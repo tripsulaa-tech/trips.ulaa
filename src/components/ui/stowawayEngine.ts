@@ -225,13 +225,10 @@ function drawFrom<T extends { id: string }>(
   let bag = readList(key).filter(id => byId.has(id));
   if (bag.length === 0) bag = shuffle(all.map(x => x.id));
   let idx = bag.findIndex(id => accept(byId.get(id)!));
-  if (idx < 0) {
-    // Nothing acceptable left: top up with a fresh shuffle behind the rest.
-    const fresh = shuffle(all.map(x => x.id)).filter(id => !bag.includes(id));
-    bag = [...bag, ...fresh];
-    idx = bag.findIndex(id => accept(byId.get(id)!));
-    if (idx < 0) idx = 0;
-  }
+  // Only unacceptable cards (e.g. the same category as last round) are left:
+  // deal one anyway. A repeated category is better than a repeated pair, and
+  // it is the same choice the online rooms make (stowaway_start_round).
+  if (idx < 0) idx = 0;
   const [id] = bag.splice(idx, 1);
   writeList(key, bag);
   return byId.get(id)!;

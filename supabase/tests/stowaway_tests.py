@@ -277,6 +277,43 @@ check('each action moves the live-update counter exactly once', (r1, r2) == (r0 
 cur = API.cursor(); cur.execute('select * from public.stowaway_signal'); cols = [d[0] for d in cur.description]
 check('the public live-update table exposes only room id + counter', cols == ['room_id', 'rev'], cols); clear()
 
+# ── 8. Share links (Admin -> Games -> Play Stowaway) ──
+AUTH = connect('authenticated')   # a signed-in admin (the test stub's is_admin() is always true)
+def rpc_as(conn, fn, *args):
+    cur = conn.cursor()
+    try:
+        cur.execute(f'select public.{fn}({",".join(["%s"] * len(args))})', args)
+        return cur.fetchone()[0]
+    except psycopg2.Error as e:
+        raise Err((e.pgerror or str(e)).split('\n')[0].replace('ERROR:', '').strip())
+su('delete from stowaway_share_links')
+names = ['Asha', 'Ravi', 'Meena', 'Karthik']
+sc = rpc_as(AUTH, 'stowaway_create_share', names, 'Coorg Escape')
+check('an admin can make a share link with a 4-character code', isinstance(sc, str) and len(sc) == 4 and sc == sc.lower(), sc)
+got = rpc_as(API, 'stowaway_get_share', sc.upper())
+check('anyone can open a link by its code (any letter case)', got and got['players'] == names and got['trip_title'] == 'Coorg Escape', got)
+check('an unknown code opens nothing', rpc_as(API, 'stowaway_get_share', 'zzzz') is None)
+blocked = []
+for fn, args in [('stowaway_create_share', (names, 'x')), ('stowaway_update_share', (sc, names, 'x'))]:
+    try: rpc_as(API, fn, *args); blocked.append(fn)
+    except Err: pass
+check('the public key cannot create or change a share link', not blocked, blocked)
+bad = []
+for pl in (['A', 'B'], [f'P{i}' for i in range(16)], ['A', '  ', 'B', ''], None):
+    try: rpc_as(AUTH, 'stowaway_create_share', pl, ''); bad.append(pl)
+    except Err: pass
+check('a link needs 3 to 15 real names', not bad, bad)
+cl = rpc_as(AUTH, 'stowaway_create_share', ['  Priya\t ', '', 'X' * 40, 'Ravi', 'Meena'], '')
+check('names are trimmed, blanks dropped and capped at 18 characters', rpc_as(API, 'stowaway_get_share', cl)['players'] == ['Priya', 'X' * 18, 'Ravi', 'Meena'])
+check('updating keeps the same code and swaps the players', rpc_as(AUTH, 'stowaway_update_share', sc, ['Zed', 'Yan', 'Xin'], 'Hampi') is True
+      and rpc_as(API, 'stowaway_get_share', sc) == {'players': ['Zed', 'Yan', 'Xin'], 'trip_title': 'Hampi'})
+check('updating an unknown code reports false', rpc_as(AUTH, 'stowaway_update_share', 'zzzz', names, '') is False)
+su("update stowaway_share_links set expires_at = now() - interval '1 minute' where code = %s", (sc,))
+check('an expired link opens nothing', rpc_as(API, 'stowaway_get_share', sc) is None)
+rpc_as(AUTH, 'stowaway_create_share', names, '')
+check('making a new link clears expired ones', su('select count(*) n from stowaway_share_links where code = %s', (sc,))[0]['n'] == 0)
+su('delete from stowaway_share_links')
+
 # ── report ──
 width = max(len(n) for n, _, _ in RESULTS)
 for n, ok, d in RESULTS: print(('PASS  ' if ok else 'FAIL  ') + n + (f'\n        -> {d}' if not ok else ''))

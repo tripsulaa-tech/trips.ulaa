@@ -5,7 +5,7 @@ players (each with its own secret token, like a phone) and check the rules:
 
 | Script | Game | Checks |
 |---|---|---|
-| `stowaway_tests.py` | Stowaway | 32: winners and points, word bag, role counts, who can see what, host controls, joining, ties, the Lost Soul's one-shot guess, live updates |
+| `stowaway_tests.py` | Stowaway | 42: winners and points, word bag, role counts, who can see what, host controls, joining, ties, the Lost Soul's one-shot guess, live updates, share links |
 | `find_my_twin_tests.py` | Find My Twin | 41: pairing for every group size 2 to 24, no repeated pairs, scores recomputed independently, reveal-only mode, roster, "skip stuck pairs", edited questions, secrecy, host controls, live updates |
 
 Run them **before every release that touches `supabase/migration/*stowaway*` or
