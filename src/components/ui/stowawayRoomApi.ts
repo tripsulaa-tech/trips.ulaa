@@ -2,7 +2,9 @@
 // All rules and secrets live in the database (supabase/migration/add_stowaway_online.sql).
 // This file only calls those functions, listens for live changes, and remembers
 // which room this device is sitting in. Each phone only ever receives its OWN
-// role and word: other players' words never reach the browser.
+// role and word: other players' words never reach the browser. The room and
+// player tables are private (supabase/migration/fix_stowaway_logic_and_privacy.sql);
+// live changes come from the tiny public `stowaway_signal` table instead.
 
 import { supabase } from '../../services/supabase';
 import { SITE_ORIGIN } from '../../constants/site';
@@ -93,6 +95,7 @@ const MESSAGES: Record<string, string> = {
   host_present: 'The host is still here.',
   guess_required: 'Type your guess first.',
   no_guess_yet: 'Wait for the guess first.',
+  already_guessed: 'You already sent your guess.',
 };
 
 export class OnlineError extends Error {
@@ -185,12 +188,12 @@ export const online = {
   toLobby: (code: string) => rpc('stowaway_to_lobby', { p_code: code, p_token: t() }),
 };
 
-/** Calls `onChange` whenever the room or its players change. Returns an unsubscribe function. */
+/** Calls `onChange` whenever the room or its players change. Returns an unsubscribe function.
+ *  Every game action moves the room's counter in `stowaway_signal`; that is the only thing listened to. */
 export function subscribeRoom(roomId: string, onChange: () => void): () => void {
   const channel = supabase
     .channel(`stowaway:${roomId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'stowaway_rooms', filter: `id=eq.${roomId}` }, onChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'stowaway_players', filter: `room_id=eq.${roomId}` }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'stowaway_signal', filter: `room_id=eq.${roomId}` }, onChange)
     .subscribe();
   return () => { void supabase.removeChannel(channel); };
 }

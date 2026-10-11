@@ -319,14 +319,16 @@ export function saveSetup(s: SavedSetup) {
   try { localStorage.setItem(SETUP_KEY, JSON.stringify(s)); } catch { /* not remembered */ }
 }
 
-/** Blocks duplicates by numbering them: Priya, Priya → Priya, Priya 2. */
+/** Blocks duplicates by numbering them: Priya, Priya → Priya, Priya 2. A numbered
+ *  name that is already taken (Priya, Priya, Priya 2) is numbered again, so every
+ *  name that comes out is unique (names key the scores). */
 export function uniqueNames(raw: string[]): string[] {
-  const seen = new Map<string, number>();
-  return raw.map(n => {
-    const base = n;
-    const key = base.toLowerCase();
-    const count = (seen.get(key) ?? 0) + 1;
-    seen.set(key, count);
-    return count === 1 ? base : `${base} ${count}`;
+  const taken = new Set<string>();
+  return raw.map(base => {
+    let name = base;
+    let k = 1;
+    while (taken.has(name.toLowerCase())) { k += 1; name = `${base} ${k}`; }
+    taken.add(name.toLowerCase());
+    return name;
   });
 }
