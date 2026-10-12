@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useGameContent } from '../../hooks/useGameContent';
-import { STOWAWAY_DEFAULTS, applyStowawayContent, sanitizeStowawayContent } from './stowawayWords';
+import { STOWAWAY_DEFAULTS, applyStowawayContent, sanitizeStowawayContent } from './yaaruAvanWords';
 import { TWIN_PROMPTS_DEFAULTS, applyTwinPrompts, sanitizeTwinPrompts } from './findMyTwinEngine';
 
 // Stowaway and Find My Twin read their lists straight from module-level arrays,

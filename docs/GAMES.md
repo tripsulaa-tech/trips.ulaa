@@ -1,6 +1,6 @@
 # Ulaa Games: style and build guide
 
-Follow this when adding or changing a game, so every game looks, sounds and feels the same. Reference implementations: `PackBagGame.tsx`, `TravelMatchGame.tsx`, `StowawayGame.tsx`, `FindMyTwinGame.tsx` in `src/components/ui/`.
+Follow this when adding or changing a game, so every game looks, sounds and feels the same. Reference implementations: `PackBagGame.tsx`, `TravelMatchGame.tsx`, `YaaruAvanGame.tsx`, `FindMyTwinGame.tsx` in `src/components/ui/`.
 
 ## Where things live
 - `/games` page: `src/pages/GamesPage.tsx`. It renders `TripGames` with `layout="thumb"`.
@@ -49,20 +49,20 @@ Follow this when adding or changing a game, so every game looks, sounds and feel
 4. Use `useSynth`, shared buttons and parts. No new colours or fonts.
 5. Check: phone width, full screen, mute, pause, reduced motion, `tsc` and `eslint` clean.
 
-## Admin-hosted games (Truth or Dare, Stowaway, Dumb Charades, Find My Twin)
+## Admin-hosted games (Truth or Dare, Yaaru Avan?, Dumb Charades, Find My Twin)
 These four are not on the public `/games` page. An admin hosts them from Admin -> Games -> Play:
 - Pick a trip once at the top (upcoming or in-progress only). Its booked travellers are listed; if anyone is checked in only they start ticked, otherwise everyone does. Tick or untick. Code: `src/admin/games/useTripRoster.ts` and `TripRoster.tsx`.
 - Under it, each game has a card (`GameCard.tsx`): its tile to play on this phone, and a share link.
   - Truth or Dare (`RosterGameCard.tsx`, thin wrapper `TruthOrDareHost.tsx`) is dealt the ticked names. "Make share link" saves first names under a short code; "Update link" keeps the code after the ticks change.
     - Truth or Dare: `/play/truth-or-dare/:code`, `supabase/migration/add_truth_or_dare_share_links.sql`, page `TruthOrDarePlayPage.tsx`.
-    - Stowaway has no share link: online rooms are joined from the room's own link (`/play/stowaway/:code`, with WhatsApp / Copy buttons in the lobby); the tile also plays pass and play on one phone with the ticked names. `add_stowaway_share_links.sql` and its table are no longer used.
+    - Yaaru Avan? has no share link: online rooms are joined from the room's own link (`/play/stowaway/:code`, with WhatsApp / Copy buttons in the lobby); the tile also plays pass and play on one phone with the ticked names. `add_yaaru_avan_share_links.sql` and its table are no longer used.
   - Dumb Charades and Find My Twin (`LinkGameHost.tsx`) need no player list, so they get a plain link: `/play/dumb-charades` (page `DumbCharadesPlayPage.tsx`) and `/play/twin` (join page; room invite links `/play/twin/:code` come from inside the game). No database setup.
 - The other tabs ("Edit ...") change the questions, dares and word lists.
-- Props: `defaultOpen` (open on the setup screen) on Truth or Dare, Stowaway and Dumb Charades; `players` (names to pre-fill) on Truth or Dare and Stowaway.
+- Props: `defaultOpen` (open on the setup screen) on Truth or Dare, Yaaru Avan? and Dumb Charades; `players` (names to pre-fill) on Truth or Dare and Yaaru Avan?.
 
-## Online group games (Stowaway, Find My Twin)
+## Online group games (Yaaru Avan?, Find My Twin)
 These two need Supabase (everyone uses their own phone), so they are the exception to "front-end only".
-- Stowaway (hosted from Admin -> Games, see above): online join link `/play/stowaway/:code`. Run in the Supabase SQL editor, once each and in this order: `add_stowaway_online.sql`, `add_stowaway_share_links.sql`, `upgrade_stowaway_max_15.sql` (only if the first file was run before the 15-player change), `fix_stowaway_logic_and_privacy.sql` (one-shot Lost Soul guess, correct role counts, private room tables; live updates use `stowaway_signal`). Never re-run `add_stowaway_online.sql` on a live project: it restores the old functions.
+- Yaaru Avan? (hosted from Admin -> Games, see above): online join link `/play/stowaway/:code`. Run in the Supabase SQL editor, once each and in this order: `add_yaaru_avan_online.sql`, `add_yaaru_avan_share_links.sql`, `upgrade_yaaru_avan_max_15.sql` (only if the first file was run before the 15-player change), `fix_yaaru_avan_logic_and_privacy.sql` (one-shot Lost Soul guess, correct role counts, private room tables; live updates use `stowaway_signal`). Never re-run `add_yaaru_avan_online.sql` on a live project: it restores the old functions. After all the Yaaru Avan? migrations, run `rename_stowaway_to_yaaru_avan.sql` last (renames the `stowaway_*` / `_sw_*` tables and functions to `yaaru_avan_*` / `_ya_*`) and deploy the matching app build; never re-run the older files afterwards.
 - Find My Twin: join link `/play/twin/:code`. Run these in the Supabase SQL editor, once each and in this order: `add_find_my_twin.sql`, `update_find_my_twin_10_questions.sql`, `make_find_my_twin_editable.sql`, `add_find_my_twin_roster.sql`, `add_find_my_twin_reveal_mode.sql`, `harden_find_my_twin.sql` (makes the room tables private; live updates use `ftwin_signal`), `fix_find_my_twin_phase_checks.sql` (host actions check the game phase).
   - Files: `FindMyTwinGame.tsx` (tile + intro), `FindMyTwinOnline.tsx` (all room screens), `findMyTwinApi.ts` (calls), `useTwinRoom.ts` (live sync), `findMyTwinEngine.ts` (questions + prompts), `pages/FindMyTwinJoinPage.tsx`.
   - Flow: everyone answers the questions (10 by default, editable in Admin -> Games), host reveals, the database pairs people (best match first), each phone shows "You + Name, 92% match, Find Name!", both tap "I found", a conversation prompt unlocks, both tap "We talked", anyone unlocks the next round (new twin, never a repeat). 4 rounds by default (one per conversation starter).

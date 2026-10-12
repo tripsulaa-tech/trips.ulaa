@@ -9,7 +9,7 @@
 
 import { supabase } from '../../services/supabase';
 import { SITE_ORIGIN } from '../../constants/site';
-import { deviceToken } from './stowawayRoomApi';
+import { deviceToken } from './yaaruAvanRoomApi';
 
 export type TwinPhase = 'lobby' | 'hunt' | 'roundEnd' | 'final';
 

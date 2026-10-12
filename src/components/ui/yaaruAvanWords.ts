@@ -1,6 +1,6 @@
 // Stowaway: word pairs and dares.
 // Explorers get one word of a pair, Stowaways get the other. Which side is
-// which is decided at random every round (see stowawayEngine.ts), so the
+// which is decided at random every round (see yaaruAvanEngine.ts), so the
 // "first word" is never a giveaway. Every word appears in exactly one pair.
 
 export type Level = 'easy' | 'medium' | 'hard';

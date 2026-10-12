@@ -20,14 +20,14 @@ createdb ulaa_test
 pip install psycopg2-binary
 cd supabase
 for f in tests/stub_supabase.sql \
-         migration/add_stowaway_online.sql \
-         migration/add_stowaway_share_links.sql \
-         migration/fix_stowaway_logic_and_privacy.sql \
-         migration/remove_stowaway_clue_round.sql \
-         migration/drop_stowaway_clue_and_challenge_leftovers.sql \
-         migration/rename_stowaway_begin_clues_to_begin_vote.sql \
-         migration/add_stowaway_special_roles.sql \
-         migration/adopt_undercover_rules_for_stowaway.sql \
+         migration/add_yaaru_avan_online.sql \
+         migration/add_yaaru_avan_share_links.sql \
+         migration/fix_yaaru_avan_logic_and_privacy.sql \
+         migration/remove_yaaru_avan_clue_round.sql \
+         migration/drop_yaaru_avan_clue_and_challenge_leftovers.sql \
+         migration/rename_yaaru_avan_begin_clues_to_begin_vote.sql \
+         migration/add_yaaru_avan_special_roles.sql \
+         migration/adopt_undercover_rules_for_yaaru_avan.sql \
          migration/add_find_my_twin.sql \
          migration/update_find_my_twin_10_questions.sql \
          migration/make_find_my_twin_editable.sql \
@@ -39,7 +39,7 @@ for f in tests/stub_supabase.sql \
 done
 ```
 
-(`upgrade_stowaway_max_15.sql` is not needed on a fresh database.)
+(`upgrade_yaaru_avan_max_15.sql` is not needed on a fresh database.)
 
 ## Run
 

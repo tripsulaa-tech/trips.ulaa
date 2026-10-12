@@ -1,5 +1,5 @@
 -- =============================================================================
--- add_stowaway_share_links.sql
+-- add_yaaru_avan_share_links.sql
 -- =============================================================================
 -- Short share links for Stowaway (e.g. /play/stowaway/game/k7x2).
 -- Run this ONCE in the Supabase SQL editor. It is safe to run again.

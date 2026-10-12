@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- add_stowaway_special_picker.sql
+-- add_yaaru_avan_special_picker.sql
 --
 -- Yaaru Fake? online: the host can choose WHICH special roles are in play
 -- (a checklist behind the "Special roles" row in the lobby) instead of one
@@ -11,8 +11,8 @@
 --   * stowaway_start_round deals only from the ticked specials. Lucky Dip only
 --     turns into a ticked ability.
 --
--- Run once in the Supabase SQL editor, AFTER add_stowaway_special_roles.sql and
--- adopt_undercover_rules_for_stowaway.sql. Safe to run again.
+-- Run once in the Supabase SQL editor, AFTER add_yaaru_avan_special_roles.sql and
+-- adopt_undercover_rules_for_yaaru_avan.sql. Safe to run again.
 -- Deploy it BEFORE the new app build: the new build sends p_special_ids.
 -- ─────────────────────────────────────────────────────────────────────────────
 

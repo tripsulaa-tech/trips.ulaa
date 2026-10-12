@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../../components/ui/useToast';
-import { getStowawayOnlineOpen, setStowawayOnlineOpen } from '../../services/api/stowawayOnlineSwitch';
+import { getStowawayOnlineOpen, setStowawayOnlineOpen } from '../../services/api/yaaruAvanOnlineSwitch';
 import { smallBtn, primaryBtn } from './GameCard';
 
-// Admin -> Games -> Yaaru Fake?: one switch for online play. Closed (the
+// Admin -> Games -> Yaaru Avan?: one switch for online play. Closed (the
 // default): only an admin can create a room. Open: anyone with the link can
 // create or join one. Closing ends every open room. Rules live in
-// supabase/migration/add_stowaway_online_switch.sql.
-const MIGRATION = 'add_stowaway_online_switch.sql';
+// supabase/migration/add_yaaru_avan_online_switch.sql.
+const MIGRATION = 'add_yaaru_avan_online_switch.sql';
 
-export default function StowawayOnlineSwitch() {
+export default function YaaruAvanOnlineSwitch() {
   const toast = useToast();
   const [open, setOpen] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);

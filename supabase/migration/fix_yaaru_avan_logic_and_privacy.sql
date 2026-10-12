@@ -1,9 +1,9 @@
 -- =============================================================================
--- fix_stowaway_logic_and_privacy.sql
+-- fix_yaaru_avan_logic_and_privacy.sql
 -- =============================================================================
--- Run ONCE in the Supabase SQL editor, AFTER add_stowaway_online.sql,
--- add_stowaway_share_links.sql and (if you had run it) upgrade_stowaway_max_15.sql.
--- Safe to run again. Do NOT re-run add_stowaway_online.sql afterwards: it is the
+-- Run ONCE in the Supabase SQL editor, AFTER add_yaaru_avan_online.sql,
+-- add_yaaru_avan_share_links.sql and (if you had run it) upgrade_yaaru_avan_max_15.sql.
+-- Safe to run again. Do NOT re-run add_yaaru_avan_online.sql afterwards: it is the
 -- first-time setup file and would put the old versions of these functions back.
 --
 -- WHAT IT FIXES

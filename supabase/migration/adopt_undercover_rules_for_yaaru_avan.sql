@@ -1,5 +1,5 @@
 -- Yaaru Fake? online rooms: play by Undercover's rules.
--- Run once in the Supabase SQL editor AFTER add_stowaway_special_roles.sql.
+-- Run once in the Supabase SQL editor AFTER add_yaaru_avan_special_roles.sql.
 -- Re-running it is safe. Deploy it BEFORE the new app build (the build calls
 -- stowaway_describe_done and may save 0 Pickpockets).
 --

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { online, OnlineError, subscribeRoom } from './stowawayRoomApi';
-import type { OnlineState } from './stowawayRoomApi';
+import { online, OnlineError, subscribeRoom } from './yaaruAvanRoomApi';
+import type { OnlineState } from './yaaruAvanRoomApi';
 
 // Keeps one phone in sync with its room:
 //  * fetches the state (room, players, and ONLY this player's own secret),

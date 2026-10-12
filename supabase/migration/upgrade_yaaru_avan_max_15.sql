@@ -1,8 +1,8 @@
 -- =============================================================================
--- upgrade_stowaway_max_15.sql
+-- upgrade_yaaru_avan_max_15.sql
 -- =============================================================================
 -- Stowaway now takes up to 15 players (it was 12). Run this ONCE in the
--- Supabase SQL editor if add_stowaway_online.sql and add_stowaway_share_links.sql
+-- Supabase SQL editor if add_yaaru_avan_online.sql and add_yaaru_avan_share_links.sql
 -- were already run. It is safe to run again. (Fresh installs do not need it:
 -- both original files already say 15.)
 -- =============================================================================

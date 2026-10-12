@@ -2,18 +2,18 @@
 // points and awards). No React here, so it stays easy to reason about.
 // Only the word bag, player names and settings are saved on the device.
 
-import { DARES, WORD_PAIRS } from './stowawayWords';
-import type { Category, Level, WordPair } from './stowawayWords';
-import { activeSpecial, assignSpecials } from './stowawaySpecials';
-import type { SoloSpecialId, SpecialId } from './stowawaySpecials';
+import { DARES, WORD_PAIRS } from './yaaruAvanWords';
+import type { Category, Level, WordPair } from './yaaruAvanWords';
+import { assignSpecials } from './yaaruAvanSpecials';
+import type { SoloSpecialId, SpecialId } from './yaaruAvanSpecials';
 
 export type Role = 'explorer' | 'stowaway' | 'lost';
 
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 15;
 
-/** Undercover's scores: Travellers 2 each, a winning Pickpocket 10, a winning Stranger 6
- *  (a Stranger wins by lasting to the end or by guessing the Travellers' word). */
+/** Undercover's scores: Tourists 2 each, a winning Stranger 10, a winning Pickpocket 6
+ *  (a Pickpocket wins by lasting to the end or by guessing the Tourists' word). */
 export const POINTS = { explorerWin: 2, stowawaySurvive: 10, lostSurvive: 6, lostSteal: 6 } as const;
 
 export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): T[] {
@@ -31,7 +31,7 @@ export interface RoleCounts { explorers: number; stowaways: number; lost: number
 
 export const maxLost = (players: number) => (players >= 10 ? 2 : 1);
 
-/** Travellers must outnumber the sneaky side (Pickpockets + Strangers) at the start. */
+/** Tourists must outnumber the sneaky side (Strangers + Pickpockets) at the start. */
 export function countsFor(players: number, stowaways: number, lost: number): RoleCounts {
   return { explorers: players - stowaways - lost, stowaways, lost };
 }
@@ -39,7 +39,7 @@ export function countsFor(players: number, stowaways: number, lost: number): Rol
 export function rolesValid(players: number, stowaways: number, lost: number): boolean {
   if (players < MIN_PLAYERS || players > MAX_PLAYERS) return false;
   if (stowaways < 0 || lost < 0 || lost > maxLost(players)) return false;
-  if (stowaways + lost < 1) return false; // at least one Pickpocket or one Stranger
+  if (stowaways + lost < 1) return false; // at least one Stranger or one Pickpocket
   return players - stowaways - lost > stowaways + lost;
 }
 
@@ -72,13 +72,11 @@ export interface Seat {
   alive: boolean;
   special?: SpecialId;       // optional special role on top of the core role
   dipAs?: SoloSpecialId;     // Lucky Dip only: the ability it turned into
-  partner?: string;          // Rivals / Buddies only: the other player
+  partner?: string;          // Rivals / Lovers only: the other player
   outStop?: number;          // stop at which they were voted out (unset while aboard)
   outOrder?: number;         // 1 = first voted out this round, 2 = next, ...
   ticketUsed?: boolean;      // Return Ticket already used this round
   paybackDone?: boolean;     // Payback already taken this round
-  riderHit?: boolean;        // Backseat Rider guessed right
-  paybackHit?: boolean;      // Payback took down someone from the other side
 }
 
 function seatNumbers(n: number): string[] {
@@ -138,8 +136,8 @@ function aliveCounts(seats: Seat[]) {
   };
 }
 
-/** Undercover's rules: Travellers win when every Pickpocket and Stranger is
- *  offboarded. The sneaky side wins when only one Traveller is left. */
+/** Undercover's rules: Tourists win when every Stranger and Pickpocket is
+ *  offboarded. The sneaky side wins when only one Tourist is left. */
 export function checkWinner(seats: Seat[]): Side | null {
   const a = aliveCounts(seats);
   const sneaky = a.stowaways + a.lost;
@@ -149,19 +147,16 @@ export function checkWinner(seats: Seat[]): Side | null {
 }
 
 /** Speaking order for the description round: the players still aboard, going round
- *  the table from seat `from`. A Driver, if aboard, starts instead. A Sleepyhead sits
- *  out Stop 1. Returns indexes into `seats`. */
-export function describeOrder(seats: Seat[], from: number, stopNo: number): number[] {
+ *  the table from seat `from`. Returns indexes into `seats`. */
+export function describeOrder(seats: Seat[], from: number, _stopNo: number): number[] {
   const n = seats.length;
   if (n === 0) return [];
-  const driver = seats.findIndex(s => s.alive && activeSpecial(s) === 'driver');
-  const start = driver >= 0 ? driver : ((from % n) + n) % n;
+  const start = ((from % n) + n) % n;
   const out: number[] = [];
   for (let k = 0; k < n; k++) {
     const i = (start + k) % n;
     const s = seats[i];
     if (!s.alive) continue;
-    if (stopNo === 1 && activeSpecial(s) === 'sleepyhead') continue;
     out.push(i);
   }
   return out;
@@ -211,9 +206,9 @@ function top(names: string[], stats: Record<string, PlayerStats>, pick: (s: Play
 
 export function computeAwards(names: string[], stats: Record<string, PlayerStats>): Award[] {
   const defs: Array<[string, string, string, (s: PlayerStats) => number]> = [
-    ['bluffer', 'Best Bluffer', 'Survived the most rounds as a Pickpocket', s => s.survivedAsStowaway],
+    ['bluffer', 'Best Bluffer', 'Survived the most rounds as a Stranger', s => s.survivedAsStowaway],
     ['detective', 'Sharpest Detective', 'Most correct votes', s => s.correctVotes],
-    ['assassin', 'Silent Assassin', 'Stole a win as the Stranger', s => s.lostWins],
+    ['assassin', 'Silent Assassin', 'Stole a win as the Pickpocket', s => s.lostWins],
     ['lost', 'Lost in Translation', 'Most wrong votes', s => s.wrongVotes],
   ];
   const out: Award[] = [];
@@ -253,7 +248,7 @@ function drawFrom<T extends { id: string }>(
   let idx = bag.findIndex(id => accept(byId.get(id)!));
   // Only unacceptable cards (e.g. the same category as last round) are left:
   // deal one anyway. A repeated category is better than a repeated pair, and
-  // it is the same choice the online rooms make (stowaway_start_round).
+  // it is the same choice the online rooms make (yaaru_avan_start_round).
   if (idx < 0) idx = 0;
   const [id] = bag.splice(idx, 1);
   writeList(key, bag);

@@ -1,13 +1,13 @@
 -- =============================================================================
--- add_stowaway_online.sql
+-- add_yaaru_avan_online.sql
 -- =============================================================================
 -- Online rooms for the Stowaway group game ("Play online" with a 4-letter code).
 -- Run this ONCE in the Supabase SQL editor. It is safe to run again, but ONLY on a
 -- new project: running it later puts the old versions of functions back.
 --
--- RUN ORDER: 1. add_stowaway_online.sql  2. add_stowaway_share_links.sql
---   3. upgrade_stowaway_max_15.sql (only if this file was run before that change)
---   4. fix_stowaway_logic_and_privacy.sql
+-- RUN ORDER: 1. add_yaaru_avan_online.sql  2. add_yaaru_avan_share_links.sql
+--   3. upgrade_yaaru_avan_max_15.sql (only if this file was run before that change)
+--   4. fix_yaaru_avan_logic_and_privacy.sql
 --
 -- HOW SECRETS STAY SECRET
 --   * Public tables (stowaway_rooms, stowaway_players) hold only what every

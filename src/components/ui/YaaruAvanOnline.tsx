@@ -4,9 +4,10 @@ import {
   Play, ArrowRight, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
   Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle, XCircle, MagicWand,
   Gift, Question, Copy, LockSimple, LockSimpleOpen, WifiSlash, DeviceMobile, Hash, UsersThree, ChatCircleDots,
-  Smiley, Moon, Armchair, SteeringWheel, Handshake, Sword, ArrowUUpLeft, DiceFive, CaretRight, Check, ArrowLeft,
+  CaretRight, Check, ArrowLeft,
 } from '@phosphor-icons/react';
 import { SITE_HOST } from '../../constants/site';
+import SpecialList from './YaaruAvanSpecialList';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { buildScoreCard } from './packBagScoreCard';
@@ -16,30 +17,30 @@ import {
   GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName,
   loadPlayerName, savePlayerName, MAX_NAME,
 } from './gameUi';
-import { LEVELS, CATEGORY_LABEL } from './stowawayWords';
-import type { Category, Level } from './stowawayWords';
+import { LEVELS, CATEGORY_LABEL } from './yaaruAvanWords';
+import type { Category, Level } from './yaaruAvanWords';
 import {
   MIN_PLAYERS, MAX_PLAYERS, POINTS, maxLost, rolesValid, recommendedRoles, clampRoles, computeAwards,
   drawDare,
-} from './stowawayEngine';
-import type { PlayerStats, Role } from './stowawayEngine';
+} from './yaaruAvanEngine';
+import type { PlayerStats, Role } from './yaaruAvanEngine';
 import {
   online, OnlineError, joinLink, normalizeCode, loadOnlineSession, saveOnlineSession, clearOnlineSession,
-} from './stowawayRoomApi';
-import type { OnlinePhase } from './stowawayRoomApi';
-import { describeSpecial, specialDisplayName, SPECIALS, SPECIAL_BLURB, maxSpecials } from './stowawaySpecials';
-import type { SpecialId } from './stowawaySpecials';
+} from './yaaruAvanRoomApi';
+import type { OnlinePhase } from './yaaruAvanRoomApi';
+import { describeSpecial, specialDisplayName, SPECIALS, maxSpecials } from './yaaruAvanSpecials';
+import type { SpecialId } from './yaaruAvanSpecials';
 import { useOnlineRoom } from './useOnlineRoom';
 import { useStowawayContentSync } from './useGameContentSync';
 
 // "Stowaway" online: every player uses their own phone. The rules and secrets
-// live in Supabase (see add_stowaway_online.sql); this file is only the screens.
+// live in Supabase (see add_yaaru_avan_online.sql); this file is only the screens.
 // The group talks it out aloud (in person or on a call). The phone handles the
 // secret word, private voting and the scores.
 
 const MUTE_KEY = 'ulaa:packbag:muted'; // one sound setting for all the games
 
-const ROLE_LABEL: Record<Role, string> = { explorer: 'Traveller', stowaway: 'Pickpocket', lost: 'Stranger' };
+const ROLE_LABEL: Record<Role, string> = { explorer: 'Tourist', stowaway: 'Stranger', lost: 'Pickpocket' };
 const ROLE_TONE: Record<Role, string> = {
   explorer: 'from-emerald-300 to-emerald-500 text-emerald-950',
   stowaway: 'from-[#F0CE7A] to-gold text-dark',
@@ -66,7 +67,7 @@ interface StowawayOnlineProps {
 
 // ───────────────────────────── Entry: host or join ─────────────────────────────
 
-export default function StowawayOnline({ tripTitle, initialCode, onExit }: StowawayOnlineProps) {
+export default function YaaruAvanOnline({ tripTitle, initialCode, onExit }: StowawayOnlineProps) {
   useStowawayContentSync();
   const [muted, setMuted] = useState<boolean>(() => {
     try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; }
@@ -273,18 +274,6 @@ function Toggle({ on, onChange, title, desc, disabled }: {
 
 const ALL_SPECIAL_IDS: readonly SpecialId[] = SPECIALS.map(d => d.id);
 
-const SPECIAL_LOOK: Record<SpecialId, { icon: typeof Smiley; tone: string }> = {
-  clown: { icon: Smiley, tone: 'from-amber-300 to-orange-400 text-amber-950' },
-  rivals: { icon: Sword, tone: 'from-rose-300 to-red-400 text-rose-950' },
-  sleepyhead: { icon: Moon, tone: 'from-indigo-300 to-violet-400 text-indigo-950' },
-  returnTicket: { icon: Ticket, tone: 'from-emerald-300 to-teal-400 text-emerald-950' },
-  tripLeader: { icon: Crown, tone: 'from-[#F0CE7A] to-gold text-dark' },
-  backseatRider: { icon: Armchair, tone: 'from-sky-300 to-blue-400 text-sky-950' },
-  driver: { icon: SteeringWheel, tone: 'from-slate-300 to-slate-400 text-slate-900' },
-  buddies: { icon: Handshake, tone: 'from-lime-300 to-green-400 text-green-950' },
-  payback: { icon: ArrowUUpLeft, tone: 'from-fuchsia-300 to-pink-400 text-fuchsia-950' },
-  luckyDip: { icon: DiceFive, tone: 'from-yellow-200 to-amber-300 text-amber-950' },
-};
 
 /** The ids the host has ticked: none while the switch is off, all when no list was saved. */
 const pickedSpecials = (room: { specials: boolean; special_ids: SpecialId[] | null }): SpecialId[] =>
@@ -307,7 +296,7 @@ function SpecialPicker({ initial, players, busy, onSave, onCancel }: {
       <h3 className="font-display text-2xl font-extrabold text-white leading-tight">Special roles</h3>
       <p className="text-xs text-cream/60 mt-1 mb-3">
         Tick the ones you want in play. Each round, up to one special per 3 players is dealt from your ticked list
-        {players >= 3 ? ` (${slots} with ${players} players)` : ''}. Rivals and Buddies use two players.
+        {players >= 3 ? ` (${slots} with ${players} players)` : ''}. Duelists and Lovers use two players.
       </p>
 
       <div className="flex items-center justify-between mb-2">
@@ -318,33 +307,7 @@ function SpecialPicker({ initial, players, busy, onSave, onCancel }: {
         </span>
       </div>
 
-      <ul className={`${glass} divide-y divide-white/10 mb-4`}>
-        {SPECIALS.map(def => {
-          const look = SPECIAL_LOOK[def.id];
-          const Icon = look.icon;
-          const checked = on.has(def.id);
-          return (
-            <li key={def.id}>
-              <button type="button" role="checkbox" aria-checked={checked} onClick={() => toggle(def.id)}
-                className="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-white/[0.04] transition-colors">
-                <span className={`w-11 h-11 rounded-xl bg-gradient-to-br ${look.tone} flex items-center justify-center shrink-0 shadow-md`} aria-hidden="true">
-                  <Icon size={24} weight="duotone" />
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-white leading-tight">{def.name}</span>
-                    {def.pair && <span className="text-[9px] font-bold uppercase tracking-wider text-cream/60 bg-white/10 rounded-full px-1.5 py-0.5">2 players</span>}
-                  </span>
-                  <span className="block text-[12px] leading-snug text-cream/60 mt-0.5">{SPECIAL_BLURB[def.id]}</span>
-                </span>
-                <span className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-primary border-primary text-white' : 'border-white/30 text-transparent'}`} aria-hidden="true">
-                  <Check size={14} weight="bold" />
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <SpecialList on={on} onToggle={toggle} />
 
       <button type="button" disabled={busy} onClick={() => onSave(draft)} className={`${primaryBtn} disabled:opacity-60`}>
         <Check size={18} weight="bold" /> {draft.length === 0 ? 'Done (no special roles)' : `Done (${draft.length} ticked)`}
@@ -406,7 +369,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     prevPhase.current = phase;
     if (!was || was === phase) return;
     if (phase === 'describe') play('go');
-    else if (phase === 'vote') play('flip');
+    else if (phase === 'vote' || phase === 'tiebreak') play('flip');
     else if (phase === 'offboard') play('power');
     else if (phase === 'guess') play('bad');
     else if (phase === 'payback') play('power');
@@ -468,7 +431,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
   // ── Derived for rendering ──
   const link = joinLink(room.code);
-  const shareText = `Join my Yaaru Fake? game on Ulaa! Room code ${room.code}. Tap to join: ${link}`;
+  const shareText = `Join my Yaaru Avan? game on Ulaa! Room code ${room.code}. Tap to join: ${link}`;
   const n = players.length;
   const sRaw = state.counts?.stowaways ?? 1;
   const lRaw = state.counts?.lost ?? 0;
@@ -493,7 +456,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const alivePlayers = players.filter(p => p.alive);
   const countLine = room.hide_counts || !state.counts
     ? `${alivePlayers.length} travellers aboard. Roles are secret.`
-    : `${state.counts.explorers} Travellers, ${state.counts.stowaways} Pickpocket${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Stranger${state.counts.lost === 1 ? '' : 's'}` : ''}`;
+    : `${state.counts.explorers} Tourists, ${state.counts.stowaways} Stranger${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Pickpocket${state.counts.lost === 1 ? '' : 's'}` : ''}`;
 
   const voteKey = `${room.round_no}-${room.stop_no}-${room.last_result?.tie ? 't' : 'n'}${room.last_result?.saved ? `s${room.last_result.saved}` : ''}`;
   const pickId = pick?.key === voteKey ? pick.id : null;
@@ -501,19 +464,23 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const iAmOut = !!out && out.id === me.id;
   const summary = room.round_summary;
   const mySpecial = me.special
-    ? { label: specialDisplayName(me.special, me.dip), text: describeSpecial({ special: me.special, partner: me.partner ?? undefined }) ?? '' }
+    ? { label: `${specialDisplayName(me.special, me.dip)}${me.partner ? ` · with ${me.partner}` : ''}`, text: describeSpecial({ special: me.special, partner: me.partner ?? undefined }) ?? '' }
     : null;
   const voters = players.filter(p => p.voter);
   const publicRoles = players.filter(p => p.public_special);
   const outSpecial = room.last_result?.special ? specialDisplayName(room.last_result.special, !!room.last_result.dip) : null;
   const paybackBy = room.last_result?.payback_by ? byId.get(room.last_result.payback_by)?.name : undefined;
-  const riderGuess = room.last_result?.role !== 'lost';
+  const loverName = room.last_result?.lover ? byId.get(room.last_result.lover)?.name : undefined;
+  const bounceFromName = room.last_result?.bounce_from ? byId.get(room.last_result.bounce_from)?.name : undefined;
+  const goddessId = room.last_result?.tiebreak ? room.last_result.leader : undefined;
+  const goddess = goddessId ? byId.get(goddessId) : undefined;
+  const tiedPlayers = (room.last_result?.tied ?? []).map(id => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p);
   const order = room.describe_order ?? [];
   const speakerId = order[room.describe_pos];
   const speaker = speakerId ? byId.get(speakerId) : undefined;
   const myTurn = speakerId === me.id;
   const lastSpeaker = room.describe_pos + 1 >= order.length;
-  const guessWordOwner = room.last_result?.role === 'explorer' ? "Pickpockets'" : "Travellers'";
+  const guessWordOwner = room.last_result?.role === 'explorer' ? "Strangers'" : "Tourists'";
 
   const hostBanner = !isHost && state.host_away && (
     <div className="rounded-2xl bg-rose-400/10 border border-rose-300/30 px-3 py-2.5 mb-3 text-left">
@@ -612,7 +579,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-emerald-400/20 text-emerald-300 flex items-center justify-center"><Eye size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Travellers</p>
+                    <p className="text-sm font-bold text-white leading-tight">Tourists</p>
                     <p className="text-[11px] text-cream/50">Same word. Always the majority.</p>
                   </div>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-8 text-center">{n >= MIN_PLAYERS ? explorers : '-'}</span>
@@ -620,22 +587,22 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-gold/20 text-[#F0CE7A] flex items-center justify-center"><Ticket size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Pickpockets</p>
+                    <p className="text-sm font-bold text-white leading-tight">Strangers</p>
                     <p className="text-[11px] text-cream/50">A similar but different word.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={busy || n < MIN_PLAYERS || eff.stowaways <= (eff.lost > 0 ? 0 : 1)} onClick={() => void saveSettings({ stowaways: eff.stowaways - 1 })}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={busy || n < MIN_PLAYERS || eff.stowaways <= (eff.lost > 0 ? 0 : 1)} onClick={() => void saveSettings({ stowaways: eff.stowaways - 1 })}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{eff.stowaways}</span>
-                  <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={busy || n < MIN_PLAYERS || !rolesValid(n, eff.stowaways + 1, eff.lost)} onClick={() => void saveSettings({ stowaways: eff.stowaways + 1 })}><Plus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="More Strangers" disabled={busy || n < MIN_PLAYERS || !rolesValid(n, eff.stowaways + 1, eff.lost)} onClick={() => void saveSettings({ stowaways: eff.stowaways + 1 })}><Plus size={14} weight="bold" /></button>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-rose-400/20 text-rose-300 flex items-center justify-center"><Question size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Stranger</p>
+                    <p className="text-sm font-bold text-white leading-tight">Pickpocket</p>
                     <p className="text-[11px] text-cream/50">No word at all. Blends in.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={busy || n < MIN_PLAYERS || eff.lost <= (eff.stowaways > 0 ? 0 : 1)} onClick={() => void saveSettings({ lost: eff.lost - 1 })}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={busy || n < MIN_PLAYERS || eff.lost <= (eff.stowaways > 0 ? 0 : 1)} onClick={() => void saveSettings({ lost: eff.lost - 1 })}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{eff.lost}</span>
-                  <button type="button" className={stepBtn} aria-label="More Strangers" disabled={busy || n < MIN_PLAYERS || eff.lost >= maxLost(n) || !rolesValid(n, eff.stowaways, eff.lost + 1)} onClick={() => void saveSettings({ lost: eff.lost + 1 })}><Plus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={busy || n < MIN_PLAYERS || eff.lost >= maxLost(n) || !rolesValid(n, eff.stowaways, eff.lost + 1)} onClick={() => void saveSettings({ lost: eff.lost + 1 })}><Plus size={14} weight="bold" /></button>
                 </div>
               </div>
               {n < MIN_PLAYERS && <p className="text-xs text-[#F0CE7A] mb-2">Waiting for at least {MIN_PLAYERS} travellers.</p>}
@@ -650,7 +617,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <p className="text-[11px] text-cream/50 mb-4">{LEVELS.find(l => l.id === room.level)?.hint}.</p>
 
               <div className={`${glass} divide-y divide-white/10 mb-4`}>
-                <Toggle on={room.hide_counts} onChange={v => void saveSettings({ hideCounts: v })} disabled={busy} title="Hide the counts" desc="Only you can see the role split. Nobody else knows if a Stranger exists." />
+                <Toggle on={room.hide_counts} onChange={v => void saveSettings({ hideCounts: v })} disabled={busy} title="Hide the counts" desc="Only you can see the role split. Nobody else knows if a Pickpocket exists." />
                 <Toggle on={room.dares} onChange={v => void saveSettings({ dares: v })} disabled={busy} title="Trip dares" desc="The losing side gets a silly dare." />
                 <button type="button" onClick={() => { ensure(); setPickingSpecials(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors">
                   <span className="flex-1 min-w-0">
@@ -674,7 +641,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           ) : (
             <div className={`${glass} px-3 py-3 mb-3 text-sm text-cream/70`}>
               <p className="font-bold text-white mb-1">Game settings</p>
-              <p>{LEVELS.find(l => l.id === room.level)?.label} words{room.hide_counts ? ', hidden role counts' : state.counts ? `, ${state.counts.explorers} Travellers, ${state.counts.stowaways} Pickpocket${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Stranger` : ''}` : ''}.</p>
+              <p>{LEVELS.find(l => l.id === room.level)?.label} words{room.hide_counts ? ', hidden role counts' : state.counts ? `, ${state.counts.explorers} Tourists, ${state.counts.stowaways} Stranger${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Pickpocket` : ''}` : ''}.</p>
               {room.specials && <p className="text-xs text-cream/50 mt-1">Special roles: {pickedSpecials(room).map(id => specialDisplayName(id)).join(', ')}.</p>}
               {room.locked && <p className="text-xs text-cream/50 mt-1"><LockSimple size={12} weight="fill" className="inline -mt-0.5" /> The host locked the room.</p>}
             </div>
@@ -804,8 +771,10 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
           {room.last_result?.saved && (
             <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]">Return Ticket</p>
-              <p className="text-sm font-bold text-white">{room.last_result.name ?? 'Someone'} stays aboard. Vote again.</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]">The Boomerang</p>
+              <p className="text-sm font-bold text-white">
+                {room.last_result.name ?? 'Someone'} stays aboard. The votes bounced back onto {(room.last_result.bounce_names ?? []).join(' and ') || 'the voters'}. Vote again among them.
+              </p>
             </div>
           )}
 
@@ -819,7 +788,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           {me.can_vote ? (
             <>
               <div className="grid grid-cols-2 gap-2 mb-4">
-                {alivePlayers.filter(p => p.id !== me.id).map(p => (
+                {alivePlayers.filter(p => p.id !== me.id && (!room.bounce || room.bounce.includes(p.id))).map(p => (
                   <button key={p.id} type="button" aria-pressed={pickId === p.id} onClick={() => { setPick({ key: voteKey, id: p.id }); play('flip'); }}
                     className={`rounded-2xl border px-3 py-3 text-left transition ${pickId === p.id ? 'bg-gradient-to-br from-primary-light to-primary border-transparent text-white shadow-[0_8px_20px_rgba(168,90,42,0.5)]' : 'bg-white/[0.06] border-white/10 text-cream hover:bg-white/10'}`}>
                     <span className="block font-display text-base font-extrabold leading-tight truncate">{p.name}</span>
@@ -833,7 +802,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               {meP?.voted && <p className="mt-2 text-center text-xs font-bold text-emerald-300"><CheckCircle size={14} weight="fill" className="inline -mt-0.5 mr-1" />Your vote is in</p>}
             </>
           ) : waiting('You are offboard, so you cannot vote. Watch the others decide.')}
-          {me.can_vote && !meP?.alive && <p className="-mt-2 mb-3 text-center text-[11px] text-cream/50">You are offboard, but your Backseat Rider vote still counts.</p>}
+          {me.can_vote && !meP?.alive && <p className="-mt-2 mb-3 text-center text-[11px] text-cream/50">You are offboard, but as the Ghost your vote still counts.</p>}
 
           <p className={`${eyebrow} mt-4 mb-1.5`}>{voters.filter(p => p.voted).length} of {voters.length} voted</p>
           <ul className="flex flex-wrap gap-1.5">
@@ -846,6 +815,32 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           {isHost && voters.some(p => p.voted) && (
             <button type="button" disabled={busy} onClick={() => void act(() => online.resolveNow(room.code))} className={`${ghostBtn} mt-4`}>Reveal now with the votes so far</button>
           )}
+        </div>
+      )}
+
+      {/* ── Tied vote: the Goddess of Justice decides ── */}
+      {phase === 'tiebreak' && (
+        <div>
+          <div className="mb-3">
+            <p className={eyebrow}>It was a tie</p>
+            <h2 className="font-display text-2xl font-extrabold text-white leading-tight">
+              {goddessId === me.id ? 'Goddess of Justice, you decide' : `${goddess?.name ?? 'The Goddess of Justice'} decides`}
+            </h2>
+            <p className="text-xs text-cream/60">
+              {tiedPlayers.map(p => p.name).join(' and ')} got the same number of votes. The Goddess of Justice picks who goes offboard, even if she is already out.
+            </p>
+          </div>
+          {(goddessId === me.id || (isHost && !!goddess?.away)) ? (
+            <div className="grid grid-cols-2 gap-2">
+              {tiedPlayers.map(p => (
+                <button key={p.id} type="button" disabled={busy} onClick={() => void act(() => online.tiebreak(room.code, p.id))}
+                  className="rounded-2xl border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98] disabled:opacity-50">
+                  <span className="block font-display text-base font-extrabold leading-tight truncate">{p.name}</span>
+                  <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {p.seat}</span>
+                </button>
+              ))}
+            </div>
+          ) : waiting(`Waiting for ${goddess?.name ?? 'the Goddess of Justice'} to choose…`)}
         </div>
       )}
 
@@ -863,9 +858,11 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             className={`inline-block rounded-2xl bg-gradient-to-br ${ROLE_TONE[room.last_result.role]} px-6 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.4)]`}>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Was a</p>
             <p className="font-display text-3xl font-extrabold leading-tight">{roleName(room.last_result.role)}</p>
-            {outSpecial && <p className="text-xs font-bold mt-1 opacity-80">and the {outSpecial}</p>}
+            {outSpecial && <p className="text-xs font-bold mt-1 opacity-80">and {outSpecial}</p>}
           </motion.div>
-          {paybackBy && <p className="mt-3 text-xs font-bold text-[#F0CE7A]">Payback! {paybackBy} took them down.</p>}
+          {paybackBy && <p className="mt-3 text-xs font-bold text-[#F0CE7A]">Revenger! {paybackBy} took them down.</p>}
+          {bounceFromName && <p className="mt-3 text-xs font-bold text-[#F0CE7A]">Boomerang! {bounceFromName}'s votes bounced back onto them.</p>}
+          {loverName && <p className="mt-3 text-sm font-bold text-[#F0CE7A]">{loverName} was in love with {out.name} and leaves too.</p>}
 
           {room.last_result.votes.length > 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0 : 1.4 }} className="mt-5 text-left">
@@ -884,16 +881,16 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
         </div>
       )}
 
-      {/* ── Last chance: the Stranger, or a Backseat Rider ── */}
+      {/* ── Last chance: the Pickpocket ── */}
       {phase === 'guess' && out && (
         <div className="text-center pt-3">
           <motion.div initial={reduce ? false : { scale: 0.5, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 240, damping: 12 }}
             className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-rose-300 to-rose-500 text-rose-950 flex items-center justify-center shadow-[0_14px_36px_rgba(244,63,94,0.4)]" aria-hidden="true">
             <Question size={46} weight="bold" />
           </motion.div>
-          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">{riderGuess ? 'Backseat Rider' : 'Last chance'}</span>
+          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">Last chance</span>
           <h2 className="font-display text-3xl font-extrabold text-white leading-tight">
-            {riderGuess ? (iAmOut ? 'You were the Backseat Rider' : `${out.name} was the Backseat Rider`) : (iAmOut ? 'You were the Stranger' : `${out.name} was the Stranger`)}
+            {iAmOut ? 'You were the Pickpocket' : `${out.name} was the Pickpocket`}
           </h2>
 
           {iAmOut ? (
@@ -905,7 +902,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               </>
             ) : (
               <>
-                <p className="text-sm text-cream/65 mt-2 mb-4 px-4">Guess the {guessWordOwner} word. One shot.{riderGuess ? ' You keep voting either way.' : ''}</p>
+                <p className="text-sm text-cream/65 mt-2 mb-4 px-4">Guess the {guessWordOwner} word. One shot.</p>
                 <input value={guessDraft} onChange={e => setGuessDraft(e.target.value.slice(0, 40))} onKeyDown={e => { if (e.key === 'Enter' && guessDraft.trim() && !busy) void act(() => online.submitGuess(room.code, guessDraft)); }} maxLength={40} placeholder="Type your guess" aria-label="Your guess" className={`${inputCls} text-center mb-3`} />
                 <button type="button" disabled={!guessDraft.trim() || busy} onClick={() => void act(() => online.submitGuess(room.code, guessDraft))} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>Send my guess</button>
               </>
@@ -929,7 +926,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       {phase === 'payback' && out && (
         <div>
           <div className="mb-3">
-            <p className={eyebrow}>Payback</p>
+            <p className={eyebrow}>The Revenger</p>
             <h2 className="font-display text-2xl font-extrabold text-white leading-tight">{iAmOut ? 'Take someone with you' : `${out.name} takes someone with them`}</h2>
             <p className="text-xs text-cream/60">{iAmOut ? 'Pick one player to go offboard too.' : 'They are choosing now.'}</p>
           </div>
@@ -953,19 +950,19 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           {!reduce && <Confetti />}
           <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Round {room.round_no} over</span>
           <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
-            {summary.outcome === 'explorers' ? 'Travellers win!' : summary.outcome === 'stowaways' ? 'The Pickpockets got away!' : 'The Stranger stole it!'}
+            {summary.outcome === 'explorers' ? 'Tourists win!' : summary.outcome === 'stowaways' ? 'The Strangers got away!' : 'The Pickpocket stole it!'}
           </h2>
           <p className="text-sm text-cream/60 mt-1 mb-3">
-            {summary.outcome === 'explorers' ? 'Every Pickpocket and Stranger was caught.' : summary.outcome === 'stowaways' ? 'Only one Traveller was left.' : 'One lucky guess flipped the whole round.'}
+            {summary.outcome === 'explorers' ? 'Every Stranger and Pickpocket was caught.' : summary.outcome === 'stowaways' ? 'Only one Tourist was left.' : 'One lucky guess flipped the whole round.'}
           </p>
 
           <div className="grid grid-cols-2 gap-2 mb-3">
             <div className={`${glass} py-2.5`}>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Travellers had</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Tourists had</p>
               <p className="font-display text-lg font-extrabold text-white leading-tight px-2">{summary.explorer_word}</p>
             </div>
             <div className={`${glass} py-2.5`}>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Pickpockets had</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Strangers had</p>
               <p className="font-display text-lg font-extrabold text-[#F0CE7A] leading-tight px-2">{summary.stowaway_word}</p>
             </div>
           </div>
@@ -986,12 +983,12 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
           {room.dare && (
             <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-3 text-left">
-              <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Gift size={11} weight="fill" /> Trip dare for the {summary.outcome === 'explorers' ? 'Pickpockets' : 'Travellers'}</p>
+              <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Gift size={11} weight="fill" /> Trip dare for the {summary.outcome === 'explorers' ? 'Strangers' : 'Tourists'}</p>
               <p className="text-sm font-bold text-white mt-0.5">{room.dare}</p>
             </div>
           )}
 
-          <p className="text-[11px] text-cream/45 mb-3">Points: Travellers +{POINTS.explorerWin}, a winning Pickpocket +{POINTS.stowawaySurvive}, a winning Stranger +{POINTS.lostSurvive} (lasting to the end or guessing the Travellers' word).{summary.players.some(p => p.special) ? ' Special-role bonuses are added on top.' : ''}</p>
+          <p className="text-[11px] text-cream/45 mb-3">Points: Tourists +{POINTS.explorerWin}, a winning Stranger +{POINTS.stowawaySurvive}, a winning Pickpocket +{POINTS.lostSurvive} (lasting to the end or guessing the Tourists' word).{summary.players.some(p => p.special) ? ' Special-role bonuses are added on top.' : ''}</p>
 
           {isHost ? (
             <>
@@ -1045,9 +1042,9 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               try {
                 blob = await buildScoreCard({
                   score: top?.points ?? 0, stars: Math.min(3, room.round_no),
-                  title: top ? `${short(top.name, 14)} takes the trip` : 'Yaaru Fake?',
+                  title: top ? `${short(top.name, 14)} takes the trip` : 'Yaaru Avan?',
                   tripTitle: room.trip_title, host: SITE_HOST, best: top?.points ?? 0, isNewBest: false,
-                  eyebrow: 'YAARU FAKE?  ·  GROUP GAME', unit: 'TOP SCORE', ringMax: Math.max(12, room.round_no * 4),
+                  eyebrow: 'YAARU AVAN?  ·  GROUP GAME', unit: 'TOP SCORE', ringMax: Math.max(12, room.round_no * 4),
                   playerName: top?.name,
                   tiles: [
                     { v: String(room.round_no), l: 'ROUNDS' },
@@ -1056,8 +1053,8 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                   ],
                 });
               } catch { blob = null; }
-              const text = `${top?.name ?? 'We'} won our game of Yaaru Fake? on Ulaa after ${room.round_no} round${room.round_no === 1 ? '' : 's'}! Play with your travel gang: ${link}`;
-              await shareCardImage(blob, { filename: 'ulaa-yaaru-fake.png', title: 'Yaaru Fake?', text, fallbackLink: getWhatsAppLink('', text) });
+              const text = `${top?.name ?? 'We'} won our game of Yaaru Avan? on Ulaa after ${room.round_no} round${room.round_no === 1 ? '' : 's'}! Play with your travel gang: ${link}`;
+              await shareCardImage(blob, { filename: 'ulaa-yaaru-avan.png', title: 'Yaaru Avan?', text, fallbackLink: getWhatsAppLink('', text) });
               setSharing(false);
             })();
           }}>

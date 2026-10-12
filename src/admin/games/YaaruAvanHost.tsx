@@ -1,9 +1,9 @@
-import StowawayGame from '../../components/ui/StowawayGame';
+import YaaruAvanGame from '../../components/ui/YaaruAvanGame';
 import GameCard from './GameCard';
-import StowawayOnlineSwitch from './StowawayOnlineSwitch';
+import YaaruAvanOnlineSwitch from './YaaruAvanOnlineSwitch';
 import type { TripRoster } from './useTripRoster';
 
-// Admin -> Games -> Play: Yaaru Fake?. The tile starts either game:
+// Admin -> Games -> Play: Yaaru Avan?. The tile starts either game:
 //  - "Play online with friends": a room with a 4-letter code. Friends open the room's
 //    own link (/play/stowaway/:code), type their name and join. The lobby has its own
 //    WhatsApp / Copy link buttons, so there is no separate share link here.
@@ -12,12 +12,12 @@ import type { TripRoster } from './useTripRoster';
 const MAX_PLAYERS = 15;
 const MIN_PLAYERS = 3;
 
-export default function StowawayHost({ roster }: { roster: TripRoster }) {
+export default function YaaruAvanHost({ roster }: { roster: TripRoster }) {
   const names = roster.names.slice(0, MAX_PLAYERS);
   return (
     <GameCard
       game={(
-        <StowawayGame
+        <YaaruAvanGame
           tripId={roster.trip?.id ?? ''}
           tripSlug={roster.trip?.slug ?? ''}
           tripTitle={roster.trip?.title ?? 'Ulaa'}
@@ -25,8 +25,8 @@ export default function StowawayHost({ roster }: { roster: TripRoster }) {
           row
         />
       )}
-      shareTitle="Yaaru Fake?"
-      footer={<StowawayOnlineSwitch />}
+      shareTitle="Yaaru Avan?"
+      footer={<YaaruAvanOnlineSwitch />}
     />
   );
 }

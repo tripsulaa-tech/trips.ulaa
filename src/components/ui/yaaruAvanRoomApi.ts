@@ -1,17 +1,17 @@
 // Stowaway online: the thin layer between the game screens and Supabase.
-// All rules and secrets live in the database (supabase/migration/add_stowaway_online.sql).
+// All rules and secrets live in the database (supabase/migration/add_yaaru_avan_online.sql).
 // This file only calls those functions, listens for live changes, and remembers
 // which room this device is sitting in. Each phone only ever receives its OWN
 // role and word: other players' words never reach the browser. The room and
-// player tables are private (supabase/migration/fix_stowaway_logic_and_privacy.sql);
-// live changes come from the tiny public `stowaway_signal` table instead.
+// player tables are private (supabase/migration/fix_yaaru_avan_logic_and_privacy.sql);
+// live changes come from the tiny public `yaaru_avan_signal` table instead.
 
 import { supabase } from '../../services/supabase';
 import { SITE_ORIGIN } from '../../constants/site';
-import type { Role } from './stowawayEngine';
-import type { SpecialId } from './stowawaySpecials';
+import type { Role } from './yaaruAvanEngine';
+import type { SpecialId } from './yaaruAvanSpecials';
 
-export type OnlinePhase = 'lobby' | 'deal' | 'describe' | 'vote' | 'offboard' | 'guess' | 'payback' | 'roundEnd' | 'final';
+export type OnlinePhase = 'lobby' | 'deal' | 'describe' | 'vote' | 'tiebreak' | 'offboard' | 'guess' | 'payback' | 'roundEnd' | 'final';
 type OnlineOutcome = 'explorers' | 'stowaways' | 'lost-steal';
 
 interface OnlineRoom {
@@ -30,6 +30,8 @@ interface OnlineRoom {
   /** Description round: who speaks, in order, and whose turn it is (0-based). */
   describe_order: string[];
   describe_pos: number;
+  /** Boomerang bounce: after the votes bounce, only these players can be voted for. */
+  bounce?: string[] | null;
   round_no: number;
   stop_no: number;
   dare: string | null;
@@ -46,9 +48,19 @@ interface OnlineRoom {
     /** The ability the player who left had (a Lucky Dip's drawn one), and whether it came from a Lucky Dip. */
     special?: SpecialId | null;
     dip?: boolean;
-    /** Return Ticket: this player's vote was cancelled; the name is theirs. */
+    /** Boomerang (Return Ticket): the vote against this player bounced; the name is theirs. */
     saved?: string;
     name?: string;
+    /** Names of the players the votes bounced back onto. */
+    bounce_names?: string[];
+    /** Set when this exit is the landing of a Boomerang bounce: the Boomerang's id. */
+    bounce_from?: string | null;
+    /** Tied vote waiting for the Goddess of Justice (Trip Leader): her id and the tied players. */
+    tiebreak?: boolean;
+    leader?: string;
+    tied?: string[];
+    /** Lovers: the partner who left right after them. */
+    lover?: string | null;
     /** Set when this exit came from a Payback by that player. */
     payback_by?: string;
     votes: Array<{ from: string; to: string }>;
@@ -78,7 +90,7 @@ interface OnlinePlayer {
   away: boolean;
   /** Alive, or a Backseat Rider who is out: may vote. */
   voter: boolean;
-  /** Trip Leader or Driver while aboard: everyone may see these. */
+  /** Only used by older rooms: all roles are secret now. */
   public_special: 'tripLeader' | 'driver' | null;
 }
 
@@ -90,7 +102,7 @@ export interface OnlineState {
     special: SpecialId | null;
     /** True when `special` came from a Lucky Dip. */
     dip: boolean;
-    /** Name of my Rival or Buddy. */
+    /** Name of my Duelist or Lover. */
     partner: string | null;
     can_vote: boolean;
   };
@@ -181,42 +193,43 @@ const t = () => deviceToken();
 
 export const online = {
   create: (name: string, tripTitle: string) =>
-    rpc<{ code: string; player_id: string }>('stowaway_create_room', { p_name: name, p_token: t(), p_trip_title: tripTitle }),
+    rpc<{ code: string; player_id: string }>('yaaru_avan_create_room', { p_name: name, p_token: t(), p_trip_title: tripTitle }),
   peek: (code: string) =>
-    rpc<{ exists: boolean; locked?: boolean; phase?: OnlinePhase; trip_title?: string; players?: number }>('stowaway_peek', { p_code: code }),
+    rpc<{ exists: boolean; locked?: boolean; phase?: OnlinePhase; trip_title?: string; players?: number }>('yaaru_avan_peek', { p_code: code }),
   join: (code: string, name: string) =>
-    rpc<{ code: string; player_id: string }>('stowaway_join', { p_code: code, p_name: name, p_token: t() }),
-  state: (code: string) => rpc<OnlineState>('stowaway_state', { p_code: code, p_token: t() }),
-  claimHost: (code: string) => rpc('stowaway_claim_host', { p_code: code, p_token: t() }),
+    rpc<{ code: string; player_id: string }>('yaaru_avan_join', { p_code: code, p_name: name, p_token: t() }),
+  state: (code: string) => rpc<OnlineState>('yaaru_avan_state', { p_code: code, p_token: t() }),
+  claimHost: (code: string) => rpc('yaaru_avan_claim_host', { p_code: code, p_token: t() }),
   setSettings: (code: string, s: { stowaways: number; lost: number; level: string; hideCounts: boolean; dares: boolean; specials: boolean; specialIds: SpecialId[] | null }) =>
-    rpc('stowaway_set_settings', {
+    rpc('yaaru_avan_set_settings', {
       p_code: code, p_token: t(), p_stowaways: s.stowaways, p_lost: s.lost, p_level: s.level,
       p_hide_counts: s.hideCounts, p_dares: s.dares, p_specials: s.specials, p_special_ids: s.specialIds,
     }),
-  setLocked: (code: string, locked: boolean) => rpc('stowaway_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
-  kick: (code: string, player: string) => rpc('stowaway_kick', { p_code: code, p_token: t(), p_player: player }),
-  leave: (code: string) => rpc('stowaway_leave', { p_code: code, p_token: t() }),
+  setLocked: (code: string, locked: boolean) => rpc('yaaru_avan_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
+  kick: (code: string, player: string) => rpc('yaaru_avan_kick', { p_code: code, p_token: t(), p_player: player }),
+  leave: (code: string) => rpc('yaaru_avan_leave', { p_code: code, p_token: t() }),
   startRound: (code: string, dare: string | null, reset = false) =>
-    rpc('stowaway_start_round', { p_code: code, p_token: t(), p_dare: dare, p_reset: reset }),
-  ready: (code: string) => rpc('stowaway_ready', { p_code: code, p_token: t() }),
-  describeDone: (code: string, pos: number) => rpc('stowaway_describe_done', { p_code: code, p_token: t(), p_pos: pos }),
-  beginVote: (code: string) => rpc('stowaway_begin_vote', { p_code: code, p_token: t() }),
-  vote: (code: string, target: string) => rpc('stowaway_cast_vote', { p_code: code, p_token: t(), p_target: target }),
-  resolveNow: (code: string) => rpc('stowaway_resolve_now', { p_code: code, p_token: t() }),
-  afterReveal: (code: string) => rpc('stowaway_after_reveal', { p_code: code, p_token: t() }),
-  submitGuess: (code: string, text: string) => rpc('stowaway_submit_guess', { p_code: code, p_token: t(), p_text: text }),
-  judgeGuess: (code: string, correct: boolean) => rpc('stowaway_judge_guess', { p_code: code, p_token: t(), p_correct: correct }),
-  payback: (code: string, victim: string) => rpc('stowaway_payback', { p_code: code, p_token: t(), p_victim: victim }),
-  endGame: (code: string) => rpc('stowaway_end_game', { p_code: code, p_token: t() }),
-  toLobby: (code: string) => rpc('stowaway_to_lobby', { p_code: code, p_token: t() }),
+    rpc('yaaru_avan_start_round', { p_code: code, p_token: t(), p_dare: dare, p_reset: reset }),
+  ready: (code: string) => rpc('yaaru_avan_ready', { p_code: code, p_token: t() }),
+  describeDone: (code: string, pos: number) => rpc('yaaru_avan_describe_done', { p_code: code, p_token: t(), p_pos: pos }),
+  beginVote: (code: string) => rpc('yaaru_avan_begin_vote', { p_code: code, p_token: t() }),
+  vote: (code: string, target: string) => rpc('yaaru_avan_cast_vote', { p_code: code, p_token: t(), p_target: target }),
+  resolveNow: (code: string) => rpc('yaaru_avan_resolve_now', { p_code: code, p_token: t() }),
+  afterReveal: (code: string) => rpc('yaaru_avan_after_reveal', { p_code: code, p_token: t() }),
+  submitGuess: (code: string, text: string) => rpc('yaaru_avan_submit_guess', { p_code: code, p_token: t(), p_text: text }),
+  judgeGuess: (code: string, correct: boolean) => rpc('yaaru_avan_judge_guess', { p_code: code, p_token: t(), p_correct: correct }),
+  tiebreak: (code: string, pick: string) => rpc('yaaru_avan_tiebreak', { p_code: code, p_token: t(), p_pick: pick }),
+  payback: (code: string, victim: string) => rpc('yaaru_avan_payback', { p_code: code, p_token: t(), p_victim: victim }),
+  endGame: (code: string) => rpc('yaaru_avan_end_game', { p_code: code, p_token: t() }),
+  toLobby: (code: string) => rpc('yaaru_avan_to_lobby', { p_code: code, p_token: t() }),
 };
 
 /** Calls `onChange` whenever the room or its players change. Returns an unsubscribe function.
- *  Every game action moves the room's counter in `stowaway_signal`; that is the only thing listened to. */
+ *  Every game action moves the room's counter in `yaaru_avan_signal`; that is the only thing listened to. */
 export function subscribeRoom(roomId: string, onChange: () => void): () => void {
   const channel = supabase
     .channel(`stowaway:${roomId}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'stowaway_signal', filter: `room_id=eq.${roomId}` }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'yaaru_avan_signal', filter: `room_id=eq.${roomId}` }, onChange)
     .subscribe();
   return () => { void supabase.removeChannel(channel); };
 }

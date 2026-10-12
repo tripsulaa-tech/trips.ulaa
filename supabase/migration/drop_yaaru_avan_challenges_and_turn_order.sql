@@ -1,7 +1,7 @@
 -- Stowaway: drop the `challenges` and `turn_order` columns of stowaway_rooms.
 --
 -- Both are leftovers: challenge cards are gone from the game, and the clue round
--- (the only user of the speaking order) was removed in remove_stowaway_clue_round.sql.
+-- (the only user of the speaking order) was removed in remove_yaaru_avan_clue_round.sql.
 -- Safe to re-run. Rooms only live a few hours, so nothing of value is lost.
 --
 -- What changes besides the two columns:
@@ -48,7 +48,7 @@ begin
          lost = greatest(0, least(coalesce(p_lost, 0), 2)) where room_id = r.id;
 end $$;
 
--- ── A stop goes straight to the vote (as in remove_stowaway_clue_round.sql) ──
+-- ── A stop goes straight to the vote (as in remove_yaaru_avan_clue_round.sql) ──
 create or replace function public._sw_begin_stop(p_room uuid, p_stop int, p_from int)
 returns void language plpgsql security definer set search_path = public as $$
 begin

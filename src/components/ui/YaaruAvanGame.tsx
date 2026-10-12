@@ -6,7 +6,7 @@ import {
   XCircle, MagicWand, Gift, Question, ArrowRight, DeviceMobile, ChatCircleDots,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
-import stowawayCat from '../../assets/stowaway-cat.png';
+import yaaruAvanCat from '../../assets/yaaru-avan-cat.png';
 import { SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
@@ -14,38 +14,40 @@ import { useSynth } from './gameAudio';
 import { hapticsEnabled } from './haptics';
 import { Confetti, GameTile } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, glass, eyebrow, shareCardImage, cleanName } from './gameUi';
-import StowawayOnline from './StowawayOnline';
-import { loadOnlineSession } from './stowawayRoomApi';
-import { LEVELS, CATEGORY_LABEL } from './stowawayWords';
-import type { Level } from './stowawayWords';
+import YaaruAvanOnline from './YaaruAvanOnline';
+import SpecialList from './YaaruAvanSpecialList';
+import { loadOnlineSession } from './yaaruAvanRoomApi';
+import { LEVELS, CATEGORY_LABEL } from './yaaruAvanWords';
+import type { Level } from './yaaruAvanWords';
 import {
   MIN_PLAYERS, MAX_PLAYERS, POINTS, maxLost, countsFor, rolesValid, recommendedRoles, clampRoles, describeOrder,
   dealRound, drawPair, drawDare, checkWinner, roundPoints,
   computeAwards, emptyStats, loadSetup, saveSetup, uniqueNames, shuffle,
-} from './stowawayEngine';
-import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './stowawayEngine';
-import { ENABLED_SPECIALS, PUBLIC_SPECIALS, describeSpecial, activeSpecial, maxSpecials, specialBonus, specialLabel } from './stowawaySpecials';
+} from './yaaruAvanEngine';
+import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './yaaruAvanEngine';
+import { ENABLED_SPECIALS, describeSpecial, activeSpecial, maxSpecials, specialBonus, specialLabel } from './yaaruAvanSpecials';
+import type { SpecialId } from './yaaruAvanSpecials';
 import { useStowawayContentSync } from './useGameContentSync';
 
 // "Stowaway": a group bluffing game for Coming Soon trips. Two ways to play:
 // pass-and-play on one phone (this file), or online with a room code where
-// everyone uses their own phone (StowawayOnline.tsx, backed by Supabase).
+// everyone uses their own phone (YaaruAvanOnline.tsx, backed by Supabase).
 // The rest of this comment describes the pass-and-play mode.
 // Everyone is on the same trip, but a Stowaway sneaked aboard with the wrong
 // plan. Explorers get one word, Stowaways a similar one, and the Lost Soul
 // none at all. Each stop the group talks it out and offboards
 // someone. Front-end only: one phone is passed around, nothing is sent
 // anywhere. Only the word bag, names and settings live in localStorage
-// (see stowawayEngine.ts), sounds are synthesised (gameAudio.ts), and the
+// (see yaaruAvanEngine.ts), sounds are synthesised (gameAudio.ts), and the
 // share button makes a result-card image (packBagScoreCard.ts).
 
 const MUTE_KEY = 'ulaa:packbag:muted'; // shared with the other games: one sound setting
 const REVEAL_MS = 1900;
 
 type Phase =
-  | 'idle' | 'online' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'rider' | 'payback' | 'roundEnd' | 'final';
+  | 'idle' | 'online' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'payback' | 'roundEnd' | 'final';
 
-const ROLE_LABEL: Record<Role, string> = { explorer: 'Traveller', stowaway: 'Pickpocket', lost: 'Stranger' };
+const ROLE_LABEL: Record<Role, string> = { explorer: 'Tourist', stowaway: 'Stranger', lost: 'Pickpocket' };
 const ROLE_TONE: Record<Role, string> = {
   explorer: 'from-emerald-300 to-emerald-500 text-emerald-950',
   stowaway: 'from-[#F0CE7A] to-gold text-dark',
@@ -80,7 +82,7 @@ const rowsFor = (preset: string[] | undefined, saved: string[]): string[] => {
   return rows;
 };
 
-export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', className = '', compact = false, thumb = false, row = false, players: presetPlayers, defaultOpen = false }: StowawayGameProps) {
+export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', className = '', compact = false, thumb = false, row = false, players: presetPlayers, defaultOpen = false }: StowawayGameProps) {
   useStowawayContentSync();
   const reduce = useReducedMotion();
 
@@ -97,6 +99,8 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   const [level, setLevel] = useState<Level>(initial.level);
   const [useDares, setUseDares] = useState(initial.dares);
   const [useSpecials, setUseSpecials] = useState(initial.specials);
+  // Which special roles are ticked in the role list (all of them to start with).
+  const [specialIds, setSpecialIds] = useState<SpecialId[]>([...ENABLED_SPECIALS]);
   const [muted, setMuted] = useState<boolean>(() => {
     try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; }
   });
@@ -116,6 +120,10 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   const [selected, setSelected] = useState<number | null>(null);
   const [voters, setVoters] = useState<number[]>([]);
   const [lastOut, setLastOut] = useState<number | null>(null);
+  // Boomerang: after the votes bounce, only the players who cast them can be voted out.
+  const [bounce, setBounce] = useState<number[] | null>(null);
+  // Vote tied: the Goddess of Justice (if one was dealt) decides, even if she is already out.
+  const [tieOpen, setTieOpen] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [gained, setGained] = useState<Record<string, number>>({});
   const [dare, setDare] = useState<string | null>(null);
@@ -218,7 +226,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
     clearTimers();
     const pair = drawPair(level, { tripTitle: no === 1 ? tripTitle : undefined });
     const r = dealRound(list, countsFor(list.length, stowaways, lost), pair,
-      useSpecials ? { enabled: ENABLED_SPECIALS, count: maxSpecials(list.length) } : undefined);
+      useSpecials && specialIds.length > 0 ? { enabled: specialIds, count: maxSpecials(list.length) } : undefined);
     setRound(r);
     setSeats(r.seats);
     setRoundNo(no);
@@ -227,6 +235,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
     setSelected(null);
     setVoters([]);
     setLastOut(null);
+    setBounce(null);
     setOutcome(null);
     setGained({});
     setDare(null);
@@ -238,6 +247,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   // after the player who just left.
   const startStop = (stop: number, from: number, list: Seat[] = seats) => {
     const order = describeOrder(list, from, stop);
+    setBounce(null);
     setStopNo(stop);
     setSelected(null);
     setVoters([]);
@@ -251,13 +261,14 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   const goVote = () => {
     setSelected(null);
     setVoters([]);
+    setTieOpen(false);
     setPhase('vote');
     play('go');
   };
 
   const describeNext = () => {
     play('flip');
-    if (descPos + 1 >= descOrder.length) { setPhase('vote'); play('go'); return; }
+    if (descPos + 1 >= descOrder.length) { setTieOpen(false); setPhase('vote'); play('go'); return; }
     setDescPos(i => i + 1);
   };
 
@@ -282,16 +293,33 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   const aliveIdx = seats.map((s, i) => (s.alive ? i : -1)).filter(i => i >= 0);
   // A Backseat Rider who is out still votes from the back seat.
   const voterIdx = seats.map((s, i) => (s.alive || (s.outOrder !== undefined && activeSpecial(s) === 'backseatRider') ? i : -1)).filter(i => i >= 0);
-  const publicRoles = aliveIdx.filter(i => { const sp = activeSpecial(seats[i]); return sp !== undefined && PUBLIC_SPECIALS.includes(sp); });
+  // After a Boomerang bounce only the players who voted against it are up for the vote.
+  const candidateIdx = bounce ? aliveIdx.filter(i => bounce.includes(i)) : aliveIdx;
   const toggleVoter = (i: number) => setVoters(v => (v.includes(i) ? v.filter(x => x !== i) : [...v, i]));
+
+  // Takes a player offboard. Lovers go together: their partner leaves right after them.
+  const eliminate = (list: Seat[], idx: number, stop: number): Seat[] => {
+    let n = list.filter(s => s.outOrder !== undefined).length;
+    const next = list.map((s, i) => (i === idx ? { ...s, alive: false, outStop: stop, outOrder: ++n } : s));
+    const me = next[idx];
+    if (activeSpecial(me) === 'lovers' && me.partner) {
+      const pi = next.findIndex(s => s.name === me.partner && s.alive);
+      if (pi >= 0) next[pi] = { ...next[pi], alive: false, outStop: stop, outOrder: ++n };
+    }
+    return next;
+  };
 
   const confirmOffboard = () => {
     if (selected === null) return;
     ensure();
+    setTieOpen(false);
     const out = seats[selected];
-    // Return Ticket: the first vote against them is cancelled and the group votes again.
+    // Boomerang (Return Ticket): the first majority against them is not an elimination.
+    // The votes bounce back onto the players who cast them, who are voted on instead.
     if (activeSpecial(out) === 'returnTicket' && !out.ticketUsed) {
+      const bounced = voters.filter(vi => vi !== selected && seats[vi]?.alive);
       setSeats(seats.map((s, i) => (i === selected ? { ...s, ticketUsed: true } : s)));
+      setBounce(bounced.length > 0 ? bounced : null);
       setLastOut(selected);
       setSelected(null);
       setVoters([]);
@@ -313,8 +341,8 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
       });
       return next;
     });
-    const outSoFar = seats.filter(s => s.outOrder !== undefined).length;
-    const updated = seats.map((s, i) => (i === selected ? { ...s, alive: false, outStop: stopNo, outOrder: outSoFar + 1 } : s));
+    const updated = eliminate(seats, selected, stopNo);
+    setBounce(null);
     setSeats(updated);
     setLastOut(selected);
     setPhase('offboard');
@@ -350,7 +378,6 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   const afterReveal = (list: Seat[], outIdx: number) => {
     const out = list[outIdx];
     if (out.role === 'lost') { setPhase('guess'); return; }
-    if (activeSpecial(out) === 'backseatRider') { setPhase('rider'); return; }
     afterGuess(list, outIdx);
   };
 
@@ -381,28 +408,12 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
     afterGuess(seats, lastOut);
   };
 
-  // Backseat Rider's guess at the other side's word.
-  const judgeRider = (correct: boolean) => {
-    if (lastOut === null) return;
-    ensure();
-    const list = seats.map((s, i) => (i === lastOut ? { ...s, riderHit: correct } : s));
-    setSeats(list);
-    play(correct ? 'good' : 'bad');
-    afterGuess(list, lastOut);
-  };
-
   // Payback: the player who just left takes one more with them.
   const confirmPayback = (victim: number) => {
     if (lastOut === null) return;
     ensure();
-    const payer = seats[lastOut];
-    const outSoFar = seats.filter(s => s.outOrder !== undefined).length;
-    const opposite = (seats[victim].role === 'explorer') !== (payer.role === 'explorer');
-    const updated = seats.map((s, i) => {
-      if (i === lastOut) return { ...s, paybackDone: true, paybackHit: opposite };
-      if (i === victim) return { ...s, alive: false, outStop: stopNo, outOrder: outSoFar + 1 };
-      return s;
-    });
+    const marked = seats.map((s, i) => (i === lastOut ? { ...s, paybackDone: true } : s));
+    const updated = eliminate(marked, victim, stopNo);
     setSeats(updated);
     setLastOut(victim);
     setPhase('offboard');
@@ -431,12 +442,12 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   const cardOpts = useMemo(() => ({
     score: topScore,
     stars: Math.min(3, roundNo),
-    title: champion ? `${shortName(champion, 14)} takes the trip` : 'Yaaru Fake?',
+    title: champion ? `${shortName(champion, 14)} takes the trip` : 'Yaaru Avan?',
     tripTitle,
     host: SITE_HOST,
     best: topScore,
     isNewBest: false,
-    eyebrow: 'YAARU FAKE?  ·  GROUP GAME',
+    eyebrow: 'YAARU AVAN?  ·  GROUP GAME',
     unit: 'TOP SCORE',
     ringMax: Math.max(12, roundNo * 4),
     playerName: champion,
@@ -461,7 +472,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   }, [phase, cardOpts]);
 
   const shareUrl = tripSlug ? `${SITE_ORIGIN}/trips/${tripSlug}` : `${SITE_ORIGIN}/games`;
-  const shareText = `${champion ?? 'We'} won our game of Yaaru Fake? on Ulaa after ${roundNo} round${roundNo === 1 ? '' : 's'}! Play with your travel gang: ${shareUrl}`;
+  const shareText = `${champion ?? 'We'} won our game of Yaaru Avan? on Ulaa after ${roundNo} round${roundNo === 1 ? '' : 's'}! Play with your travel gang: ${shareUrl}`;
   const share = async () => {
     if (sharing) return;
     setSharing(true);
@@ -469,8 +480,8 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
     if (!blob) { try { blob = await buildScoreCard(cardOpts); } catch { blob = null; } }
     setSharing(false);
     await shareCardImage(blob, {
-      filename: 'ulaa-yaaru-fake.png',
-      title: 'Yaaru Fake?',
+      filename: 'ulaa-yaaru-avan.png',
+      title: 'Yaaru Avan?',
       text: shareText,
       fallbackLink: getWhatsAppLink('', shareText),
     });
@@ -479,11 +490,15 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   // ── Derived for rendering ──
   const passSeat = seats[passIdx];
   const out = lastOut !== null ? seats[lastOut] : null;
+  // Lovers: the partner who left right after them.
+  const lover = out && activeSpecial(out) === 'lovers' && out.partner
+    ? seats.find(s => s.name === out.partner && s.outStop === out.outStop && (s.outOrder ?? 0) === (out.outOrder ?? 0) + 1)
+    : undefined;
   const stepBtn = 'w-9 h-9 rounded-full bg-white/10 border border-white/15 text-cream flex items-center justify-center hover:bg-white/15 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition';
 
   const countLine = hideCounts
     ? `${seats.length} players. Roles are secret.`
-    : `${counts.explorers} Travellers, ${counts.stowaways} Pickpocket${counts.stowaways === 1 ? '' : 's'}${counts.lost ? `, ${counts.lost} Stranger${counts.lost === 1 ? '' : 's'}` : ''}`;
+    : `${counts.explorers} Tourists, ${counts.stowaways} Stranger${counts.stowaways === 1 ? '' : 's'}${counts.lost ? `, ${counts.lost} Pickpocket${counts.lost === 1 ? '' : 's'}` : ''}`;
 
   return (
     <div className={className}>
@@ -492,14 +507,14 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
         compact={compact}
         thumb={thumb}
         row={row}
-        iconSrc={stowawayCat}
+        iconSrc={yaaruAvanCat}
         accent="gold"
-        title="Yaaru Fake?"
+        title="Yaaru Avan?"
         subtitle="Who sneaked aboard?"
         chip="New · Group game"
       />
 
-      <Modal isOpen={open} onClose={close} ariaLabel="Yaaru Fake? group game" size="sm" flush fullScreen>
+      <Modal isOpen={open} onClose={close} ariaLabel="Yaaru Avan? group game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -515,10 +530,10 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 aria-hidden="true"
               >
-                <img src={stowawayCat} alt="" className="w-12 h-12 object-contain" draggable={false} />
+                <img src={yaaruAvanCat} alt="" className="w-12 h-12 object-contain" draggable={false} />
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {MAX_PLAYERS} players</span>
-              <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white leading-tight">Yaaru Fake?</h2>
+              <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white leading-tight">Yaaru Avan?</h2>
               <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Play on one phone, or online with a room code. Someone is faking it. Can you spot them?</p>
               </div>
               <div className="min-w-0">
@@ -528,7 +543,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                   { I: Ticket, c: 'bg-primary/25 text-[#F4B183]', t: <>Each traveller holds to see a <strong className="text-white">secret boarding pass</strong>.</> },
                   { I: ChatCircleDots, c: 'bg-gold/20 text-[#F0CE7A]', t: <>Take turns saying <strong className="text-white">one word or a short phrase</strong> about your word.</> },
                   { I: Eye, c: 'bg-secondary/25 text-[#F4B183]', t: <>Talk it out and work out <strong className="text-white">who is bluffing</strong>.</> },
-                  { I: Airplane, c: 'bg-primary/25 text-[#F4B183]', t: <>Vote someone <strong className="text-white">offboard</strong>. Find every Pickpocket and Stranger to win.</> },
+                  { I: Airplane, c: 'bg-primary/25 text-[#F4B183]', t: <>Vote someone <strong className="text-white">offboard</strong>. Find every Stranger and Pickpocket to win.</> },
                 ].map((r, i) => (
                   <li key={i} className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
                     <span className={`w-7 h-7 shrink-0 rounded-lg flex items-center justify-center ${r.c}`}><r.I size={16} weight="duotone" /></span>
@@ -552,7 +567,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
 
           {/* ── Online: every player on their own phone ── */}
           {phase === 'online' && (
-            <StowawayOnline tripTitle={tripTitle} onExit={() => { setSavedRoom(loadOnlineSession()?.code ?? null); setPhase('idle'); }} />
+            <YaaruAvanOnline tripTitle={tripTitle} onExit={() => { setSavedRoom(loadOnlineSession()?.code ?? null); setPhase('idle'); }} />
           )}
 
           {/* ── Setup ── */}
@@ -600,7 +615,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-emerald-400/20 text-emerald-300 flex items-center justify-center"><Eye size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Travellers</p>
+                    <p className="text-sm font-bold text-white leading-tight">Tourists</p>
                     <p className="text-[11px] text-cream/50">Same word. Always the majority.</p>
                   </div>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-8 text-center">{playerCount >= MIN_PLAYERS ? counts.explorers : '-'}</span>
@@ -608,22 +623,22 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-gold/20 text-[#F0CE7A] flex items-center justify-center"><Ticket size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Pickpockets</p>
+                    <p className="text-sm font-bold text-white leading-tight">Strangers</p>
                     <p className="text-[11px] text-cream/50">A similar but different word.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={playerCount < MIN_PLAYERS || stowaways <= (lost > 0 ? 0 : 1)} onClick={() => setStowaways(s => s - 1)}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={playerCount < MIN_PLAYERS || stowaways <= (lost > 0 ? 0 : 1)} onClick={() => setStowaways(s => s - 1)}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{stowaways}</span>
-                  <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={playerCount < MIN_PLAYERS || !rolesValid(playerCount, stowaways + 1, lost)} onClick={() => setStowaways(s => s + 1)}><Plus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="More Strangers" disabled={playerCount < MIN_PLAYERS || !rolesValid(playerCount, stowaways + 1, lost)} onClick={() => setStowaways(s => s + 1)}><Plus size={14} weight="bold" /></button>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-rose-400/20 text-rose-300 flex items-center justify-center"><Question size={16} weight="duotone" /></span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white leading-tight">Stranger</p>
+                    <p className="text-sm font-bold text-white leading-tight">Pickpocket</p>
                     <p className="text-[11px] text-cream/50">No word at all. Blends in.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={playerCount < MIN_PLAYERS || lost <= (stowaways > 0 ? 0 : 1)} onClick={() => setLost(l => l - 1)}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={playerCount < MIN_PLAYERS || lost <= (stowaways > 0 ? 0 : 1)} onClick={() => setLost(l => l - 1)}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{lost}</span>
-                  <button type="button" className={stepBtn} aria-label="More Strangers" disabled={playerCount < MIN_PLAYERS || lost >= maxLost(playerCount) || !rolesValid(playerCount, stowaways, lost + 1)} onClick={() => setLost(l => l + 1)}><Plus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={playerCount < MIN_PLAYERS || lost >= maxLost(playerCount) || !rolesValid(playerCount, stowaways, lost + 1)} onClick={() => setLost(l => l + 1)}><Plus size={14} weight="bold" /></button>
                 </div>
               </div>
               {playerCount < MIN_PLAYERS && <p className="text-xs text-[#F0CE7A] mb-2">Add at least {MIN_PLAYERS} travellers to pick roles.</p>}
@@ -646,9 +661,9 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
 
               <div className={`${glass} divide-y divide-white/10 mb-4`}>
                 {[
-                  { k: 'hide', on: hideCounts, set: setHideCounts, t: 'Hide the counts', d: 'Nobody knows if a Stranger exists. Much more tense.' },
+                  { k: 'hide', on: hideCounts, set: setHideCounts, t: 'Hide the counts', d: 'Nobody knows if a Pickpocket exists. Much more tense.' },
                   { k: 'dare', on: useDares, set: setUseDares, t: 'Trip dares', d: 'The losing side draws a silly dare.' },
-                  { k: 'special', on: useSpecials, set: setUseSpecials, t: 'Special roles', d: 'Clown, Rivals, Payback, Return Ticket and more. Up to one per 3 players.' },
+                  { k: 'special', on: useSpecials, set: setUseSpecials, t: 'Special roles', d: 'The Joy Fool, Boomerang, Revenger, Lovers and more. Up to one per 3 players.' },
                 ].map(o => (
                   <button key={o.k} type="button" role="switch" aria-checked={o.on} onClick={() => o.set(!o.on)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left">
                     <span className="flex-1 min-w-0">
@@ -661,6 +676,13 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                   </button>
                 ))}
               </div>
+
+              {useSpecials && (
+                <SpecialList
+                  on={new Set(specialIds)}
+                  onToggle={id => setSpecialIds(ids => ENABLED_SPECIALS.filter(x => (x === id ? !ids.includes(x) : ids.includes(x))))}
+                />
+              )}
 
               <button type="button" onClick={startSession} disabled={!valid} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
                 <Play size={18} weight="fill" /> Deal boarding passes
@@ -720,7 +742,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                           {passSeat.special && describeSpecial(passSeat) && (
                             <div className="mt-3 pt-3 border-t border-dark/15">
                               <p className="text-[10px] font-bold uppercase tracking-widest text-dark/50">Special role</p>
-                              <p className="font-display text-lg font-extrabold text-primary-dark leading-tight">{specialLabel(passSeat)}</p>
+                              <p className="font-display text-lg font-extrabold text-primary-dark leading-tight">{specialLabel(passSeat)}{passSeat.partner ? ` · with ${passSeat.partner}` : ''}</p>
                               <p className="text-xs font-semibold text-dark/70 leading-snug mt-0.5">{describeSpecial(passSeat)}</p>
                             </div>
                           )}
@@ -783,11 +805,6 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                   </li>
                 ))}
               </ol>
-              {publicRoles.length > 0 && publicRoles.map(i => (
-                <p key={i} className="text-xs text-[#F0CE7A] leading-snug mt-2">
-                  {activeSpecial(seats[i]) === 'tripLeader' ? `Trip Leader ${seats[i].name} breaks any tie.` : `Driver ${seats[i].name} starts every description round.`}
-                </p>
-              ))}
               <button type="button" onClick={describeNext} className={`${primaryBtn} mt-5`}>
                 {descPos + 1 >= descOrder.length ? 'Done. Start the discussion' : 'Done. Next speaker'} <ArrowRight size={16} weight="bold" />
               </button>
@@ -802,14 +819,10 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                 <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Who goes offboard?</h2>
                 <p className="text-xs text-cream/60">Discuss who is bluffing, then tap the person the group picked.</p>
                 <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
-                {publicRoles.map(i => (
-                  <p key={i} className="text-xs text-[#F0CE7A] leading-snug mt-1">
-                    {activeSpecial(seats[i]) === 'tripLeader' ? `Trip Leader ${seats[i].name} breaks any tie.` : `Driver ${seats[i].name} starts every description round.`}
-                  </p>
-                ))}
               </div>
+              {bounce && <p className="text-xs font-bold text-[#F0CE7A] leading-snug mb-3">The votes bounced back. Only the players who voted against the Boomerang can be voted out.</p>}
               <div className="grid grid-cols-2 gap-2 mb-4">
-                {aliveIdx.map(i => (
+                {candidateIdx.map(i => (
                   <button
                     key={i}
                     type="button"
@@ -834,6 +847,25 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {useSpecials && specialIds.includes('tripLeader') && (
+                <div className="mb-4">
+                  <button type="button" onClick={() => setTieOpen(o => !o)} aria-expanded={tieOpen}
+                    className="text-xs font-bold text-[#F0CE7A] underline underline-offset-2">
+                    {tieOpen ? 'Hide tie-break' : 'Vote tied?'}
+                  </button>
+                  {tieOpen && (() => {
+                    const goddess = seats.find(s => activeSpecial(s) === 'tripLeader');
+                    return (
+                      <p className="text-xs text-cream/80 leading-snug mt-1.5 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2">
+                        {goddess
+                          ? `${goddess.name} is the Goddess of Justice${goddess.alive ? '' : ' (already out, but she still decides)'}. She picks who goes offboard from the tied players. Tap that person above.`
+                          : 'Nobody is the Goddess of Justice this round, so the group decides the tie. Tap the person above.'}
+                      </p>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -866,8 +898,9 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
               >
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Was a</p>
                 <p className="font-display text-3xl font-extrabold leading-tight">{ROLE_LABEL[out.role]}</p>
-                {out.special && describeSpecial(out) && <p className="text-xs font-bold mt-1 opacity-80">and the {specialLabel(out)}</p>}
+                {out.special && describeSpecial(out) && <p className="text-xs font-bold mt-1 opacity-80">and {specialLabel(out)}</p>}
               </motion.div>
+              {lover && <p className="text-sm font-bold text-[#F0CE7A] mt-4">{lover.name} was in love with {out.name} and leaves too.</p>}
             </div>
           )}
 
@@ -884,8 +917,8 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                 <Question size={46} weight="bold" />
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">Last chance</span>
-              <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{out.name} was the Stranger</h2>
-              <p className="text-sm text-cream/65 mt-2 mb-5 px-4">{out.name}, say your guess for the Travellers' word out loud. The group decides if it is right.</p>
+              <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{out.name} was the Pickpocket</h2>
+              <p className="text-sm text-cream/65 mt-2 mb-5 px-4">{out.name}, say your guess for the Tourists' word out loud. The group decides if it is right.</p>
               <p className="text-xs text-cream/45 mb-5 px-4">Close enough counts. Spelling does not matter.</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => judgeGuess(false)} className={`${ghostBtn} !py-4`}><XCircle size={20} weight="fill" className="text-rose-300" /> Wrong</button>
@@ -897,7 +930,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
           {/* ── Return Ticket: the vote is cancelled ── */}
           {phase === 'saved' && out && (
             <div className="relative text-center pt-10 min-h-[18rem]">
-              <p className={eyebrow}>Return Ticket</p>
+              <p className={eyebrow}>The Boomerang</p>
               <motion.div
                 initial={reduce ? false : { scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
@@ -908,23 +941,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                 <Ticket size={52} weight="duotone" />
               </motion.div>
               <p className="font-display text-3xl font-extrabold text-white leading-tight">{out.name} stays aboard!</p>
-              <p className="text-sm text-cream/60 mt-2 px-6">Their Return Ticket cancels this vote. The group votes again.</p>
-            </div>
-          )}
-
-          {/* ── Backseat Rider's guess ── */}
-          {phase === 'rider' && out && (
-            <div className="relative text-center pt-6">
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Backseat Rider</span>
-              <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{out.name}, take a guess</h2>
-              <p className="text-sm text-cream/65 mt-2 mb-5 px-4">
-                Say your guess for the {out.role === 'explorer' ? "Pickpockets'" : "Travellers'"} word out loud. The group decides if it is right.
-              </p>
-              <p className="text-xs text-cream/45 mb-5 px-4">Close enough counts. You keep voting from the back seat either way.</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => judgeRider(false)} className={`${ghostBtn} !py-4`}><XCircle size={20} weight="fill" className="text-rose-300" /> Wrong</button>
-                <button type="button" onClick={() => judgeRider(true)} className={`${primaryBtn} !py-4`}><CheckCircle size={20} weight="fill" /> Correct</button>
-              </div>
+              <p className="text-sm text-cream/60 mt-2 px-6">The Boomerang bounces the votes back onto the players who cast them. Vote again among them.</p>
             </div>
           )}
 
@@ -932,7 +949,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
           {phase === 'payback' && out && (
             <div className="relative">
               <div className="pr-12 mb-3">
-                <p className={eyebrow}>Payback</p>
+                <p className={eyebrow}>The Revenger</p>
                 <h2 className="font-display text-2xl font-extrabold text-white leading-tight">{out.name} takes someone with them</h2>
                 <p className="text-xs text-cream/60">{out.name}, pick one player to go offboard too.</p>
               </div>
@@ -955,23 +972,23 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
               {!reduce && outcome === 'explorers' && <Confetti />}
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Round {roundNo} over</span>
               <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
-                {outcome === 'explorers' ? 'Travellers win!' : outcome === 'stowaways' ? 'The Pickpockets got away!' : 'The Stranger stole it!'}
+                {outcome === 'explorers' ? 'Tourists win!' : outcome === 'stowaways' ? 'The Strangers got away!' : 'The Pickpocket stole it!'}
               </h2>
               <p className="text-sm text-cream/60 mt-1 mb-3">
-                {outcome === 'explorers' ? 'Every Pickpocket and Stranger was caught.' : outcome === 'stowaways' ? 'Only one Traveller was left.' : 'One lucky guess flipped the whole round.'}
+                {outcome === 'explorers' ? 'Every Stranger and Pickpocket was caught.' : outcome === 'stowaways' ? 'Only one Tourist was left.' : 'One lucky guess flipped the whole round.'}
               </p>
 
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className={`${glass} py-2.5`}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Travellers had</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Tourists had</p>
                   <p className="font-display text-lg font-extrabold text-white leading-tight px-2">{round.explorerWord}</p>
                 </div>
                 <div className={`${glass} py-2.5`}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Pickpockets had</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Strangers had</p>
                   <p className="font-display text-lg font-extrabold text-[#F0CE7A] leading-tight px-2">{round.stowawayWord}</p>
                 </div>
               </div>
-              <p className="text-[11px] text-cream/40 mb-3">{CATEGORY_LABEL[round.pair.category]} · {seats.filter(s => s.role === 'lost').length > 0 ? `${seats.filter(s => s.role === 'lost').map(s => s.name).join(' & ')} ${seats.filter(s => s.role === 'lost').length > 1 ? 'were' : 'was'} the Stranger` : 'No Stranger this round'}</p>
+              <p className="text-[11px] text-cream/40 mb-3">{CATEGORY_LABEL[round.pair.category]} · {seats.filter(s => s.role === 'lost').length > 0 ? `${seats.filter(s => s.role === 'lost').map(s => s.name).join(' & ')} ${seats.filter(s => s.role === 'lost').length > 1 ? 'were' : 'was'} the Pickpocket` : 'No Pickpocket this round'}</p>
 
               <ul className={`${glass} text-left divide-y divide-white/10 mb-3`}>
                 {[...seats].sort((x, y) => (gained[y.name] ?? 0) - (gained[x.name] ?? 0)).map(s => (
@@ -988,12 +1005,12 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
 
               {dare && (
                 <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-3 text-left">
-                  <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Gift size={11} weight="fill" /> Trip dare for the {outcome === 'explorers' ? 'Pickpockets' : 'Travellers'}</p>
+                  <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Gift size={11} weight="fill" /> Trip dare for the {outcome === 'explorers' ? 'Strangers' : 'Tourists'}</p>
                   <p className="text-sm font-bold text-white mt-0.5">{dare}</p>
                 </div>
               )}
 
-              <p className="text-[11px] text-cream/45 mb-3">Points: Travellers +{POINTS.explorerWin}, a winning Pickpocket +{POINTS.stowawaySurvive}, a winning Stranger +{POINTS.lostSurvive} (lasting to the end or guessing the Travellers' word).{seats.some(s => s.special) ? ' Special-role bonuses are added on top.' : ''}</p>
+              <p className="text-[11px] text-cream/45 mb-3">Points: Tourists +{POINTS.explorerWin}, a winning Stranger +{POINTS.stowawaySurvive}, a winning Pickpocket +{POINTS.lostSurvive} (lasting to the end or guessing the Tourists' word).{seats.some(s => s.special) ? ' Special-role bonuses are added on top.' : ''}</p>
 
               <button type="button" onClick={nextRound} className={`${primaryBtn} mb-2.5`}><Play size={18} weight="fill" /> Play next round</button>
               <button type="button" onClick={endSession} className={ghostBtn}><Trophy size={16} weight="fill" /> End game and see awards</button>

@@ -1,8 +1,8 @@
 -- Yaaru Fake? special roles for ONLINE rooms (the one-phone game already has them).
 -- Run once in the Supabase SQL editor, AFTER every other stowaway migration
--- (add_stowaway_online, add_stowaway_share_links, upgrade_stowaway_max_15,
--- fix_stowaway_logic_and_privacy, remove_stowaway_clue_round,
--- drop_stowaway_clue_and_challenge_leftovers, rename_stowaway_begin_clues_to_begin_vote).
+-- (add_yaaru_avan_online, add_yaaru_avan_share_links, upgrade_yaaru_avan_max_15,
+-- fix_yaaru_avan_logic_and_privacy, remove_yaaru_avan_clue_round,
+-- drop_yaaru_avan_clue_and_challenge_leftovers, rename_yaaru_avan_begin_clues_to_begin_vote).
 -- Re-running it is safe. Deploy this BEFORE the new app build: the new build
 -- calls stowaway_set_settings with an extra argument and stowaway_payback.
 --

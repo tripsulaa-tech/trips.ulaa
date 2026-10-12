@@ -1,5 +1,5 @@
 -- ─────────────────────────────────────────────────────────────────────────────
--- add_stowaway_online_switch.sql
+-- add_yaaru_avan_online_switch.sql
 --
 -- One on/off switch (Admin -> Games -> Yaaru Fake?) for Stowaway online.
 --   * OFF (the default): only a signed-in admin can create a room. Players can
@@ -7,7 +7,7 @@
 --   * ON: anyone with the link can create or join a room.
 -- Joining a room with its 4-letter code is unchanged.
 --
--- Run once in the Supabase SQL editor (after add_stowaway_online.sql and
+-- Run once in the Supabase SQL editor (after add_yaaru_avan_online.sql and
 -- add_admin_allowlist_and_hardening.sql). Safe to run again. It also removes
 -- the earlier "host code" / "trip window" experiments if they were run.
 -- ─────────────────────────────────────────────────────────────────────────────

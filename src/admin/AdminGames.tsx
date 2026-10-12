@@ -4,7 +4,7 @@ import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { Plus, Trash as Trash2, PencilSimple as Edit2, MagnifyingGlass as Search, ArrowCounterClockwise, ClipboardText, Info, CaretDown, X, Sparkle, Boat, FilmSlate, UsersThree } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import TruthOrDareHost from './games/TruthOrDareHost';
-import StowawayHost from './games/StowawayHost';
+import YaaruAvanHost from './games/YaaruAvanHost';
 import LinkGameHost from './games/LinkGameHost';
 import TwinRoomHost from './games/TwinRoomHost';
 import TripRosterPanel from './games/TripRoster';
@@ -29,7 +29,7 @@ import {
 import {
   CATEGORY_LABEL, LEVELS, STOWAWAY_CATEGORIES, STOWAWAY_DEFAULTS, STOWAWAY_LEVELS, sanitizeStowawayContent,
   type StowawayContent,
-} from '../components/ui/stowawayWords';
+} from '../components/ui/yaaruAvanWords';
 import {
   TWIN_DEFAULT_WEIGHT, TWIN_ICONS, TWIN_ICON_KEYS, TWIN_MAX_LABEL, TWIN_MAX_QUESTIONS, TWIN_MAX_ROUNDS, TWIN_MAX_WEIGHT,
   TWIN_MIN_QUESTIONS, TWIN_MIN_WEIGHT, TWIN_PROMPTS_DEFAULTS, sanitizeTwinPrompts,
@@ -668,8 +668,8 @@ function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
   return (
     <div className="space-y-4">
       <Card>
-        <Hint>Travellers get one word of a pair and the Pickpocket gets the other. Easy pairs are quite different, Hard pairs are nearly identical. Dares are for the losing side.</Hint>
-        <Segmented<StowView> label="Yaaru Fake? content" value={view} onChange={setView} options={[
+        <Hint>Tourists get one word of a pair and the Stranger gets the other. Easy pairs are quite different, Hard pairs are nearly identical. Dares are for the losing side.</Hint>
+        <Segmented<StowView> label="Yaaru Avan? content" value={view} onChange={setView} options={[
           { id: 'pairs', label: 'Word pairs', count: draft.pairs.length },
           { id: 'dares', label: 'Dares', count: draft.dares.length },
         ]} />
@@ -1008,7 +1008,7 @@ const TABS: { id: GameTab; label: string }[] = [
 type EditGame = 'tod' | 'stowaway' | 'charades' | 'twin';
 const EDIT_GAMES: { id: EditGame; label: string; blurb: string; Icon: PhosphorIcon }[] = [
   { id: 'tod', label: 'Truth or Dare', blurb: 'Truths, dares, twists', Icon: Sparkle },
-  { id: 'stowaway', label: 'Yaaru Fake?', blurb: 'Word pairs, dares', Icon: Boat },
+  { id: 'stowaway', label: 'Yaaru Avan?', blurb: 'Word pairs, dares', Icon: Boat },
   { id: 'charades', label: 'Dumb Charades', blurb: 'Tamil film list', Icon: FilmSlate },
   { id: 'twin', label: 'Find My Twin', blurb: 'Questions and rounds', Icon: UsersThree },
 ];
@@ -1112,7 +1112,7 @@ export default function AdminGames() {
                 </div>
                 <div className="grid gap-3 2xl:grid-cols-2">
                   <TruthOrDareHost roster={roster} />
-                  <StowawayHost roster={roster} />
+                  <YaaruAvanHost roster={roster} />
                   <LinkGameHost
                     game={<DumbCharadesGame row />}
                     path="/play/dumb-charades"
