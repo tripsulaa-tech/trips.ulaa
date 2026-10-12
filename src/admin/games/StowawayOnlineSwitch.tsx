@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../../components/ui/useToast';
-import { getStowawayOnlineOpen, setStowawayOnlineOpen } from '../../services/api/stowawayShare';
+import { getStowawayOnlineOpen, setStowawayOnlineOpen } from '../../services/api/stowawayOnlineSwitch';
 import { smallBtn, primaryBtn } from './GameCard';
 
 // Admin -> Games -> Yaaru Fake?: one switch for online play. Closed (the

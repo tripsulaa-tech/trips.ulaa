@@ -63,7 +63,7 @@ interface StowawayGameProps {
   row?: boolean;
   /** Names to pre-fill the setup screen with (e.g. the travellers present on a trip). */
   players?: string[];
-  /** Open straight on the pass-and-play setup screen (used by the shared /play/stowaway/game link). */
+  /** Open straight on the pass-and-play setup screen (used by the admin tile). */
   defaultOpen?: boolean;
 }
 

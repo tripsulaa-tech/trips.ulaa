@@ -1,29 +1,32 @@
 import StowawayGame from '../../components/ui/StowawayGame';
-import { createStowawayShare, updateStowawayShare } from '../../services/api/stowawayShare';
-import RosterGameCard from './RosterGameCard';
+import GameCard from './GameCard';
 import StowawayOnlineSwitch from './StowawayOnlineSwitch';
 import type { TripRoster } from './useTripRoster';
 
-// Admin -> Games -> Play: Stowaway for the ticked travellers (3 to 15 players;
-// pass and play on this phone, or a short share link: /play/stowaway/game/:code).
-// The game's own "Play online with friends" option is still on its tile; below
-// it, one switch opens or closes online play for players (admins can always host).
+// Admin -> Games -> Play: Yaaru Fake?. The tile starts either game:
+//  - "Play online with friends": a room with a 4-letter code. Friends open the room's
+//    own link (/play/stowaway/:code), type their name and join. The lobby has its own
+//    WhatsApp / Copy link buttons, so there is no separate share link here.
+//  - "Play on this phone": pass and play, dealt the ticked travellers (3 to 15).
+// Below the tile, one switch opens or closes online play for players (admins can always host).
+const MAX_PLAYERS = 15;
+const MIN_PLAYERS = 3;
+
 export default function StowawayHost({ roster }: { roster: TripRoster }) {
+  const names = roster.names.slice(0, MAX_PLAYERS);
   return (
-    <RosterGameCard
-      roster={roster}
-      id="stowaway"
-      title="Yaaru Fake?"
-      path="/play/stowaway/game"
-      minPlayers={3}
-      maxPlayers={15}
-      renderGame={names => (
-        <StowawayGame tripId={roster.trip?.id ?? ''} tripSlug={roster.trip?.slug ?? ''} tripTitle={roster.trip?.title ?? 'Ulaa'} players={names} row />
+    <GameCard
+      game={(
+        <StowawayGame
+          tripId={roster.trip?.id ?? ''}
+          tripSlug={roster.trip?.slug ?? ''}
+          tripTitle={roster.trip?.title ?? 'Ulaa'}
+          players={names.length >= MIN_PLAYERS ? names : undefined}
+          row
+        />
       )}
-      create={createStowawayShare}
-      update={updateStowawayShare}
-      migrationFile="add_stowaway_share_links.sql"
-      extra={<StowawayOnlineSwitch />}
+      shareTitle="Yaaru Fake?"
+      footer={<StowawayOnlineSwitch />}
     />
   );
 }
