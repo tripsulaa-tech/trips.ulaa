@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkWinner, countsFor, dealRound, recommendedRoles, roundPoints, rolesValid, uniqueNames } from './stowawayEngine';
+import { POINTS, checkWinner, clampRoles, countsFor, dealRound, describeOrder, recommendedRoles, roundPoints, rolesValid, uniqueNames } from './stowawayEngine';
 import type { Seat } from './stowawayEngine';
 import { BACKSEAT_POINTS, BUDDY_POINTS, PAYBACK_POINTS, CLOWN_EARLY_STOPS, CLOWN_POINTS, ENABLED_SPECIALS, RIVAL_POINTS, SLEEPY_POINTS, SPECIALS, activeSpecial, assignSpecials, describeSpecial, maxSpecials, specialBonus } from './stowawaySpecials';
 import type { BonusSeat } from './stowawaySpecials';
@@ -30,6 +30,13 @@ describe('core roles', () => {
     expect(rolesValid(16, 2, 0)).toBe(false);
   });
 
+  it('needs at least one Pickpocket or one Stranger, like Undercover', () => {
+    expect(rolesValid(5, 0, 1)).toBe(true);   // Stranger only
+    expect(rolesValid(5, 0, 0)).toBe(false);  // nobody faking it
+    expect(clampRoles(5, 0, 0)).toEqual({ stowaways: 1, lost: 0 });
+    expect(clampRoles(5, 0, 1)).toEqual({ stowaways: 0, lost: 1 });
+  });
+
   it('recommends a valid split for every size', () => {
     for (let n = 3; n <= 15; n++) {
       const r = recommendedRoles(n);
@@ -49,10 +56,37 @@ describe('core roles', () => {
     const seat = (name: string, role: Seat['role'], alive = true): Seat => ({ name, role, word: null, seat: '1A', alive });
     const seats = [seat('a', 'explorer'), seat('b', 'explorer'), seat('c', 'stowaway'), seat('d', 'lost', false)];
     expect(checkWinner(seats)).toBeNull();
+    // Undercover: the sneaky side wins when only one Traveller is left, not at parity.
+    expect(checkWinner([seat('a', 'explorer'), seat('b', 'explorer'), seat('c', 'stowaway'), seat('d', 'stowaway')])).toBeNull();
+    expect(checkWinner([seat('a', 'explorer'), seat('c', 'stowaway'), seat('d', 'stowaway')])).toBe('sneaky');
     expect(checkWinner([seat('a', 'explorer'), seat('c', 'stowaway')])).toBe('sneaky');
     expect(checkWinner([seat('a', 'explorer'), seat('c', 'stowaway', false)])).toBe('explorers');
     expect(roundPoints(seats, 'explorers')).toEqual({ a: 2, b: 2, c: 0, d: 0 });
-    expect(roundPoints(seats, 'stowaways')).toEqual({ a: 0, b: 0, c: 3, d: 0 });
+    expect(roundPoints(seats, 'stowaways')).toEqual({ a: 0, b: 0, c: POINTS.stowawaySurvive, d: 0 });
+  });
+
+  it('scores like Undercover: Travellers 2, Pickpocket 10, Stranger 6', () => {
+    const seat = (name: string, role: Seat['role'], alive = true): Seat => ({ name, role, word: null, seat: '1A', alive });
+    const seats = [seat('a', 'explorer'), seat('b', 'stowaway'), seat('c', 'lost'), seat('d', 'lost', false)];
+    expect(roundPoints(seats, 'stowaways')).toEqual({ a: 0, b: 10, c: 6, d: 0 });
+    expect(roundPoints(seats, 'lost-steal')).toEqual({ a: 0, b: 0, c: 6, d: 0 });
+    expect(roundPoints(seats, 'explorers')).toEqual({ a: 2, b: 0, c: 0, d: 0 });
+  });
+
+  it('describe order goes round the table from the starter, aboard players only', () => {
+    const seat = (name: string, alive = true, extra: Partial<Seat> = {}): Seat => ({ name, role: 'explorer', word: null, seat: '1A', alive, ...extra });
+    const seats = [seat('a'), seat('b', false), seat('c'), seat('d'), seat('e')];
+    expect(describeOrder(seats, 2, 1)).toEqual([2, 3, 4, 0]);
+    expect(describeOrder(seats, 4, 2)).toEqual([4, 0, 2, 3]);
+    expect(describeOrder(seats, 1, 2)).toEqual([2, 3, 4, 0]);          // a gone seat is skipped
+    expect(describeOrder(seats, 7, 2)).toEqual([2, 3, 4, 0]);          // wraps past the end
+  });
+
+  it('a Driver starts the description round; a Sleepyhead sits out Stop 1 only', () => {
+    const seat = (name: string, extra: Partial<Seat> = {}): Seat => ({ name, role: 'explorer', word: null, seat: '1A', alive: true, ...extra });
+    const seats = [seat('a'), seat('b', { special: 'driver' }), seat('c', { special: 'sleepyhead' }), seat('d')];
+    expect(describeOrder(seats, 0, 1)).toEqual([1, 3, 0]);
+    expect(describeOrder(seats, 0, 2)).toEqual([1, 2, 3, 0]);
   });
 
   it('numbers duplicate names', () => {

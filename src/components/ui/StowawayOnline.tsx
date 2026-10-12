@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Play, ArrowRight, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
   Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle, XCircle, MagicWand,
-  Gift, Question, Copy, LockSimple, LockSimpleOpen, WifiSlash, DeviceMobile, Hash, UsersThree,
+  Gift, Question, Copy, LockSimple, LockSimpleOpen, WifiSlash, DeviceMobile, Hash, UsersThree, ChatCircleDots,
 } from '@phosphor-icons/react';
 import { SITE_HOST } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
@@ -26,6 +26,7 @@ import {
   online, OnlineError, joinLink, normalizeCode, loadOnlineSession, saveOnlineSession, clearOnlineSession,
 } from './stowawayRoomApi';
 import type { OnlinePhase } from './stowawayRoomApi';
+import { describeSpecial, specialDisplayName } from './stowawaySpecials';
 import { useOnlineRoom } from './useOnlineRoom';
 import { useStowawayContentSync } from './useGameContentSync';
 
@@ -178,8 +179,9 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
 
 // ───────────────────────────── Small shared pieces ─────────────────────────────
 
-function BoardingPass({ name, seat, word, tripTitle, holding }: {
+function BoardingPass({ name, seat, word, tripTitle, holding, special }: {
   name: string; seat: string | null; word: string | null; tripTitle: string; holding: boolean;
+  special?: { label: string; text: string } | null;
 }) {
   return (
     <div className="mx-auto max-w-[19rem] select-none">
@@ -205,6 +207,13 @@ function BoardingPass({ name, seat, word, tripTitle, holding }: {
                       <p className="font-display text-3xl font-extrabold text-rose-700 leading-tight">No destination</p>
                       <p className="text-sm font-bold text-dark/70 mt-1">Blend in.</p>
                     </>}
+                {special && (
+                  <div className="mt-3 pt-3 border-t border-dark/15">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-dark/50">Special role</p>
+                    <p className="font-display text-lg font-extrabold text-primary-dark leading-tight">{special.label}</p>
+                    <p className="text-xs font-semibold text-dark/70 leading-snug mt-0.5">{special.text}</p>
+                  </div>
+                )}
               </motion.div>
             ) : (
               <motion.div key="hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center gap-1 text-dark/60">
@@ -309,9 +318,11 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     const was = prevPhase.current;
     prevPhase.current = phase;
     if (!was || was === phase) return;
-    if (phase === 'vote') play('flip');
+    if (phase === 'describe') play('go');
+    else if (phase === 'vote') play('flip');
     else if (phase === 'offboard') play('power');
     else if (phase === 'guess') play('bad');
+    else if (phase === 'payback') play('power');
     else if (phase === 'roundEnd') play(outcome === 'explorers' ? 'win' : 'gold');
     else if (phase === 'final') play('win');
     try { navigator.vibrate?.(phase === 'offboard' ? [30, 40, 30] : 20); } catch { /* no haptics */ }
@@ -378,10 +389,10 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const validRoles = n >= MIN_PLAYERS && rolesValid(n, eff.stowaways, eff.lost);
   const explorers = n - eff.stowaways - eff.lost;
 
-  const saveSettings = (patch: Partial<{ stowaways: number; lost: number; level: Level; hideCounts: boolean; dares: boolean }>) =>
+  const saveSettings = (patch: Partial<{ stowaways: number; lost: number; level: Level; hideCounts: boolean; dares: boolean; specials: boolean }>) =>
     act(() => online.setSettings(room.code, {
       stowaways: eff.stowaways, lost: eff.lost, level: room.level, hideCounts: room.hide_counts,
-      dares: room.dares, ...patch,
+      dares: room.dares, specials: room.specials, ...patch,
     }));
 
   const copyLink = async () => {
@@ -397,11 +408,25 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     ? `${alivePlayers.length} travellers aboard. Roles are secret.`
     : `${state.counts.explorers} Travellers, ${state.counts.stowaways} Pickpocket${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Stranger${state.counts.lost === 1 ? '' : 's'}` : ''}`;
 
-  const voteKey = `${room.round_no}-${room.stop_no}-${room.last_result?.tie ? 't' : 'n'}`;
+  const voteKey = `${room.round_no}-${room.stop_no}-${room.last_result?.tie ? 't' : 'n'}${room.last_result?.saved ? `s${room.last_result.saved}` : ''}`;
   const pickId = pick?.key === voteKey ? pick.id : null;
   const out = room.out_player ? byId.get(room.out_player) : undefined;
   const iAmOut = !!out && out.id === me.id;
   const summary = room.round_summary;
+  const mySpecial = me.special
+    ? { label: specialDisplayName(me.special, me.dip), text: describeSpecial({ special: me.special, partner: me.partner ?? undefined }) ?? '' }
+    : null;
+  const voters = players.filter(p => p.voter);
+  const publicRoles = players.filter(p => p.public_special);
+  const outSpecial = room.last_result?.special ? specialDisplayName(room.last_result.special, !!room.last_result.dip) : null;
+  const paybackBy = room.last_result?.payback_by ? byId.get(room.last_result.payback_by)?.name : undefined;
+  const riderGuess = room.last_result?.role !== 'lost';
+  const order = room.describe_order ?? [];
+  const speakerId = order[room.describe_pos];
+  const speaker = speakerId ? byId.get(speakerId) : undefined;
+  const myTurn = speakerId === me.id;
+  const lastSpeaker = room.describe_pos + 1 >= order.length;
+  const guessWordOwner = room.last_result?.role === 'explorer' ? "Pickpockets'" : "Travellers'";
 
   const hostBanner = !isHost && state.host_away && (
     <div className="rounded-2xl bg-rose-400/10 border border-rose-300/30 px-3 py-2.5 mb-3 text-left">
@@ -495,7 +520,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                     <p className="text-sm font-bold text-white leading-tight">Pickpockets</p>
                     <p className="text-[11px] text-cream/50">A similar but different word.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={busy || n < MIN_PLAYERS || eff.stowaways <= 1} onClick={() => void saveSettings({ stowaways: eff.stowaways - 1 })}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={busy || n < MIN_PLAYERS || eff.stowaways <= (eff.lost > 0 ? 0 : 1)} onClick={() => void saveSettings({ stowaways: eff.stowaways - 1 })}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{eff.stowaways}</span>
                   <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={busy || n < MIN_PLAYERS || !rolesValid(n, eff.stowaways + 1, eff.lost)} onClick={() => void saveSettings({ stowaways: eff.stowaways + 1 })}><Plus size={14} weight="bold" /></button>
                 </div>
@@ -505,7 +530,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                     <p className="text-sm font-bold text-white leading-tight">Stranger</p>
                     <p className="text-[11px] text-cream/50">No word at all. Blends in.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={busy || n < MIN_PLAYERS || eff.lost <= 0} onClick={() => void saveSettings({ lost: eff.lost - 1 })}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={busy || n < MIN_PLAYERS || eff.lost <= (eff.stowaways > 0 ? 0 : 1)} onClick={() => void saveSettings({ lost: eff.lost - 1 })}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{eff.lost}</span>
                   <button type="button" className={stepBtn} aria-label="More Strangers" disabled={busy || n < MIN_PLAYERS || eff.lost >= maxLost(n) || !rolesValid(n, eff.stowaways, eff.lost + 1)} onClick={() => void saveSettings({ lost: eff.lost + 1 })}><Plus size={14} weight="bold" /></button>
                 </div>
@@ -524,6 +549,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <div className={`${glass} divide-y divide-white/10 mb-4`}>
                 <Toggle on={room.hide_counts} onChange={v => void saveSettings({ hideCounts: v })} disabled={busy} title="Hide the counts" desc="Only you can see the role split. Nobody else knows if a Stranger exists." />
                 <Toggle on={room.dares} onChange={v => void saveSettings({ dares: v })} disabled={busy} title="Trip dares" desc="The losing side gets a silly dare." />
+                <Toggle on={room.specials} onChange={v => void saveSettings({ specials: v })} disabled={busy} title="Special roles" desc="Clown, Rivals, Payback, Return Ticket and more. Up to one per 3 players." />
               </div>
 
               <button type="button" disabled={busy || !validRoles} onClick={() => { void act(() => online.startRound(room.code, nextDare(), false)); }} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
@@ -534,6 +560,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <div className={`${glass} px-3 py-3 mb-3 text-sm text-cream/70`}>
               <p className="font-bold text-white mb-1">Game settings</p>
               <p>{LEVELS.find(l => l.id === room.level)?.label} words{room.hide_counts ? ', hidden role counts' : state.counts ? `, ${state.counts.explorers} Travellers, ${state.counts.stowaways} Pickpocket${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Stranger` : ''}` : ''}.</p>
+              {room.specials && <p className="text-xs text-cream/50 mt-1">Special roles are on.</p>}
               {room.locked && <p className="text-xs text-cream/50 mt-1"><LockSimple size={12} weight="fill" className="inline -mt-0.5" /> The host locked the room.</p>}
             </div>
           )}
@@ -547,7 +574,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
         <div className="text-center">
           <p className={eyebrow}>Round {room.round_no} · Boarding passes</p>
           <h2 className="font-display text-2xl font-extrabold text-white leading-tight mb-3">Check your pass</h2>
-          <BoardingPass name={meP?.name ?? ''} seat={meP?.seat ?? null} word={me.word} tripTitle={room.trip_title} holding={holding} />
+          <BoardingPass name={meP?.name ?? ''} seat={meP?.seat ?? null} word={me.word} tripTitle={room.trip_title} holding={holding} special={mySpecial} />
           <HoldButton
             holding={holding}
             onChange={v => { setHolding(v); if (v) { setSeenRound(room.round_no); play('flip'); try { navigator.vibrate?.(20); } catch { /* no haptics */ } } }}
@@ -571,10 +598,64 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           </ul>
           {isHost
             ? <button type="button" disabled={busy} onClick={() => void act(() => online.beginVote(room.code))} className={`${players.every(p => p.ready) ? primaryBtn : ghostBtn} mt-4`}>
-                {players.every(p => p.ready) ? 'Everyone has boarded. Start the vote' : `Start anyway (${players.filter(p => p.ready).length} of ${n} ready)`} <ArrowRight size={16} weight="bold" />
+                {players.every(p => p.ready) ? 'Everyone has boarded. Start the round' : `Start anyway (${players.filter(p => p.ready).length} of ${n} ready)`} <ArrowRight size={16} weight="bold" />
               </button>
             : <div className="mt-3">{waiting(players.every(p => p.ready) ? `Waiting for ${hostName} to start…` : 'Waiting for everyone to get ready…')}</div>}
         </div>
+      )}
+
+      {/* ── Description round ── */}
+      {phase === 'describe' && (
+          <div className="text-center">
+            <div className="mb-3 text-left">
+              <p className={eyebrow}>Round {room.round_no} · Stop {room.stop_no}</p>
+              <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Describe your word</h2>
+              <p className="text-xs text-cream/60">Say one word or a short phrase about your word, aloud. Be truthful, but do not give it away.</p>
+              <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
+            </div>
+            {speaker && (
+              <motion.div key={room.describe_pos} initial={reduce ? false : { scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                className="rounded-3xl bg-gradient-to-br from-[#FFF6DD] to-[#F0CE7A] text-dark px-5 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
+                <span className="mx-auto w-11 h-11 rounded-2xl bg-dark/90 text-[#F0CE7A] flex items-center justify-center mb-2" aria-hidden="true"><ChatCircleDots size={24} weight="duotone" /></span>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-dark/50">{room.describe_pos === 0 ? 'Starts' : `Speaker ${room.describe_pos + 1} of ${order.length}`}</p>
+                <p className="font-display text-3xl font-extrabold leading-tight break-words">{myTurn ? 'You' : speaker.name}</p>
+                <p className="text-xs font-bold text-dark/60 mt-1">Seat {speaker.seat}</p>
+              </motion.div>
+            )}
+            <ol className="flex flex-wrap justify-center gap-1.5 mt-4" aria-label="Speaking order">
+              {order.map((id, k) => (
+                <li key={id} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${k === room.describe_pos ? 'bg-gold/25 border-gold/60 text-[#F0CE7A]' : k < room.describe_pos ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
+                  {k < room.describe_pos && <CheckCircle size={11} weight="fill" className="inline -mt-0.5 mr-1" />}{byId.get(id)?.name ?? '...'}
+                </li>
+              ))}
+            </ol>
+            {publicRoles.map(p => (
+              <p key={p.id} className="text-xs text-[#F0CE7A] leading-snug mt-2">
+                {p.public_special === 'tripLeader' ? `Trip Leader ${p.name} breaks any tie.` : `Driver ${p.name} starts every description round.`}
+              </p>
+            ))}
+            {meP?.alive && me.role !== null && (
+              <div className="mt-4">
+                <HoldButton holding={holding} onChange={v => { setHolding(v); if (v) play('flip'); }} label="Hold to peek at my word" className="!py-2.5 !text-sm" />
+                <AnimatePresence>
+                  {holding && (
+                    <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 text-center font-display text-2xl font-extrabold text-[#F0CE7A]">
+                      {me.word ?? 'No destination. Blend in.'}
+                      {mySpecial && <span className="block mt-1 text-xs font-semibold text-cream/70 font-sans">{mySpecial.label}: {mySpecial.text}</span>}
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
+            {(myTurn || isHost) ? (
+              <button type="button" disabled={busy} onClick={() => void act(() => online.describeDone(room.code, room.describe_pos))} className={`${primaryBtn} mt-4 disabled:opacity-50`}>
+                {myTurn ? (lastSpeaker ? 'Done. Start the discussion' : 'Done. Next speaker') : (lastSpeaker ? 'Host: start the discussion' : 'Host: next speaker')} <ArrowRight size={16} weight="bold" />
+              </button>
+            ) : <div className="mt-4">{waiting(`Waiting for ${speaker?.name ?? 'the speaker'} to finish…`)}</div>}
+            {isHost && !myTurn && (
+              <button type="button" disabled={busy} onClick={() => void act(() => online.beginVote(room.code))} className="mt-3 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">Skip to the discussion and vote</button>
+            )}
+          </div>
       )}
 
       {/* ── Vote ── */}
@@ -583,8 +664,13 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           <div className="mb-3">
             <p className={eyebrow}>Round {room.round_no} · Stop {room.stop_no}</p>
             <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Who goes offboard?</h2>
-            <p className="text-xs text-cream/60">Talk it out. Votes are private and revealed together.</p>
+            <p className="text-xs text-cream/60">Discuss who is bluffing. Votes are private and revealed together.</p>
             <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
+            {publicRoles.map(p => (
+              <p key={p.id} className="text-xs text-[#F0CE7A] leading-snug mt-1">
+                {p.public_special === 'tripLeader' ? `Trip Leader ${p.name} breaks any tie.` : `Driver ${p.name} starts every description round.`}
+              </p>
+            ))}
           </div>
 
           {meP?.alive && me.role !== null && (
@@ -594,9 +680,17 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 {holding && (
                   <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-2 text-center font-display text-2xl font-extrabold text-[#F0CE7A]">
                     {me.word ?? 'No destination. Blend in.'}
+                    {mySpecial && <span className="block mt-1 text-xs font-semibold text-cream/70 font-sans">{mySpecial.label}: {mySpecial.text}</span>}
                   </motion.p>
                 )}
               </AnimatePresence>
+            </div>
+          )}
+
+          {room.last_result?.saved && (
+            <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]">Return Ticket</p>
+              <p className="text-sm font-bold text-white">{room.last_result.name ?? 'Someone'} stays aboard. Vote again.</p>
             </div>
           )}
 
@@ -607,7 +701,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             </div>
           )}
 
-          {meP?.alive ? (
+          {me.can_vote ? (
             <>
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {alivePlayers.filter(p => p.id !== me.id).map(p => (
@@ -619,21 +713,22 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 ))}
               </div>
               <button type="button" disabled={!pickId || busy} onClick={() => { if (pickId) void act(() => online.vote(room.code, pickId)); }} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>
-                <Airplane size={18} weight="fill" /> {meP.voted ? 'Change my vote' : pickId ? `Lock vote for ${byId.get(pickId)?.name ?? ''}` : 'Pick someone'}
+                <Airplane size={18} weight="fill" /> {meP?.voted ? 'Change my vote' : pickId ? `Lock vote for ${byId.get(pickId)?.name ?? ''}` : 'Pick someone'}
               </button>
-              {meP.voted && <p className="mt-2 text-center text-xs font-bold text-emerald-300"><CheckCircle size={14} weight="fill" className="inline -mt-0.5 mr-1" />Your vote is in</p>}
+              {meP?.voted && <p className="mt-2 text-center text-xs font-bold text-emerald-300"><CheckCircle size={14} weight="fill" className="inline -mt-0.5 mr-1" />Your vote is in</p>}
             </>
           ) : waiting('You are offboard, so you cannot vote. Watch the others decide.')}
+          {me.can_vote && !meP?.alive && <p className="-mt-2 mb-3 text-center text-[11px] text-cream/50">You are offboard, but your Backseat Rider vote still counts.</p>}
 
-          <p className={`${eyebrow} mt-4 mb-1.5`}>{alivePlayers.filter(p => p.voted).length} of {alivePlayers.length} voted</p>
+          <p className={`${eyebrow} mt-4 mb-1.5`}>{voters.filter(p => p.voted).length} of {voters.length} voted</p>
           <ul className="flex flex-wrap gap-1.5">
-            {alivePlayers.map(p => (
+            {voters.map(p => (
               <li key={p.id} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${p.voted ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
                 {p.voted && <CheckCircle size={11} weight="fill" className="inline -mt-0.5 mr-1" />}{p.name}
               </li>
             ))}
           </ul>
-          {isHost && alivePlayers.some(p => p.voted) && (
+          {isHost && voters.some(p => p.voted) && (
             <button type="button" disabled={busy} onClick={() => void act(() => online.resolveNow(room.code))} className={`${ghostBtn} mt-4`}>Reveal now with the votes so far</button>
           )}
         </div>
@@ -653,7 +748,9 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             className={`inline-block rounded-2xl bg-gradient-to-br ${ROLE_TONE[room.last_result.role]} px-6 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.4)]`}>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Was a</p>
             <p className="font-display text-3xl font-extrabold leading-tight">{roleName(room.last_result.role)}</p>
+            {outSpecial && <p className="text-xs font-bold mt-1 opacity-80">and the {outSpecial}</p>}
           </motion.div>
+          {paybackBy && <p className="mt-3 text-xs font-bold text-[#F0CE7A]">Payback! {paybackBy} took them down.</p>}
 
           {room.last_result.votes.length > 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: reduce ? 0 : 1.4 }} className="mt-5 text-left">
@@ -672,15 +769,17 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
         </div>
       )}
 
-      {/* ── Lost Soul's last chance ── */}
+      {/* ── Last chance: the Stranger, or a Backseat Rider ── */}
       {phase === 'guess' && out && (
         <div className="text-center pt-3">
           <motion.div initial={reduce ? false : { scale: 0.5, rotate: -10 }} animate={{ scale: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 240, damping: 12 }}
             className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-rose-300 to-rose-500 text-rose-950 flex items-center justify-center shadow-[0_14px_36px_rgba(244,63,94,0.4)]" aria-hidden="true">
             <Question size={46} weight="bold" />
           </motion.div>
-          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">Last chance</span>
-          <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{iAmOut ? 'You were the Stranger' : `${out.name} was the Stranger`}</h2>
+          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">{riderGuess ? 'Backseat Rider' : 'Last chance'}</span>
+          <h2 className="font-display text-3xl font-extrabold text-white leading-tight">
+            {riderGuess ? (iAmOut ? 'You were the Backseat Rider' : `${out.name} was the Backseat Rider`) : (iAmOut ? 'You were the Stranger' : `${out.name} was the Stranger`)}
+          </h2>
 
           {iAmOut ? (
             room.guess_text ? (
@@ -691,7 +790,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               </>
             ) : (
               <>
-                <p className="text-sm text-cream/65 mt-2 mb-4 px-4">Guess the Travellers' word. One shot.</p>
+                <p className="text-sm text-cream/65 mt-2 mb-4 px-4">Guess the {guessWordOwner} word. One shot.{riderGuess ? ' You keep voting either way.' : ''}</p>
                 <input value={guessDraft} onChange={e => setGuessDraft(e.target.value.slice(0, 40))} onKeyDown={e => { if (e.key === 'Enter' && guessDraft.trim() && !busy) void act(() => online.submitGuess(room.code, guessDraft)); }} maxLength={40} placeholder="Type your guess" aria-label="Your guess" className={`${inputCls} text-center mb-3`} />
                 <button type="button" disabled={!guessDraft.trim() || busy} onClick={() => void act(() => online.submitGuess(room.code, guessDraft))} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>Send my guess</button>
               </>
@@ -700,14 +799,36 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <>
               <p className="text-sm text-cream/65 mt-2 px-4">{out.name} guessed</p>
               <p className={`font-display text-3xl font-extrabold ${GOLD_GRAD_TEXT}`}>{room.guess_text}</p>
-              {room.guess_match && <p className="text-xs font-bold text-emerald-300 mt-1">That is an exact match with the Travellers' word.</p>}
+              {room.guess_match && <p className="text-xs font-bold text-emerald-300 mt-1">That is an exact match with the {guessWordOwner} word.</p>}
               <p className="text-xs text-cream/45 my-3 px-4">Close enough counts. Spelling does not matter.</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" disabled={busy} onClick={() => void act(() => online.judgeGuess(room.code, false))} className={`${ghostBtn} !py-4`}><XCircle size={20} weight="fill" className="text-rose-300" /> Wrong</button>
                 <button type="button" disabled={busy} onClick={() => void act(() => online.judgeGuess(room.code, true))} className={`${primaryBtn} !py-4`}><CheckCircle size={20} weight="fill" /> Correct</button>
               </div>
             </>
-          ) : waiting(`Waiting for ${out.name} to type her guess…`)}
+          ) : waiting(`Waiting for ${out.name} to type their guess…`)}
+        </div>
+      )}
+
+      {/* ── Payback: the player who just left takes one more ── */}
+      {phase === 'payback' && out && (
+        <div>
+          <div className="mb-3">
+            <p className={eyebrow}>Payback</p>
+            <h2 className="font-display text-2xl font-extrabold text-white leading-tight">{iAmOut ? 'Take someone with you' : `${out.name} takes someone with them`}</h2>
+            <p className="text-xs text-cream/60">{iAmOut ? 'Pick one player to go offboard too.' : 'They are choosing now.'}</p>
+          </div>
+          {(iAmOut || (isHost && out.away)) ? (
+            <div className="grid grid-cols-2 gap-2">
+              {alivePlayers.map(p => (
+                <button key={p.id} type="button" disabled={busy} onClick={() => void act(() => online.payback(room.code, p.id))}
+                  className="rounded-2xl border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98] disabled:opacity-50">
+                  <span className="block font-display text-base font-extrabold leading-tight truncate">{p.name}</span>
+                  <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {p.seat}</span>
+                </button>
+              ))}
+            </div>
+          ) : waiting(`Waiting for ${out.name} to choose…`)}
         </div>
       )}
 
@@ -720,7 +841,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             {summary.outcome === 'explorers' ? 'Travellers win!' : summary.outcome === 'stowaways' ? 'The Pickpockets got away!' : 'The Stranger stole it!'}
           </h2>
           <p className="text-sm text-cream/60 mt-1 mb-3">
-            {summary.outcome === 'explorers' ? 'Every Pickpocket and Stranger was caught.' : summary.outcome === 'stowaways' ? 'They blended in until the end.' : 'One lucky guess flipped the whole round.'}
+            {summary.outcome === 'explorers' ? 'Every Pickpocket and Stranger was caught.' : summary.outcome === 'stowaways' ? 'Only one Traveller was left.' : 'One lucky guess flipped the whole round.'}
           </p>
 
           <div className="grid grid-cols-2 gap-2 mb-3">
@@ -742,7 +863,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                   {s.role === 'explorer' ? <Eye size={13} weight="bold" /> : s.role === 'stowaway' ? <Ticket size={13} weight="bold" /> : <Skull size={13} weight="bold" />}
                 </span>
                 <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{byId.get(s.id)?.name ?? '...'}{s.id === me.id && <span className="ml-1.5 text-[10px] font-semibold text-cream/40">you</span>}</span>
-                <span className="text-[11px] text-cream/50">{ROLE_LABEL[s.role]}</span>
+                <span className="text-[11px] text-cream/50">{ROLE_LABEL[s.role]}{s.special ? ` · ${specialDisplayName(s.special, !!s.dip)}` : ''}</span>
                 <span className={`w-9 text-right font-display font-extrabold tabular-nums ${s.gained > 0 ? 'text-emerald-300' : 'text-cream/30'}`}>+{s.gained}</span>
               </li>
             ))}
@@ -755,7 +876,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             </div>
           )}
 
-          <p className="text-[11px] text-cream/45 mb-3">Points: Travellers +{POINTS.explorerWin}, a surviving Pickpocket +{POINTS.stowawaySurvive}, a Stranger steal +{POINTS.lostSteal}.</p>
+          <p className="text-[11px] text-cream/45 mb-3">Points: Travellers +{POINTS.explorerWin}, a winning Pickpocket +{POINTS.stowawaySurvive}, a winning Stranger +{POINTS.lostSurvive} (lasting to the end or guessing the Travellers' word).{summary.players.some(p => p.special) ? ' Special-role bonuses are added on top.' : ''}</p>
 
           {isHost ? (
             <>

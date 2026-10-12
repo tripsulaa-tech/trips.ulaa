@@ -4,7 +4,7 @@
 
 import { DARES, WORD_PAIRS } from './stowawayWords';
 import type { Category, Level, WordPair } from './stowawayWords';
-import { assignSpecials } from './stowawaySpecials';
+import { activeSpecial, assignSpecials } from './stowawaySpecials';
 import type { SoloSpecialId, SpecialId } from './stowawaySpecials';
 
 export type Role = 'explorer' | 'stowaway' | 'lost';
@@ -12,7 +12,9 @@ export type Role = 'explorer' | 'stowaway' | 'lost';
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 15;
 
-export const POINTS = { explorerWin: 2, stowawaySurvive: 3, lostSteal: 4 } as const;
+/** Undercover's scores: Travellers 2 each, a winning Pickpocket 10, a winning Stranger 6
+ *  (a Stranger wins by lasting to the end or by guessing the Travellers' word). */
+export const POINTS = { explorerWin: 2, stowawaySurvive: 10, lostSurvive: 6, lostSteal: 6 } as const;
 
 export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): T[] {
   const a = [...arr];
@@ -29,14 +31,15 @@ export interface RoleCounts { explorers: number; stowaways: number; lost: number
 
 export const maxLost = (players: number) => (players >= 10 ? 2 : 1);
 
-/** Explorers must always outnumber the sneaky side (Stowaways + Lost Souls). */
+/** Travellers must outnumber the sneaky side (Pickpockets + Strangers) at the start. */
 export function countsFor(players: number, stowaways: number, lost: number): RoleCounts {
   return { explorers: players - stowaways - lost, stowaways, lost };
 }
 
 export function rolesValid(players: number, stowaways: number, lost: number): boolean {
   if (players < MIN_PLAYERS || players > MAX_PLAYERS) return false;
-  if (stowaways < 1 || lost < 0 || lost > maxLost(players)) return false;
+  if (stowaways < 0 || lost < 0 || lost > maxLost(players)) return false;
+  if (stowaways + lost < 1) return false; // at least one Pickpocket or one Stranger
   return players - stowaways - lost > stowaways + lost;
 }
 
@@ -54,8 +57,9 @@ export function recommendedRoles(players: number): { stowaways: number; lost: nu
 /** Clamps role counts into a valid split after the player count changes. */
 export function clampRoles(players: number, stowaways: number, lost: number): { stowaways: number; lost: number } {
   let l = Math.min(lost, maxLost(players));
-  let s = Math.max(1, stowaways);
-  while (!rolesValid(players, s, l) && l > 0) l -= 1;
+  let s = Math.max(0, stowaways);
+  if (s + l < 1) s = 1;
+  while (!rolesValid(players, s, l) && l > 0) { l -= 1; if (s + l < 1) s = 1; }
   while (!rolesValid(players, s, l) && s > 1) s -= 1;
   return { stowaways: s, lost: l };
 }
@@ -134,14 +138,33 @@ function aliveCounts(seats: Seat[]) {
   };
 }
 
-/** Explorers win when every Stowaway and Lost Soul is offboarded. The sneaky
- *  side wins when their number equals the remaining Explorers. */
+/** Undercover's rules: Travellers win when every Pickpocket and Stranger is
+ *  offboarded. The sneaky side wins when only one Traveller is left. */
 export function checkWinner(seats: Seat[]): Side | null {
   const a = aliveCounts(seats);
   const sneaky = a.stowaways + a.lost;
   if (sneaky === 0) return 'explorers';
-  if (sneaky >= a.explorers) return 'sneaky';
+  if (a.explorers <= 1) return 'sneaky';
   return null;
+}
+
+/** Speaking order for the description round: the players still aboard, going round
+ *  the table from seat `from`. A Driver, if aboard, starts instead. A Sleepyhead sits
+ *  out Stop 1. Returns indexes into `seats`. */
+export function describeOrder(seats: Seat[], from: number, stopNo: number): number[] {
+  const n = seats.length;
+  if (n === 0) return [];
+  const driver = seats.findIndex(s => s.alive && activeSpecial(s) === 'driver');
+  const start = driver >= 0 ? driver : ((from % n) + n) % n;
+  const out: number[] = [];
+  for (let k = 0; k < n; k++) {
+    const i = (start + k) % n;
+    const s = seats[i];
+    if (!s.alive) continue;
+    if (stopNo === 1 && activeSpecial(s) === 'sleepyhead') continue;
+    out.push(i);
+  }
+  return out;
 }
 
 // ── Scoring ──
@@ -154,7 +177,8 @@ export function roundPoints(seats: Seat[], outcome: Outcome): Record<string, num
   if (outcome === 'explorers') {
     seats.filter(s => s.role === 'explorer').forEach(s => { pts[s.name] = POINTS.explorerWin; });
   } else if (outcome === 'stowaways') {
-    seats.filter(s => s.alive && s.role !== 'explorer').forEach(s => { pts[s.name] = POINTS.stowawaySurvive; });
+    seats.filter(s => s.alive && s.role === 'stowaway').forEach(s => { pts[s.name] = POINTS.stowawaySurvive; });
+    seats.filter(s => s.alive && s.role === 'lost').forEach(s => { pts[s.name] = POINTS.lostSurvive; });
   } else {
     seats.filter(s => s.role === 'lost' && s.alive).forEach(s => { pts[s.name] = POINTS.lostSteal; });
   }

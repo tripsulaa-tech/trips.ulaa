@@ -9,8 +9,9 @@
 import { supabase } from '../../services/supabase';
 import { SITE_ORIGIN } from '../../constants/site';
 import type { Role } from './stowawayEngine';
+import type { SpecialId } from './stowawaySpecials';
 
-export type OnlinePhase = 'lobby' | 'deal' | 'vote' | 'offboard' | 'guess' | 'roundEnd' | 'final';
+export type OnlinePhase = 'lobby' | 'deal' | 'describe' | 'vote' | 'offboard' | 'guess' | 'payback' | 'roundEnd' | 'final';
 type OnlineOutcome = 'explorers' | 'stowaways' | 'lost-steal';
 
 interface OnlineRoom {
@@ -23,6 +24,10 @@ interface OnlineRoom {
   level: 'easy' | 'medium' | 'hard';
   dares: boolean;
   hide_counts: boolean;
+  specials: boolean;
+  /** Description round: who speaks, in order, and whose turn it is (0-based). */
+  describe_order: string[];
+  describe_pos: number;
   round_no: number;
   stop_no: number;
   dare: string | null;
@@ -36,6 +41,14 @@ interface OnlineRoom {
     names?: string[];
     out?: string;
     role?: Role;
+    /** The ability the player who left had (a Lucky Dip's drawn one), and whether it came from a Lucky Dip. */
+    special?: SpecialId | null;
+    dip?: boolean;
+    /** Return Ticket: this player's vote was cancelled; the name is theirs. */
+    saved?: string;
+    name?: string;
+    /** Set when this exit came from a Payback by that player. */
+    payback_by?: string;
     votes: Array<{ from: string; to: string }>;
   } | null;
   round_summary: {
@@ -43,7 +56,7 @@ interface OnlineRoom {
     explorer_word: string;
     stowaway_word: string;
     category: string;
-    players: Array<{ id: string; role: Role; gained: number }>;
+    players: Array<{ id: string; role: Role; gained: number; bonus?: number; special?: SpecialId | null; dip?: boolean }>;
   } | null;
 }
 
@@ -61,11 +74,24 @@ interface OnlinePlayer {
   wrong_votes: number;
   lost_wins: number;
   away: boolean;
+  /** Alive, or a Backseat Rider who is out: may vote. */
+  voter: boolean;
+  /** Trip Leader or Driver while aboard: everyone may see these. */
+  public_special: 'tripLeader' | 'driver' | null;
 }
 
 export interface OnlineState {
   now: string;
-  me: { id: string; role: Role | null; word: string | null };
+  me: {
+    id: string; role: Role | null; word: string | null;
+    /** The ability that applies to me (a Lucky Dip's drawn one). */
+    special: SpecialId | null;
+    /** True when `special` came from a Lucky Dip. */
+    dip: boolean;
+    /** Name of my Rival or Buddy. */
+    partner: string | null;
+    can_vote: boolean;
+  };
   room: OnlineRoom;
   players: OnlinePlayer[];
   host_away: boolean;
@@ -90,6 +116,8 @@ const MESSAGES: Record<string, string> = {
   guess_required: 'Type your guess first.',
   no_guess_yet: 'Wait for the guess first.',
   already_guessed: 'You already sent your guess.',
+  bad_target: 'You cannot pick that player.',
+  not_your_turn: 'It is not your turn to speak.',
 };
 
 export class OnlineError extends Error {
@@ -157,10 +185,10 @@ export const online = {
     rpc<{ code: string; player_id: string }>('stowaway_join', { p_code: code, p_name: name, p_token: t() }),
   state: (code: string) => rpc<OnlineState>('stowaway_state', { p_code: code, p_token: t() }),
   claimHost: (code: string) => rpc('stowaway_claim_host', { p_code: code, p_token: t() }),
-  setSettings: (code: string, s: { stowaways: number; lost: number; level: string; hideCounts: boolean; dares: boolean }) =>
+  setSettings: (code: string, s: { stowaways: number; lost: number; level: string; hideCounts: boolean; dares: boolean; specials: boolean }) =>
     rpc('stowaway_set_settings', {
       p_code: code, p_token: t(), p_stowaways: s.stowaways, p_lost: s.lost, p_level: s.level,
-      p_hide_counts: s.hideCounts, p_dares: s.dares,
+      p_hide_counts: s.hideCounts, p_dares: s.dares, p_specials: s.specials,
     }),
   setLocked: (code: string, locked: boolean) => rpc('stowaway_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
   kick: (code: string, player: string) => rpc('stowaway_kick', { p_code: code, p_token: t(), p_player: player }),
@@ -168,12 +196,14 @@ export const online = {
   startRound: (code: string, dare: string | null, reset = false) =>
     rpc('stowaway_start_round', { p_code: code, p_token: t(), p_dare: dare, p_reset: reset }),
   ready: (code: string) => rpc('stowaway_ready', { p_code: code, p_token: t() }),
+  describeDone: (code: string, pos: number) => rpc('stowaway_describe_done', { p_code: code, p_token: t(), p_pos: pos }),
   beginVote: (code: string) => rpc('stowaway_begin_vote', { p_code: code, p_token: t() }),
   vote: (code: string, target: string) => rpc('stowaway_cast_vote', { p_code: code, p_token: t(), p_target: target }),
   resolveNow: (code: string) => rpc('stowaway_resolve_now', { p_code: code, p_token: t() }),
   afterReveal: (code: string) => rpc('stowaway_after_reveal', { p_code: code, p_token: t() }),
   submitGuess: (code: string, text: string) => rpc('stowaway_submit_guess', { p_code: code, p_token: t(), p_text: text }),
   judgeGuess: (code: string, correct: boolean) => rpc('stowaway_judge_guess', { p_code: code, p_token: t(), p_correct: correct }),
+  payback: (code: string, victim: string) => rpc('stowaway_payback', { p_code: code, p_token: t(), p_victim: victim }),
   endGame: (code: string) => rpc('stowaway_end_game', { p_code: code, p_token: t() }),
   toLobby: (code: string) => rpc('stowaway_to_lobby', { p_code: code, p_token: t() }),
 };

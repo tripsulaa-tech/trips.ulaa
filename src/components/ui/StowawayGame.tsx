@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Play, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
   Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle,
-  XCircle, MagicWand, Gift, Question, ArrowRight, DeviceMobile,
+  XCircle, MagicWand, Gift, Question, ArrowRight, DeviceMobile, ChatCircleDots,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
 import stowawayCat from '../../assets/stowaway-cat.png';
@@ -19,7 +19,7 @@ import { loadOnlineSession } from './stowawayRoomApi';
 import { LEVELS, CATEGORY_LABEL } from './stowawayWords';
 import type { Level } from './stowawayWords';
 import {
-  MIN_PLAYERS, MAX_PLAYERS, POINTS, maxLost, countsFor, rolesValid, recommendedRoles, clampRoles,
+  MIN_PLAYERS, MAX_PLAYERS, POINTS, maxLost, countsFor, rolesValid, recommendedRoles, clampRoles, describeOrder,
   dealRound, drawPair, drawDare, checkWinner, roundPoints,
   computeAwards, emptyStats, loadSetup, saveSetup, uniqueNames, shuffle,
 } from './stowawayEngine';
@@ -43,7 +43,7 @@ const MUTE_KEY = 'ulaa:packbag:muted'; // shared with the other games: one sound
 const REVEAL_MS = 1900;
 
 type Phase =
-  | 'idle' | 'online' | 'setup' | 'pass' | 'ticket' | 'vote' | 'offboard' | 'guess' | 'saved' | 'rider' | 'payback' | 'roundEnd' | 'final';
+  | 'idle' | 'online' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'rider' | 'payback' | 'roundEnd' | 'final';
 
 const ROLE_LABEL: Record<Role, string> = { explorer: 'Traveller', stowaway: 'Pickpocket', lost: 'Stranger' };
 const ROLE_TONE: Record<Role, string> = {
@@ -111,6 +111,8 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   const [seats, setSeats] = useState<Seat[]>([]);
   const [passIdx, setPassIdx] = useState(0);        // whose boarding pass is next
   const [stopNo, setStopNo] = useState(1);          // stop within the round
+  const [descOrder, setDescOrder] = useState<number[]>([]); // speaking order for the description round (seat indexes)
+  const [descPos, setDescPos] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [voters, setVoters] = useState<number[]>([]);
   const [lastOut, setLastOut] = useState<number | null>(null);
@@ -231,13 +233,32 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
     setPhase('pass');
   };
 
-  // A new stop: the group talks it out, then goes straight to the vote.
-  const startStop = (stop: number) => {
+  // A new stop, as in Undercover: everyone describes their word in turn, then the group
+  // talks it out and votes. The round starts at a random seat; after that, at the seat
+  // after the player who just left.
+  const startStop = (stop: number, from: number, list: Seat[] = seats) => {
+    const order = describeOrder(list, from, stop);
     setStopNo(stop);
+    setSelected(null);
+    setVoters([]);
+    setDescOrder(order);
+    setDescPos(0);
+    setPhase(order.length > 0 ? 'describe' : 'vote');
+    play('go');
+  };
+
+  // The vote again at the same stop (Return Ticket): no new description round.
+  const goVote = () => {
     setSelected(null);
     setVoters([]);
     setPhase('vote');
     play('go');
+  };
+
+  const describeNext = () => {
+    play('flip');
+    if (descPos + 1 >= descOrder.length) { setPhase('vote'); play('go'); return; }
+    setDescPos(i => i + 1);
   };
 
   // ── Boarding passes: hold to reveal ──
@@ -250,7 +271,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
   const passOn = () => {
     setHolding(false);
     if (passIdx + 1 >= seats.length) {
-      if (round) startStop(1);
+      if (round) startStop(1, Math.floor(Math.random() * seats.length));
       return;
     }
     setPassIdx(i => i + 1);
@@ -277,7 +298,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
       setPhase('saved');
       play('gold');
       buzz([30, 40, 30]);
-      later(REVEAL_MS, () => startStop(stopNo));
+      later(REVEAL_MS, () => goVote());
       return;
     }
     // Votes: anyone who pointed at a sneaky player was right; at an Explorer, wrong.
@@ -342,7 +363,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
       setPhase('payback');
       return;
     }
-    startStop(stopNo + 1);
+    startStop(stopNo + 1, outIdx + 1, list);
   };
 
   // Lost Soul's last chance: the group judges the spoken guess.
@@ -505,8 +526,9 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
               <ul className={`${glass} text-left divide-y divide-white/10 mb-4`}>
                 {[
                   { I: Ticket, c: 'bg-primary/25 text-[#F4B183]', t: <>Each traveller holds to see a <strong className="text-white">secret boarding pass</strong>.</> },
-                  { I: Eye, c: 'bg-gold/20 text-[#F0CE7A]', t: <>Talk it out and work out <strong className="text-white">who is bluffing</strong>.</> },
-                  { I: Airplane, c: 'bg-secondary/25 text-[#F4B183]', t: <>Vote someone <strong className="text-white">offboard</strong>. Find every Pickpocket to win.</> },
+                  { I: ChatCircleDots, c: 'bg-gold/20 text-[#F0CE7A]', t: <>Take turns saying <strong className="text-white">one word or a short phrase</strong> about your word.</> },
+                  { I: Eye, c: 'bg-secondary/25 text-[#F4B183]', t: <>Talk it out and work out <strong className="text-white">who is bluffing</strong>.</> },
+                  { I: Airplane, c: 'bg-primary/25 text-[#F4B183]', t: <>Vote someone <strong className="text-white">offboard</strong>. Find every Pickpocket and Stranger to win.</> },
                 ].map((r, i) => (
                   <li key={i} className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
                     <span className={`w-7 h-7 shrink-0 rounded-lg flex items-center justify-center ${r.c}`}><r.I size={16} weight="duotone" /></span>
@@ -589,7 +611,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                     <p className="text-sm font-bold text-white leading-tight">Pickpockets</p>
                     <p className="text-[11px] text-cream/50">A similar but different word.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={playerCount < MIN_PLAYERS || stowaways <= 1} onClick={() => setStowaways(s => s - 1)}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={playerCount < MIN_PLAYERS || stowaways <= (lost > 0 ? 0 : 1)} onClick={() => setStowaways(s => s - 1)}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{stowaways}</span>
                   <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={playerCount < MIN_PLAYERS || !rolesValid(playerCount, stowaways + 1, lost)} onClick={() => setStowaways(s => s + 1)}><Plus size={14} weight="bold" /></button>
                 </div>
@@ -599,7 +621,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                     <p className="text-sm font-bold text-white leading-tight">Stranger</p>
                     <p className="text-[11px] text-cream/50">No word at all. Blends in.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={playerCount < MIN_PLAYERS || lost <= 0} onClick={() => setLost(l => l - 1)}><Minus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={playerCount < MIN_PLAYERS || lost <= (stowaways > 0 ? 0 : 1)} onClick={() => setLost(l => l - 1)}><Minus size={14} weight="bold" /></button>
                   <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{lost}</span>
                   <button type="button" className={stepBtn} aria-label="More Strangers" disabled={playerCount < MIN_PLAYERS || lost >= maxLost(playerCount) || !rolesValid(playerCount, stowaways, lost + 1)} onClick={() => setLost(l => l + 1)}><Plus size={14} weight="bold" /></button>
                 </div>
@@ -738,17 +760,51 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
             </div>
           )}
 
+          {/* ── Description round ── */}
+          {phase === 'describe' && descOrder.length > 0 && (
+            <div className="relative text-center">
+              <div className="pr-12 mb-3 text-left">
+                <p className={eyebrow}>Round {roundNo} · Stop {stopNo}</p>
+                <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Describe your word</h2>
+                <p className="text-xs text-cream/60">Say one word or a short phrase about your word. Be truthful, but do not give it away.</p>
+                <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
+              </div>
+              <motion.div key={descPos} initial={reduce ? false : { scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+                className="rounded-3xl bg-gradient-to-br from-[#FFF6DD] to-[#F0CE7A] text-dark px-5 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
+                <span className="mx-auto w-11 h-11 rounded-2xl bg-dark/90 text-[#F0CE7A] flex items-center justify-center mb-2" aria-hidden="true"><ChatCircleDots size={24} weight="duotone" /></span>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-dark/50">{descPos === 0 ? 'Starts' : `Speaker ${descPos + 1} of ${descOrder.length}`}</p>
+                <p className="font-display text-3xl font-extrabold leading-tight break-words">{seats[descOrder[descPos]].name}</p>
+                <p className="text-xs font-bold text-dark/60 mt-1">Seat {seats[descOrder[descPos]].seat}</p>
+              </motion.div>
+              <ol className="flex flex-wrap justify-center gap-1.5 mt-4" aria-label="Speaking order">
+                {descOrder.map((i, k) => (
+                  <li key={i} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${k === descPos ? 'bg-gold/25 border-gold/60 text-[#F0CE7A]' : k < descPos ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
+                    {k < descPos && <CheckCircle size={11} weight="fill" className="inline -mt-0.5 mr-1" />}{seats[i].name}
+                  </li>
+                ))}
+              </ol>
+              {publicRoles.length > 0 && publicRoles.map(i => (
+                <p key={i} className="text-xs text-[#F0CE7A] leading-snug mt-2">
+                  {activeSpecial(seats[i]) === 'tripLeader' ? `Trip Leader ${seats[i].name} breaks any tie.` : `Driver ${seats[i].name} starts every description round.`}
+                </p>
+              ))}
+              <button type="button" onClick={describeNext} className={`${primaryBtn} mt-5`}>
+                {descPos + 1 >= descOrder.length ? 'Done. Start the discussion' : 'Done. Next speaker'} <ArrowRight size={16} weight="bold" />
+              </button>
+            </div>
+          )}
+
           {/* ── Vote ── */}
           {phase === 'vote' && (
             <div className="relative">
               <div className="pr-12 mb-3">
                 <p className={eyebrow}>Round {roundNo} · Stop {stopNo}</p>
                 <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Who goes offboard?</h2>
-                <p className="text-xs text-cream/60">Talk it out, then tap the person the group picked.</p>
+                <p className="text-xs text-cream/60">Discuss who is bluffing, then tap the person the group picked.</p>
                 <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
                 {publicRoles.map(i => (
                   <p key={i} className="text-xs text-[#F0CE7A] leading-snug mt-1">
-                    {activeSpecial(seats[i]) === 'tripLeader' ? `Trip Leader ${seats[i].name} breaks any tie.` : `Driver ${seats[i].name} chooses who speaks first.`}
+                    {activeSpecial(seats[i]) === 'tripLeader' ? `Trip Leader ${seats[i].name} breaks any tie.` : `Driver ${seats[i].name} starts every description round.`}
                   </p>
                 ))}
               </div>
@@ -902,7 +958,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                 {outcome === 'explorers' ? 'Travellers win!' : outcome === 'stowaways' ? 'The Pickpockets got away!' : 'The Stranger stole it!'}
               </h2>
               <p className="text-sm text-cream/60 mt-1 mb-3">
-                {outcome === 'explorers' ? 'Every Pickpocket and Stranger was caught.' : outcome === 'stowaways' ? 'They blended in until the end.' : 'One lucky guess flipped the whole round.'}
+                {outcome === 'explorers' ? 'Every Pickpocket and Stranger was caught.' : outcome === 'stowaways' ? 'Only one Traveller was left.' : 'One lucky guess flipped the whole round.'}
               </p>
 
               <div className="grid grid-cols-2 gap-2 mb-3">
@@ -937,7 +993,7 @@ export default function StowawayGame({ tripSlug = '', tripTitle = 'Ulaa', classN
                 </div>
               )}
 
-              <p className="text-[11px] text-cream/45 mb-3">Points: Travellers +{POINTS.explorerWin}, a surviving Pickpocket +{POINTS.stowawaySurvive}, a Stranger steal +{POINTS.lostSteal}.{seats.some(s => s.special) ? ' Special-role bonuses are added on top.' : ''}</p>
+              <p className="text-[11px] text-cream/45 mb-3">Points: Travellers +{POINTS.explorerWin}, a winning Pickpocket +{POINTS.stowawaySurvive}, a winning Stranger +{POINTS.lostSurvive} (lasting to the end or guessing the Travellers' word).{seats.some(s => s.special) ? ' Special-role bonuses are added on top.' : ''}</p>
 
               <button type="button" onClick={nextRound} className={`${primaryBtn} mb-2.5`}><Play size={18} weight="fill" /> Play next round</button>
               <button type="button" onClick={endSession} className={ghostBtn}><Trophy size={16} weight="fill" /> End game and see awards</button>

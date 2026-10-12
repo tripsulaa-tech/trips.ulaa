@@ -54,6 +54,10 @@ export interface SpecialLike { special?: SpecialId; dipAs?: SoloSpecialId; partn
 /** The ability that actually applies: a Lucky Dip's drawn ability, else the special itself. */
 export const activeSpecial = (a: SpecialLike): SpecialId | undefined => a.dipAs ?? a.special;
 
+/** Display name for an ability id; `dip` marks one that came from a Lucky Dip. */
+export const specialDisplayName = (id: SpecialId, dip = false): string =>
+  (dip ? `Lucky Dip: ${specialName(id)}` : specialName(id));
+
 /** Display name of the ability that applies, or null when there is no special. */
 export const specialLabel = (a: SpecialLike): string | null => {
   const id = activeSpecial(a);
@@ -153,7 +157,7 @@ export function describeSpecial(a: SpecialLike): string | null {
         ? `${a.partner} is your Rival. If they are voted out before you, you score +${RIVAL_POINTS}.`
         : null;
     case 'sleepyhead':
-      return `You are asleep at Stop 1: stay silent and let the others talk. Awake from Stop 2. Still aboard at the end of the round: +${SLEEPY_POINTS}.`;
+      return `You are asleep at Stop 1: skip your turn in the description round and stay silent in the discussion. Awake from Stop 2. Still aboard at the end of the round: +${SLEEPY_POINTS}.`;
     case 'returnTicket':
       return 'The first time you are voted out, you stay aboard and the group votes again.';
     case 'tripLeader':
@@ -161,7 +165,7 @@ export function describeSpecial(a: SpecialLike): string | null {
     case 'backseatRider':
       return `When you are voted out you get one guess at the other side's word: +${BACKSEAT_POINTS} if right. You keep voting from the back seat.`;
     case 'driver':
-      return 'You are the Driver. You choose who speaks first at every stop.';
+      return 'You are the Driver. You start the description round at every stop.';
     case 'buddies':
       return a.partner
         ? `${a.partner} is your Buddy. If you are both still aboard at the end of the round, you each score +${BUDDY_POINTS}.`

@@ -5,7 +5,7 @@ players (each with its own secret token, like a phone) and check the rules:
 
 | Script | Game | Checks |
 |---|---|---|
-| `stowaway_tests.py` | Stowaway | 42: winners and points, word bag, role counts, who can see what, host controls, joining, ties, the Lost Soul's one-shot guess, live updates, share links |
+| `stowaway_tests.py` | Stowaway | 67: winners and points, word bag, role counts, who can see what, host controls, joining, ties, the Lost Soul's one-shot guess, the description round, Undercover's win rule and points, Stranger-only games, special roles (dealing, caps, pairs, Lucky Dip, Return Ticket, Backseat Rider, Payback, Trip Leader, bonuses, secrecy), live updates, share links |
 | `find_my_twin_tests.py` | Find My Twin | 41: pairing for every group size 2 to 24, no repeated pairs, scores recomputed independently, reveal-only mode, roster, "skip stuck pairs", edited questions, secrecy, host controls, live updates |
 
 Run them **before every release that touches `supabase/migration/*stowaway*` or
@@ -26,6 +26,8 @@ for f in tests/stub_supabase.sql \
          migration/remove_stowaway_clue_round.sql \
          migration/drop_stowaway_clue_and_challenge_leftovers.sql \
          migration/rename_stowaway_begin_clues_to_begin_vote.sql \
+         migration/add_stowaway_special_roles.sql \
+         migration/adopt_undercover_rules_for_stowaway.sql \
          migration/add_find_my_twin.sql \
          migration/update_find_my_twin_10_questions.sql \
          migration/make_find_my_twin_editable.sql \
