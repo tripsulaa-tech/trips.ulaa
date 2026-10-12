@@ -245,7 +245,7 @@ export const handleExportTemplate = () => {
     ],
 
     // ── Tab: Accommodation ──────────────────────────────────────────
-    accommodation_description: '<Section Description for the "Stay. Relax. Repeat." section — describe the accommodation. For a ONE-DAY trip leave this as \"\": the site and PDF then show \"This is a one-day experience, so accommodation is not included.\">',
+    accommodation_description: '<Section Description for the "Stay. Relax. Repeat." section — describe the accommodation. For a ONE-DAY trip leave this as "": the site and PDF then show "This is a one-day experience, so accommodation is not included.">',
     accommodation_photos: ['(leave blank — uploaded manually; 6 or more look best)'],
 
     // ── Tab: Meeting Point ──────────────────────────────────────────

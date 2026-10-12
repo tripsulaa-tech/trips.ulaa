@@ -233,6 +233,12 @@ export function useTripFormModal(load: () => void) {
   // Scroll position of the modal body just before the first search jump, so clearing the search
   // can return to it.
   const searchOriginScrollRef = useRef<number | null>(null);
+  const searchMatchIndexRef = useRef(0);
+  // Forgets where the search was (used when switching to another trip).
+  const resetSearchPosition = () => {
+    searchMatchIndexRef.current = 0;
+    searchOriginScrollRef.current = null;
+  };
   const handleModalSearch = () => {
     const query = modalSearch.trim();
     const container = modalBodyRef.current;
@@ -251,7 +257,6 @@ export function useTripFormModal(load: () => void) {
   // Jumps to the Nth best match for the current query (0 = best). Typing
   // always goes to the best match; pressing Enter in the search box steps to
   // the next one and wraps around.
-  const searchMatchIndexRef = useRef(0);
   const jumpToSearchMatch = (index: number) => {
     const query = modalSearch.trim();
     const container = modalBodyRef.current;
@@ -386,8 +391,7 @@ export function useTripFormModal(load: () => void) {
     openEdit(trip);
     // Keep whatever was typed in the field search; the effect below re-runs it on the new trip.
     setModalSearch(keptSearch);
-    searchMatchIndexRef.current = 0;
-    searchOriginScrollRef.current = null;
+    resetSearchPosition();
     modalBodyRef.current?.scrollTo({ top: 0 });
   };
 

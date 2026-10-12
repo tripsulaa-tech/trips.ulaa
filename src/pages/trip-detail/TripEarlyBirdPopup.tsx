@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import EarlyBirdSeatsPrompt, { getEarlyBirdSeatsOffer } from '../../components/ui/EarlyBirdSeatsPrompt';
+import EarlyBirdSeatsPrompt from '../../components/ui/EarlyBirdSeatsPrompt';
+import { getEarlyBirdSeatsOffer } from '../../components/ui/earlyBirdSeatsOffer';
 import type { UpcomingTrip } from '../../types/types-index';
 
 // Same beat as the special-offer popup — long enough that it doesn't fight

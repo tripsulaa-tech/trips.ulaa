@@ -4,7 +4,8 @@ import {
 } from '@phosphor-icons/react';
 import type { FAQ } from '../../types/types-index';
 import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
-import { useReorder, moveItem, ReorderGrip, ReorderArrows } from './Reorder';
+import { useReorder, moveItem } from './reorderUtils';
+import { ReorderGrip, ReorderArrows } from './Reorder';
 
 interface FAQEditorProps {
   value: FAQ[];

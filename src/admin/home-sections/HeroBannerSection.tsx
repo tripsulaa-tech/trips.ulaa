@@ -12,7 +12,8 @@ import {
   DeviceMobile,
 } from '@phosphor-icons/react';
 import ImageUploadField from '../../components/ui/ImageUploadField';
-import { useReorder, moveItem, ReorderGrip } from '../../components/ui/Reorder';
+import { useReorder, moveItem } from '../../components/ui/reorderUtils';
+import { ReorderGrip } from '../../components/ui/Reorder';
 import { uploadImage, deleteImageByUrl } from '../../services/api';
 import { DEFAULT_HOME_HERO } from '../../constants/home-hero';
 import type { HomeHeroContent, HomeHeroSlide } from '../../types/types-index';

@@ -20,7 +20,8 @@ import { getPackageBase, hasPackages, isPackageSoldOut, withBasicPricing } from 
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
-import { EarlyBirdSeatsStrip, getEarlyBirdSeatsOffer } from './EarlyBirdSeatsPrompt';
+import { EarlyBirdSeatsStrip } from './EarlyBirdSeatsPrompt';
+import { getEarlyBirdSeatsOffer } from './earlyBirdSeatsOffer';
 
 interface TripCardProps {
   trip: UpcomingTrip;

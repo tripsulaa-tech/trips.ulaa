@@ -3,7 +3,8 @@ import type { TripOptionsConfig, TripOption, TripPackage } from '../../types/typ
 import { formatPrice } from '../../utils/utils-index';
 import { hasOwnPrice, newOptionId, packageQuote, noPackageBase } from '../../utils/tripOptions';
 import { inputClass } from './useTripFormModal';
-import { useReorder, moveItem, ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
+import { useReorder, moveItem } from '../../components/ui/reorderUtils';
+import { ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
 
 // Admin editor for a trip's public packages (Basic / Premium / ...).
 //

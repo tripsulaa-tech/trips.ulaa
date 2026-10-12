@@ -18,7 +18,8 @@ import {
   itemCardHeaderClass,
   itemNumberBadgeClass,
 } from './shared';
-import { useReorder, moveItem, ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
+import { useReorder, moveItem } from '../../components/ui/reorderUtils';
+import { ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
 
 export default function JourneyIntroSection({
   content,

@@ -13,7 +13,8 @@ import {
   itemNumberBadgeClass,
 } from './shared';
 import { STORAGE_BUCKET } from '../../constants/storage';
-import { useReorder, moveItem, ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
+import { useReorder, moveItem } from '../../components/ui/reorderUtils';
+import { ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
 
 // Soft limits matching the card's real-world footprint on the public page
 // (aspect-[4/3] tile, heading text-sm sm:text-base, description text-xs) —

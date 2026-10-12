@@ -2,7 +2,8 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 're
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Fire, Seat, User } from '@phosphor-icons/react';
-import Plane3D, { isPlane3DSupported } from './Plane3D';
+import Plane3D from './Plane3D';
+import { isPlane3DSupported } from './plane3DRenderer';
 
 interface TripCountdownCardProps {
   startDate: string | null | undefined;

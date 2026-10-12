@@ -11,7 +11,8 @@ import InlineEditText from './InlineEditText';
 import TripHighlightIconPicker from './TripHighlightIconPicker';
 import { EDITOR_INPUT_CLASS as inputClass } from '../../constants/formStyles';
 import { STORAGE_BUCKET } from '../../constants/storage';
-import { useReorder, moveItem, ReorderGrip } from './Reorder';
+import { useReorder, moveItem } from './reorderUtils';
+import { ReorderGrip } from './Reorder';
 
 interface ItineraryEditorProps {
   value: ItineraryDay[];

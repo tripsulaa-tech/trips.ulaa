@@ -153,7 +153,7 @@ export default function AdminInvoiceGenerator() {
   // What "nothing to keep" looks like: a fresh form (or, after Save, the invoice just saved).
   const [draftBase, setDraftBase] = useState(() => stableStringify(withoutNumber(defaultInvoiceGeneratorData())));
   const dataRef = useRef(data);
-  dataRef.current = data;
+  useEffect(() => { dataRef.current = data; }, [data]);
   const draftValue = useMemo(() => withoutNumber(data), [data]);
   useDraftKeeper({ key: INVOICE_DRAFT_KEY, value: draftValue, base: draftBase });
   // Phones: the preview opens as a bottom sheet from a floating eye button instead of sitting at the bottom of the page.
@@ -314,6 +314,8 @@ export default function AdminInvoiceGenerator() {
         setHistoryLoading(false);
       }
     })();
+    // Runs once on mount; it reads the latest form through dataRef on purpose.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = async () => {

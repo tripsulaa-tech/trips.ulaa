@@ -13,7 +13,8 @@ import {
   itemCardHeaderClass,
   itemNumberBadgeClass,
 } from './shared';
-import { useReorder, moveItem, ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
+import { useReorder, moveItem } from '../../components/ui/reorderUtils';
+import { ReorderGrip, ReorderArrows } from '../../components/ui/Reorder';
 
 // Soft limits matching the step's footprint on the public page (heading
 // text-base, description text-sm capped to a ~200px column).

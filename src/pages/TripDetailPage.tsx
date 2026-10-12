@@ -34,7 +34,7 @@ import TripEndBanner from './trip-detail/TripEndBanner';
 import TripBookingModal from './trip-detail/TripBookingModal';
 import TripSpecialOfferPopup from './trip-detail/TripSpecialOfferPopup';
 import TripEarlyBirdPopup from './trip-detail/TripEarlyBirdPopup';
-import { getEarlyBirdSeatsOffer } from '../components/ui/EarlyBirdSeatsPrompt';
+import { getEarlyBirdSeatsOffer } from '../components/ui/earlyBirdSeatsOffer';
 import { useIsDesktop } from './trip-detail/tripDetailUtils';
 import { Compass } from '@phosphor-icons/react';
 
