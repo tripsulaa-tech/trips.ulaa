@@ -24,7 +24,7 @@ interface RosterGameCardProps {
   create: (names: string[], tripTitle: string) => Promise<string>;
   update: (code: string, names: string[], tripTitle: string) => Promise<boolean>;
   migrationFile: string;
-  /** Extra content under the card's share row (e.g. Stowaway's host code). */
+  /** Extra content under the card's share row (e.g. Stowaway's online switch). */
   extra?: ReactNode;
 }
 

@@ -111,9 +111,7 @@ const MESSAGES: Record<string, string> = {
   need_more_players: 'You need at least 3 players.',
   bad_roles: 'These roles do not work for this many players.',
   no_votes_yet: 'Nobody has voted yet.',
-  not_allowed: 'Hosting needs a host code from the Ulaa team.',
-  bad_host_code: 'That host code is not valid, or the trip has finished. Check it with the Ulaa team.',
-  host_code_busy: 'This host code already has 5 open rooms. Finish one, or ask the Ulaa team.',
+  game_closed: 'Online play is not open right now. Ask the Ulaa team to open it.',
   too_many_rooms: 'Lots of games are running right now. Try again in a minute.',
   host_present: 'The host is still here.',
   guess_required: 'Type your guess first.',
@@ -180,11 +178,8 @@ export function joinLink(code: string): string {
 const t = () => deviceToken();
 
 export const online = {
-  /** Admins can host without a code; everyone else needs the trip's host code. */
-  create: (name: string, tripTitle: string, hostCode?: string) =>
-    rpc<{ code: string; player_id: string }>('stowaway_create_room', {
-      p_name: name, p_token: t(), p_trip_title: tripTitle, p_host_code: hostCode?.trim() || null,
-    }),
+  create: (name: string, tripTitle: string) =>
+    rpc<{ code: string; player_id: string }>('stowaway_create_room', { p_name: name, p_token: t(), p_trip_title: tripTitle }),
   peek: (code: string) =>
     rpc<{ exists: boolean; locked?: boolean; phase?: OnlinePhase; trip_title?: string; players?: number }>('stowaway_peek', { p_code: code }),
   join: (code: string, name: string) =>
