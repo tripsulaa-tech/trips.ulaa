@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { POINTS, checkWinner, clampRoles, countsFor, dealRound, describeOrder, recommendedRoles, roundPoints, rolesValid, uniqueNames } from './yaaruAvanEngine';
+import { MAX_PLAYERS, MIN_PLAYERS, POINTS, checkWinner, clampRoles, countsFor, dealRound, describeOrder, recommendedRoles, roundPoints, rolesValid, uniqueNames } from './yaaruAvanEngine';
 import type { Seat } from './yaaruAvanEngine';
-import { CLOWN_POINTS, ENABLED_SPECIALS, RIVAL_POINTS, SPECIALS, activeSpecial, assignSpecials, describeSpecial, maxSpecials, specialBonus } from './yaaruAvanSpecials';
+import { CLOWN_POINTS, ENABLED_SPECIALS, RIVAL_POINTS, SPECIALS, activeSpecial, assignSpecials, describeSpecial, maxSpecials, specialBonus, PUBLIC_SPECIALS, SPECIAL_BLURB } from './yaaruAvanSpecials';
 import type { BonusSeat } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
 
@@ -27,7 +27,7 @@ describe('core roles', () => {
     expect(rolesValid(9, 1, 2)).toBe(false); // Pickpocket cap is 1 below 10 players
     expect(rolesValid(10, 2, 2)).toBe(true);
     expect(rolesValid(2, 1, 0)).toBe(false);
-    expect(rolesValid(16, 2, 0)).toBe(false);
+    expect(rolesValid(21, 2, 0)).toBe(false);
   });
 
   it('needs at least one Stranger or one Pickpocket, like Undercover', () => {
@@ -38,7 +38,7 @@ describe('core roles', () => {
   });
 
   it('recommends a valid split for every size', () => {
-    for (let n = 3; n <= 15; n++) {
+    for (let n = 3; n <= MAX_PLAYERS; n++) {
       const r = recommendedRoles(n);
       expect(rolesValid(n, r.stowaways, r.lost)).toBe(true);
     }
@@ -96,9 +96,9 @@ describe('core roles', () => {
 
 describe('special roles', () => {
   it('caps at one special per 3 players', () => {
-    expect([3, 5, 6, 9, 15].map(maxSpecials)).toEqual([1, 1, 2, 3, 5]);
+    expect([3, 5, 6, 9, 15, 20].map(maxSpecials)).toEqual([1, 1, 2, 3, 5, 6]);
     for (let seed = 1; seed <= 50; seed++) {
-      for (const n of [3, 5, 9, 15]) {
+      for (const n of [3, 5, 9, 15, 20]) {
         // A pair (Duelists, Lovers) is one role dealt to two players, so count roles, not players.
         const out = assignSpecials(names(n), ALL, Infinity, seeded(seed));
         const pairSeats = [...out.values()].filter(a => PAIR.has(a.special)).length;
@@ -240,5 +240,34 @@ describe('special role scoring', () => {
     }
     expect(describeSpecial({ special: 'rivals', partner: 'Meena' })).toBeTruthy();
     expect(describeSpecial({ special: 'lovers' })).toBeNull();
+  });
+});
+
+describe('player limits (Undercover allows 3 to 20)', () => {
+  it('takes 3 to 20 players', () => {
+    expect([MIN_PLAYERS, MAX_PLAYERS]).toEqual([3, 20]);
+    expect(rolesValid(20, 3, 1)).toBe(true);
+    expect(rolesValid(21, 3, 1)).toBe(false);
+    expect(rolesValid(2, 1, 0)).toBe(false);
+  });
+
+  it('deals a full 20-player table with unique seats and the right role counts', () => {
+    const ns = Array.from({ length: 20 }, (_, i) => `P${i}`);
+    const c = recommendedRoles(20);
+    const r = dealRound(ns, countsFor(20, c.stowaways, c.lost), { id: 'x', category: 'places', level: 'easy', a: 'A', b: 'B' } as never);
+    expect(r.seats).toHaveLength(20);
+    expect(new Set(r.seats.map(x => x.seat)).size).toBe(20);
+    expect(r.seats.filter(x => x.role === 'stowaway')).toHaveLength(c.stowaways);
+    expect(r.seats.filter(x => x.role === 'lost')).toHaveLength(c.lost);
+  });
+});
+
+describe('Goddess of Justice announcement', () => {
+  it('is the only role announced to everyone', () => {
+    expect([...PUBLIC_SPECIALS]).toEqual(['tripLeader']);
+  });
+
+  it('is described to the players as announced', () => {
+    expect(SPECIAL_BLURB.tripLeader).toMatch(/told who she is/i);
   });
 });

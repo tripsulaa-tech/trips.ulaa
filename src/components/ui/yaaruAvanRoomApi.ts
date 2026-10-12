@@ -59,6 +59,10 @@ interface OnlineRoom {
     tiebreak?: boolean;
     leader?: string;
     tied?: string[];
+    /** No Goddess: the tied players describe once more, then the others vote again among them. */
+    redo?: boolean;
+    /** Tied again after that: the host (leader) decides instead of the Goddess. */
+    host_pick?: boolean;
     /** Lovers: the partner who left right after them. */
     lover?: string | null;
     /** Set when this exit came from a Payback by that player. */
@@ -90,8 +94,8 @@ interface OnlinePlayer {
   away: boolean;
   /** Alive, or a Backseat Rider who is out: may vote. */
   voter: boolean;
-  /** Only used by older rooms: all roles are secret now. */
-  public_special: 'tripLeader' | 'driver' | null;
+  /** The Goddess of Justice is announced to everyone once the words are dealt; every other role stays secret. */
+  public_special: 'tripLeader' | null;
 }
 
 export interface OnlineState {
@@ -117,7 +121,7 @@ const MESSAGES: Record<string, string> = {
   room_not_found: 'That room code was not found. Check it and try again.',
   room_locked: 'The host has locked this room.',
   game_started: 'That game has already started. Ask the host to open the next lobby.',
-  room_full: 'This room is full (15 players).',
+  room_full: 'This room is full (20 players).',
   name_required: 'Please type your name.',
   host_only: 'Only the host can do that.',
   not_in_room: 'You are not in this room any more.',
@@ -133,6 +137,7 @@ const MESSAGES: Record<string, string> = {
   already_guessed: 'You already sent your guess.',
   bad_target: 'You cannot pick that player.',
   not_your_turn: 'It is not your turn to speak.',
+  tied_cannot_vote: 'You were tied, so the other players decide this vote.',
 };
 
 export class OnlineError extends Error {

@@ -16,8 +16,19 @@ import psycopg2, psycopg2.extras
 
 DSN = os.environ.get('TEST_DATABASE_URL')
 QUICK = '--quick' in sys.argv
+NO_SPECIALS = '--no-specials' in sys.argv
 if not DSN:
     sys.exit('Set TEST_DATABASE_URL to a throw-away database (see README.md).')
+
+if NO_SPECIALS and '__filtered__' not in globals():
+    # --no-specials: run everything except the special-role checks (the marked blocks).
+    import re
+    src = open(__file__).read()
+    mark = '# @' + 'specials-'
+    src = re.sub(re.escape(mark + 'begin') + '.*?' + re.escape(mark + 'end') + '\n', '', src, flags=re.S)
+    src = src.replace('# @' + 'nospecials: ', '')
+    exec(compile(src, __file__, 'exec'), {**globals(), '__filtered__': True, '__name__': '__main__'})
+    sys.exit(0)
 
 def connect(role=None):
     c = psycopg2.connect(DSN); c.autocommit = True
@@ -61,7 +72,7 @@ def new_room(n, stow=1, lost=0, level='medium', hide=False):
     ps = [P(f'P{i}') for i in range(n)]
     r = rpc('yaaru_avan_create_room', ps[0].name, ps[0].tok, 'Test'); code = r['code']; ps[0].id = r['player_id']
     for p in ps[1:]: p.id = rpc('yaaru_avan_join', code, p.name, p.tok)['player_id']
-    rpc('yaaru_avan_set_settings', code, ps[0].tok, stow, lost, level, hide, False)
+    rpc('yaaru_avan_set_settings', code, ps[0].tok, stow, lost, level, hide, False, False, None)
     return code, ps
 
 def roles_of(code):
@@ -86,8 +97,10 @@ def play_round(code, ps, policy='random', check_counts=True):
             roles = roles_of(code); alive = [p for p in ps if roles[p.id]['alive']]
             for v in alive:
                 pl = {x['id']: x for x in state(code, host)['players']}
-                if state(code, host)['room']['phase'] != 'vote' or pl[v.id]['voted']: continue
-                others = [p for p in alive if p.id != v.id]
+                st_v = state(code, v)
+                if st_v['room']['phase'] != 'vote' or pl[v.id]['voted'] or not st_v['me']['can_vote']: continue
+                bounce_ids = st_v['room'].get('bounce')   # after a tie only the tied players can be voted for
+                others = [p for p in alive if p.id != v.id and (not bounce_ids or p.id in bounce_ids)]
                 if policy == 'smart' and roles[v.id]['role'] == 'explorer':
                     tgt = random.choice([p for p in others if roles[p.id]['role'] != 'explorer'] or others)
                 elif policy == 'bad':
@@ -95,7 +108,9 @@ def play_round(code, ps, policy='random', check_counts=True):
                 else: tgt = random.choice(others)
                 rpc('yaaru_avan_cast_vote', code, v.tok, tgt.id)
         elif ph == 'describe':
-            rpc('yaaru_avan_describe_done', code, host.tok)
+            rpc('yaaru_avan_describe_done', code, host.tok, room['describe_pos'])
+        elif ph == 'tiebreak':   # no Goddess here, so the host picks between the tied players
+            rpc('yaaru_avan_tiebreak', code, host.tok, random.choice(room['last_result']['tied']))
         elif ph == 'offboard':
             su("update yaaru_avan_rooms set offboard_at = now() - interval '10 seconds' where code = %s", (code,))
             rpc('yaaru_avan_after_reveal', code, random.choice(ps).tok)
@@ -115,7 +130,7 @@ def check(name, ok, detail=''): RESULTS.append((name, bool(ok), '' if ok else st
 random.seed(2024)
 
 # ── 1. Every role split, every table size: counts shown = roles dealt ──
-sizes = range(3, 16, 3 if QUICK else 1)
+sizes = range(3, 21, 3 if QUICK else 1)
 bad = []
 for n in sizes:
     for stow, lost in [(1, 0), (1, 1), (2, 1), (3, 2), (4, 1), (6, 2)]:
@@ -127,7 +142,7 @@ check('role counts shown match the roles dealt (all sizes and splits)', not bad,
 # ── 2. Full multi-round games obey the rules ──
 issues = collections.Counter()
 for _ in range(25 if QUICK else 120):
-    n = random.randint(3, 15); stow, lost = random.choice([(1, 0), (1, 1), (2, 1), (2, 2), (3, 1), (3, 2)])
+    n = random.randint(3, 20); stow, lost = random.choice([(1, 0), (1, 1), (2, 1), (2, 2), (3, 1), (3, 2)])
     code, ps = new_room(n, stow, lost)
     for rnd in range(3):
         st, pr = play_round(code, ps, random.choice(['random', 'smart', 'bad']), check_counts=False)
@@ -209,7 +224,9 @@ rpc('yaaru_avan_start_round', code, host.tok, None, False); [rpc('yaaru_avan_rea
 start_vote(code, host.tok)
 for i, p in enumerate(ps): rpc('yaaru_avan_cast_vote', code, p.tok, ps[(i + 1) % 3].id)
 room = state(code, host)['room']
-check('a tied vote asks everyone to vote again', room['phase'] == 'vote' and room['last_result']['tie'] is True)
+check('a tie with no Goddess sends the tied players back to describe once more',
+      room['phase'] == 'describe' and room['last_result']['tie'] is True and room['last_result']['redo'] is True
+      and sorted(room['describe_order']) == sorted(p.id for p in ps), room['phase'])
 check('a tie clears the "voted" flags', not any(p['voted'] for p in state(code, host)['players'])); clear()
 
 code, ps = new_room(5, 1, 0); host = ps[0]
@@ -238,10 +255,20 @@ try: rpc('yaaru_avan_join', code, 'New', str(uuid.uuid4())); started = False
 except Err as e: started = e.code == 'game_started'
 check('nobody can join a game in progress', started); clear()
 
-code, ps = new_room(15, 1, 0)
-try: rpc('yaaru_avan_join', code, 'Sixteen', str(uuid.uuid4())); full = False
+code, ps = new_room(20, 1, 0)
+try: rpc('yaaru_avan_join', code, 'TwentyOne', str(uuid.uuid4())); full = False
 except Err as e: full = e.code == 'room_full'
-check('the 16th player is refused', full); clear()
+check('the 21st player is refused (a room holds 20)', full); clear()
+
+# The Goddess of Justice is announced once the words are dealt; nothing else is.
+code, ps = new_room(5, 1, 0); rpc('yaaru_avan_start_round', code, ps[0].tok, None, False)
+su("update yaaru_avan_rooms set specials = true where code = %s", (code,))
+su("update yaaru_avan_player_private set special = 'tripLeader' where player_id = %s", (ps[2].id,))
+seen_by = [{q['id']: q['public_special'] for q in state(code, v)['players']} for v in (ps[0], ps[3])]
+check('everyone is told who the Goddess of Justice is once the words are dealt',
+      all(m[ps[2].id] == 'tripLeader' and sum(1 for x in m.values() if x) == 1 for m in seen_by), seen_by)
+su("update yaaru_avan_rooms set phase = 'lobby' where code = %s", (code,))
+check('the Goddess is not announced in the lobby', all(q['public_special'] is None for q in state(code, ps[0])['players'])); clear()
 
 code, ps = new_room(4, 1, 0); rpc('yaaru_avan_leave', code, ps[0].tok)
 check('the host leaving hands the room to the next player', state(code, ps[1])['room']['host_id'] == ps[1].id)
@@ -299,10 +326,10 @@ for fn, args in [('yaaru_avan_create_share', (names, 'x')), ('yaaru_avan_update_
     except Err: pass
 check('the public key cannot create or change a share link', not blocked, blocked)
 bad = []
-for pl in (['A', 'B'], [f'P{i}' for i in range(16)], ['A', '  ', 'B', ''], None):
+for pl in (['A', 'B'], [f'P{i}' for i in range(21)], ['A', '  ', 'B', ''], None):
     try: rpc_as(AUTH, 'yaaru_avan_create_share', pl, ''); bad.append(pl)
     except Err: pass
-check('a link needs 3 to 15 real names', not bad, bad)
+check('a link needs 3 to 20 real names', not bad, bad)
 cl = rpc_as(AUTH, 'yaaru_avan_create_share', ['  Priya\t ', '', 'X' * 40, 'Ravi', 'Meena'], '')
 check('names are trimmed, blanks dropped and capped at 18 characters', rpc_as(API, 'yaaru_avan_get_share', cl)['players'] == ['Priya', 'X' * 18, 'Ravi', 'Meena'])
 check('updating keeps the same code and swaps the players', rpc_as(AUTH, 'yaaru_avan_update_share', sc, ['Zed', 'Yan', 'Xin'], 'Hampi') is True
@@ -316,17 +343,18 @@ su('delete from yaaru_avan_share_links')
 
 
 # ── special roles (online) ──
-SPECIAL_IDS = {'clown', 'rivals', 'sleepyhead', 'returnTicket', 'tripLeader', 'backseatRider', 'driver', 'buddies', 'payback', 'luckyDip'}
-DIP_OK = {'clown', 'sleepyhead', 'returnTicket', 'tripLeader', 'backseatRider', 'driver'}
+SPECIAL_IDS = {'clown', 'rivals', 'returnTicket', 'tripLeader', 'backseatRider', 'payback', 'luckyDip', 'lovers'}
+DIP_OK = {'clown', 'returnTicket', 'tripLeader', 'backseatRider', 'payback'}
 
 def specials_of(code):
     return su("""select pp.player_id, pp.special, pp.dip_as, pp.partner from yaaru_avan_player_private pp
         join yaaru_avan_players p on p.id = pp.player_id join yaaru_avan_rooms r on r.id = p.room_id where r.code = %s""", (code,))
 
+# @specials-begin
 # 1. Dealing: caps, pairs, Lucky Dip, off by default
 deal_bad = collections.Counter(); seen_specials = set()
 for _ in range(40 if QUICK else 200):
-    n = random.randint(3, 15); code, ps = new_room(n)
+    n = random.randint(3, 20); code, ps = new_room(n)
     rpc('yaaru_avan_start_round', code, ps[0].tok, None, False)
     if any(r['special'] or r['dip_as'] for r in specials_of(code)): deal_bad['specials dealt while the switch is off'] += 1
     su("update yaaru_avan_rooms set phase = 'lobby' where code = %s", (code,))
@@ -334,11 +362,11 @@ for _ in range(40 if QUICK else 200):
     rpc('yaaru_avan_start_round', code, ps[0].tok, None, False)
     rows = specials_of(code); by = {r['player_id']: r for r in rows}
     got = [r for r in rows if r['special']]
-    if len(got) > n // 3: deal_bad['more than one special per 3 players'] += 1
+    if len(got) - sum(1 for r in got if r['special'] in ('rivals', 'lovers')) // 2 > n // 3: deal_bad['more than one special per 3 players'] += 1
     seen_specials |= {r['special'] for r in got}
     for r in got:
         if r['special'] not in SPECIAL_IDS: deal_bad['unknown special'] += 1
-        if r['special'] in ('rivals', 'buddies'):
+        if r['special'] in ('rivals', 'lovers'):
             q = by.get(r['partner'])
             if not q or q['special'] != r['special'] or q['partner'] != r['player_id']: deal_bad['pair not matched'] += 1
         elif r['partner']: deal_bad['solo special has a partner'] += 1
@@ -351,6 +379,7 @@ check('specials are only dealt when the room switch is on', 'specials dealt whil
 check('at most one special per 3 players, pairs matched, Lucky Dip draws a free solo ability', not deal_bad, deal_bad)
 check('every kind of special turns up across many deals', SPECIAL_IDS <= seen_specials, SPECIAL_IDS - seen_specials)
 
+# @specials-end
 # helpers for forced scenarios
 def scenario(n, stowaway_idx, specials, lost_idx=()):
     code, ps = new_room(n, len(stowaway_idx), len(lost_idx))
@@ -389,29 +418,16 @@ def reveal(code, ps):
 def gains(code, ps):
     return {p.id: g for p in ps for g in [next(x['gained'] for x in state(code, ps[0])['room']['round_summary']['players'] if x['id'] == p.id)]}
 
+# @specials-begin
 # 2. One long round that uses most specials
-code, ps, rp = scenario(9, {7, 8}, {1: ('payback', None), 2: ('backseatRider', None), 3: ('sleepyhead', None),
-                                    4: ('clown', None), 5: ('buddies', 6), 6: ('buddies', 5), 0: ('returnTicket', None)})
+code, ps, rp = scenario(9, {7, 8}, {1: ('payback', None), 2: ('backseatRider', None), 4: ('clown', None)})
 issues = []
 vote_for(code, ps, ps[4]); reveal(code, ps)                          # Clown out at stop 1
 if phase(code, ps) != 'vote' or state(code, ps[0])['room']['stop_no'] != 2: issues.append('stop 2 did not start after the Clown')
-vote_for(code, ps, ps[0])                                            # Return Ticket: vote cancelled
-r = state(code, ps[0])['room']
-if r['phase'] != 'vote' or not (r['last_result'] or {}).get('saved') or r['stop_no'] != 2: issues.append('Return Ticket did not cancel the vote')
-if not next(x for x in state(code, ps[1])['players'] if x['id'] == ps[0].id)['alive']: issues.append('Return Ticket holder was removed')
-vote_for(code, ps, ps[0]); reveal(code, ps)                          # second vote works
-if phase(code, ps) != 'vote' or next(x for x in state(code, ps[1])['players'] if x['id'] == ps[0].id)['alive']: issues.append('Return Ticket worked twice')
-vote_for(code, ps, ps[2]); reveal(code, ps)                          # Backseat Rider out -> guess
-if phase(code, ps) != 'guess': issues.append(f'Backseat Rider did not get a guess (phase {phase(code, ps)})')
-rpc('yaaru_avan_submit_guess', code, ps[2].tok, rp['stowaway_word'])   # a Traveller guesses the Pickpockets' word
-if state(code, ps[3])['room']['guess_match'] is not True: issues.append('Rider guess not matched against the other side word')
-if state(code, ps[2])['room']['guess_match'] is not None: issues.append('Rider could see the verdict')
-try: rpc('yaaru_avan_judge_guess', code, ps[2].tok, True); issues.append('Rider judged own guess')
-except Err: pass
-rpc('yaaru_avan_judge_guess', code, ps[3].tok, True)
-if phase(code, ps) != 'describe': issues.append('round did not continue with a description round after the Rider guess')
-to_vote(code, ps)
-if phase(code, ps) != 'vote': issues.append('round did not continue after the Rider guess')
+vote_for(code, ps, ps[0]); reveal(code, ps)                          # a plain player out at stop 2
+if phase(code, ps) != 'vote' or next(x for x in state(code, ps[1])['players'] if x['id'] == ps[0].id)['alive']: issues.append('the stop 2 vote did not take a player off')
+vote_for(code, ps, ps[2]); reveal(code, ps)                          # Ghost (a Traveller) out: no guess, the game goes on
+if phase(code, ps) != 'vote': issues.append(f'a Traveller Ghost should get no guess and the game should go on (phase {phase(code, ps)})')
 if not state(code, ps[2])['me']['can_vote']: issues.append('Rider cannot vote after leaving')
 if state(code, ps[4])['me']['can_vote']: issues.append('a plain out player can vote')
 # stop 4: the Rider still votes, and the vote waits for the Rider
@@ -437,51 +453,146 @@ end = state(code, ps[0])['room']
 if end['phase'] != 'roundEnd' or end['outcome'] != 'explorers': issues.append('round did not end with a Traveller win')
 else:
     g = gains(code, ps)
-    want = {0: 2, 1: 2 + 2, 2: 2 + 3, 3: 2 + 1, 4: 2 + 4, 5: 2 + 2, 6: 2 + 2, 7: 0, 8: 0}
+    want = {0: 2, 1: 2, 2: 2, 3: 2, 4: 2 + 4, 5: 2, 6: 2, 7: 0, 8: 0}
     for i, w in want.items():
         if g[ps[i].id] != w: issues.append(f'P{i} scored {g[ps[i].id]}, expected {w}')
     sm = {x['id']: x for x in end['round_summary']['players']}
     if sm[ps[4].id].get('special') != 'clown' or sm[ps[4].id].get('bonus') != 4: issues.append('round summary does not show specials and bonuses')
-check('Clown, Return Ticket, Backseat Rider, Payback, Sleepyhead and Buddies play out and score correctly', not issues, issues[:4])
+check('Clown, Ghost and Revenger play out and score correctly', not issues, issues[:4])
 clear()
 
-# 3. A Traveller Backseat Rider guessing their own word is wrong
+# 3. Only a Pickpocket gets a last guess: a Traveller Ghost who is voted out does not
 code, ps, rp = scenario(6, {5}, {1: ('backseatRider', None)})
 vote_for(code, ps, ps[1]); reveal(code, ps)
-rpc('yaaru_avan_submit_guess', code, ps[1].tok, rp['explorer_word'])
-check('a Traveller Backseat Rider is checked against the Pickpockets word, not their own',
-      state(code, ps[0])['room']['guess_match'] is False)
+check('a Traveller Ghost gets no last guess', phase(code, ps) == 'vote', phase(code, ps))
 clear()
 
 # 4. Rivals: the one whose rival goes first scores
 code, ps, rp = scenario(6, {5}, {1: ('rivals', 2), 2: ('rivals', 1)})
 vote_for(code, ps, ps[1]); reveal(code, ps); vote_for(code, ps, ps[5]); reveal(code, ps)
 g = gains(code, ps) if phase(code, ps) == 'roundEnd' else {}
-check('Rivals: +2 for the rival who outlasts the other', g and g[ps[2].id] == 4 and g[ps[1].id] == 2, g)
+check('Rivals: +2 for the rival who outlasts the other, -2 for the first one out', g and g[ps[2].id] == 4 and g[ps[1].id] == 0, g)
 clear()
 
-# 5. Trip Leader breaks a tie; without one it is still a tie
+# @specials-end
+# 5. A tie goes to the Goddess of Justice; without one the tied players describe once more
 def tie_votes(code, ps):
     for voter, target in [(0, 1), (3, 1), (1, 2), (4, 2), (2, 5), (5, 4)]:
         if phase(code, ps) == 'vote': rpc('yaaru_avan_cast_vote', code, ps[voter].tok, ps[target].id)
+# @specials-begin
 code, ps, rp = scenario(6, {5}, {0: ('tripLeader', None)})
 tie_votes(code, ps)
 r = state(code, ps[0])['room']
-check('the Trip Leader breaks a tie with their own vote', r['phase'] == 'offboard' and r['out_player'] == ps[1].id, r['phase'])
+check('a tie with a Goddess waits for her pick', r['phase'] == 'tiebreak' and r['last_result']['leader'] == ps[0].id
+      and set(r['last_result']['tied']) == {ps[1].id, ps[2].id}, (r['phase'], r['last_result']))
+try: rpc('yaaru_avan_tiebreak', code, ps[3].tok, ps[1].id); other = False
+except Err: other = True
+check('only the Goddess (or the host when she is away) can pick', other)
+try: rpc('yaaru_avan_tiebreak', code, ps[0].tok, ps[3].id); bad_pick = False
+except Err as e: bad_pick = e.code == 'bad_target'
+check('the Goddess can only pick one of the tied players', bad_pick)
+rpc('yaaru_avan_tiebreak', code, ps[0].tok, ps[1].id)
+r = state(code, ps[0])['room']
+check('the Goddess pick takes that player offboard', r['phase'] == 'offboard' and r['out_player'] == ps[1].id, r['phase'])
 clear()
+# @specials-end
 code, ps, rp = scenario(6, {5}, {})
 tie_votes(code, ps)
 r = state(code, ps[0])['room']
-check('with no Trip Leader a tie is still a tie', r['phase'] == 'vote' and r['last_result']['tie'] is True, r['phase'])
+check('with no Goddess a tie sends only the tied players back to describe once more',
+      r['phase'] == 'describe' and r['last_result']['redo'] is True
+      and set(r['describe_order']) == {ps[1].id, ps[2].id} and set(r['bounce']) == {ps[1].id, ps[2].id},
+      (r['phase'], r['describe_order']))
+
+# They describe once more (the host moves the turns along), then the others vote again.
+for pos in range(2): rpc('yaaru_avan_describe_done', code, ps[0].tok, pos)
+check('after the tied players describe, the room goes to a re-vote', phase(code, ps) == 'vote', phase(code, ps))
+try: rpc('yaaru_avan_cast_vote', code, ps[1].tok, ps[2].id); tied_voted = True
+except Err as e: tied_voted = e.code != 'tied_cannot_vote'
+check('a tied player sits the re-vote out', not tied_voted)
+st1 = state(code, ps[0])
+check('the tied players are not counted as voters in the re-vote',
+      st1['me']['can_vote'] and not state(code, ps[1])['me']['can_vote']
+      and {q['id'] for q in st1['players'] if q['voter']} == {ps[0].id, ps[3].id, ps[4].id, ps[5].id})
+try: rpc('yaaru_avan_cast_vote', code, ps[0].tok, ps[3].id); off = False
+except Err as e: off = e.code == 'bad_target'
+check('only the tied players can be voted for in the re-vote', off)
+for voter in (0, 3, 4, 5): rpc('yaaru_avan_cast_vote', code, ps[voter].tok, ps[1].id)
+r = state(code, ps[0])['room']
+check('the re-vote takes the majority player offboard', r['phase'] == 'offboard' and r['out_player'] == ps[1].id, r['phase'])
+clear()
+
+# Tied again after the re-vote: the host decides, so the game cannot loop.
+code, ps, rp = scenario(6, {5}, {})
+tie_votes(code, ps)
+for pos in range(2): rpc('yaaru_avan_describe_done', code, ps[0].tok, pos)
+for voter, target in [(0, 1), (3, 2), (4, 1), (5, 2)]: rpc('yaaru_avan_cast_vote', code, ps[voter].tok, ps[target].id)
+r = state(code, ps[0])['room']
+check('tied again after the re-vote: the host decides', r['phase'] == 'tiebreak' and r['last_result']['host_pick'] is True
+      and r['last_result']['leader'] == ps[0].id, r['phase'])
+try: rpc('yaaru_avan_tiebreak', code, ps[3].tok, ps[1].id); other = False
+except Err: other = True
+check('only the host can pick in that tie-break', other)
+rpc('yaaru_avan_tiebreak', code, ps[0].tok, ps[2].id)
+r = state(code, ps[0])['room']
+check('the host pick takes that player offboard', r['phase'] == 'offboard' and r['out_player'] == ps[2].id, r['phase'])
+clear()
+
+# @specials-begin
+# 5b. Boomerang: the votes bounce onto the voters, who are then tied
+def reveal_now(code, ps): rpc('yaaru_avan_resolve_now', code, ps[0].tok)
+def ticket_used(code, p): return su('select ticket_used from yaaru_avan_player_private where player_id = %s', (p.id,))[0]['ticket_used']
+
+# One voter: the whole bounce lands on them.
+code, ps, rp = scenario(6, {5}, {0: ('returnTicket', None)})
+rpc('yaaru_avan_cast_vote', code, ps[1].tok, ps[0].id); reveal_now(code, ps)
+r = state(code, ps[0])['room']
+check('Boomerang with one voter: that voter goes straight off',
+      r['phase'] == 'offboard' and r['out_player'] == ps[1].id and r['last_result']['bounce_from'] == ps[0].id and ticket_used(code, ps[0]), (r['phase'], r['last_result']))
+clear()
+
+# Several voters, no Goddess: they are tied, describe once more, and the others re-vote.
+code, ps, rp = scenario(7, {6}, {0: ('returnTicket', None)})
+for i in (1, 2, 3): rpc('yaaru_avan_cast_vote', code, ps[i].tok, ps[0].id)
+reveal_now(code, ps)
+r = state(code, ps[0])['room']; lr = r['last_result']
+check('Boomerang with several voters and no Goddess: the voters are tied and describe once more',
+      r['phase'] == 'describe' and lr['tie'] is True and lr['redo'] is True and lr['saved'] == ps[0].id
+      and set(r['describe_order']) == {ps[1].id, ps[2].id, ps[3].id} and set(r['bounce']) == {ps[1].id, ps[2].id, ps[3].id}
+      and ticket_used(code, ps[0]) and next(x for x in state(code, ps[0])['players'] if x['id'] == ps[0].id)['alive'], (r['phase'], lr))
+for pos in range(3): rpc('yaaru_avan_describe_done', code, ps[0].tok, pos)
+st = state(code, ps[0])
+check('after the bounce the tied voters sit the re-vote out',
+      phase(code, ps) == 'vote' and st['me']['can_vote'] and not state(code, ps[1])['me']['can_vote']
+      and {q['id'] for q in st['players'] if q['voter']} == {ps[0].id, ps[4].id, ps[5].id, ps[6].id}, (phase(code, ps), st['me']))
+try: rpc('yaaru_avan_cast_vote', code, ps[4].tok, ps[0].id); bad = False
+except Err as e: bad = e.code == 'bad_target'
+check('the Boomerang is not a choice in that re-vote', bad)
+for i in (0, 4, 5, 6): rpc('yaaru_avan_cast_vote', code, ps[i].tok, ps[1].id)
+r = state(code, ps[0])['room']
+check('the re-vote takes the chosen voter offboard and the Boomerang stays', r['phase'] == 'offboard' and r['out_player'] == ps[1].id, r['phase'])
+clear()
+
+# Several voters, with a Goddess: she picks among them.
+code, ps, rp = scenario(7, {6}, {0: ('returnTicket', None), 4: ('tripLeader', None)})
+for i in (1, 2, 3): rpc('yaaru_avan_cast_vote', code, ps[i].tok, ps[0].id)
+reveal_now(code, ps)
+r = state(code, ps[0])['room']; lr = r['last_result']
+check('Boomerang with several voters and a Goddess: she picks among the voters',
+      r['phase'] == 'tiebreak' and lr['leader'] == ps[4].id and lr['saved'] == ps[0].id and set(lr['tied']) == {ps[1].id, ps[2].id, ps[3].id}, (r['phase'], lr))
+rpc('yaaru_avan_tiebreak', code, ps[4].tok, ps[2].id)
+r = state(code, ps[0])['room']
+check('the Goddess pick after a bounce takes that voter offboard', r['phase'] == 'offboard' and r['out_player'] == ps[2].id, r['phase'])
 clear()
 
 # 6. Who can see what
-code, ps, rp = scenario(6, {5}, {0: ('tripLeader', None), 3: ('driver', None), 1: ('clown', None), 2: ('rivals', 4), 4: ('rivals', 2)})
+code, ps, rp = scenario(6, {5}, {0: ('tripLeader', None), 1: ('clown', None), 2: ('rivals', 4), 4: ('rivals', 2)})
+su("update yaaru_avan_rooms set specials = true where code = %s", (code,))   # the Goddess is only announced when specials are on
 pubs = {x['id']: x['public_special'] for x in state(code, ps[1])['players']}
 me1, me2 = state(code, ps[1])['me'], state(code, ps[2])['me']
 leak = [k for x in state(code, ps[1])['players'] for k in x if k in ('special', 'dip_as', 'partner')]
-check('everyone sees the Trip Leader and Driver, nobody sees other specials or partners',
-      pubs[ps[0].id] == 'tripLeader' and pubs[ps[3].id] == 'driver' and pubs[ps[1].id] is None and pubs[ps[2].id] is None
+check('everyone sees the Goddess, nobody sees other specials or partners',
+      pubs[ps[0].id] == 'tripLeader' and pubs[ps[3].id] is None and pubs[ps[1].id] is None and pubs[ps[2].id] is None
       and me1['special'] == 'clown' and me1['partner'] is None and me2['special'] == 'rivals' and me2['partner'] == ps[4].name and not leak,
       (pubs, me1, me2, leak))
 clear()
@@ -494,6 +605,7 @@ for fn, args in [('_ya_after_out', (str(uuid.uuid4()), str(uuid.uuid4()))), ('_y
 check('the internal special-role helpers cannot be called with the public key', not bad, bad)
 
 
+# @specials-end
 # ── Undercover rules (online): description round, win condition, points, role counts ──
 def room(code, ps): return state(code, ps[0])['room']
 
@@ -508,10 +620,12 @@ want = sorted(seat_of, key=lambda i: (seat_of[i] - r['start_idx']) % 6)
 check('the first stop starts with a description round, from the random starting seat, round the table',
       r['phase'] == 'describe' and r['describe_pos'] == 0 and order == want, (r['phase'], order, want))
 byid = {p.id: p for p in ps}
-speaker, other = byid[order[0]], byid[order[3]]
-try: rpc('yaaru_avan_describe_done', code, other.tok, 0); wrong = False
-except Err as e: wrong = e.code == 'not_your_turn'
-check('only the current speaker or the host can finish a turn', wrong and room(code, ps)['describe_pos'] == 0)
+speaker = byid[order[0]]
+other = next(byid[i] for i in order[1:] if byid[i] is not ps[0])   # neither the speaker nor the host
+wrong_code = None
+try: rpc('yaaru_avan_describe_done', code, other.tok, 0)
+except Err as e: wrong_code = e.code
+check('only the current speaker or the host can finish a turn', wrong_code == 'not_your_turn' and room(code, ps)['describe_pos'] == 0, (wrong_code, room(code, ps)['describe_pos'], other.id == speaker.id))
 rpc('yaaru_avan_describe_done', code, speaker.tok, 0)
 rpc('yaaru_avan_describe_done', code, speaker.tok, 0)        # a double tap from the same screen
 check('a turn finishes once: a repeated tap does not skip the next speaker', room(code, ps)['describe_pos'] == 1, room(code, ps)['describe_pos'])
@@ -536,13 +650,12 @@ check('the next stop starts a new description round at the seat after the player
       r['phase'] == 'describe' and r['stop_no'] == 2 and r['describe_order'] == want and vote_target.id not in r['describe_order'], (r['phase'], r['describe_order'], want))
 clear()
 
-code, ps, rp = scenario(6, {5}, {3: ('driver', None), 4: ('sleepyhead', None)})
-# scenario() skipped the first description round; rebuild stop 1 to look at its order
+code, ps, rp = scenario(6, {5}, {})
+# scenario() skipped the first description round; rebuild stop 1
 su("update yaaru_avan_rooms set phase = 'deal' where code = %s", (code,))
 rpc('yaaru_avan_begin_vote', code, ps[0].tok)
 r = room(code, ps)
-check('a Driver starts the description round and a Sleepyhead sits out Stop 1',
-      r['describe_order'][0] == ps[3].id and ps[4].id not in r['describe_order'] and len(r['describe_order']) == 5, r['describe_order'])
+check('the first description round has everyone in it', len(r['describe_order']) == 6, r['describe_order'])
 rpc('yaaru_avan_begin_vote', code, ps[0].tok)
 check('the host can skip the description round', room(code, ps)['phase'] == 'vote')
 try: rpc('yaaru_avan_begin_vote', code, ps[1].tok); skipped = True

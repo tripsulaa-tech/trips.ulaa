@@ -5,7 +5,7 @@ players (each with its own secret token, like a phone) and check the rules:
 
 | Script | Game | Checks |
 |---|---|---|
-| `stowaway_tests.py` | Stowaway | 67: winners and points, word bag, role counts, who can see what, host controls, joining, ties, the Lost Soul's one-shot guess, the description round, Undercover's win rule and points, Stranger-only games, special roles (dealing, caps, pairs, Lucky Dip, Return Ticket, Backseat Rider, Payback, Trip Leader, bonuses, secrecy), live updates, share links |
+| `stowaway_tests.py` | Stowaway | 87 (`--no-specials` skips the special-role checks): winners and points, word bag, role counts, who can see what, host controls, joining, ties, the Lost Soul's one-shot guess, the description round, Undercover's win rule and points, Stranger-only games, tie-breaks and the Boomerang bounce, special roles (dealing, caps, pairs, Falafel Vendor, Boomerang, Ghost, Revenger, Goddess, Joy Fool and Duelist bonuses, secrecy), live updates, share links |
 | `find_my_twin_tests.py` | Find My Twin | 41: pairing for every group size 2 to 24, no repeated pairs, scores recomputed independently, reveal-only mode, roster, "skip stuck pairs", edited questions, secrecy, host controls, live updates |
 
 Run them **before every release that touches `supabase/migration/*stowaway*` or
@@ -27,7 +27,15 @@ for f in tests/stub_supabase.sql \
          migration/drop_yaaru_avan_clue_and_challenge_leftovers.sql \
          migration/rename_yaaru_avan_begin_clues_to_begin_vote.sql \
          migration/add_yaaru_avan_special_roles.sql \
+         migration/add_yaaru_avan_special_picker.sql \
+         migration/add_yaaru_avan_online_switch.sql \
          migration/adopt_undercover_rules_for_yaaru_avan.sql \
+         migration/update_yaaru_avan_online_roles_to_ulaa.sql \
+         migration/rename_stowaway_to_yaaru_avan.sql \
+         migration/yaaru_avan_pickpocket_always_guesses.sql \
+         migration/raise_yaaru_avan_max_players_to_20.sql \
+         migration/yaaru_avan_tie_redescribe.sql \
+         migration/yaaru_avan_boomerang_tie.sql \
          migration/add_find_my_twin.sql \
          migration/update_find_my_twin_10_questions.sql \
          migration/make_find_my_twin_editable.sql \
@@ -39,14 +47,14 @@ for f in tests/stub_supabase.sql \
 done
 ```
 
-(`upgrade_yaaru_avan_max_15.sql` is not needed on a fresh database.)
+(`upgrade_yaaru_avan_max_15.sql` is not needed on a fresh database. Keep this list in the order the files are applied to your real project: the rename migration must come after the Ulaa roles one, and the later `yaaru_avan_*` files use the renamed functions.)
 
 ## Run
 
 ```bash
 cd supabase/tests
 export TEST_DATABASE_URL=postgresql://localhost/ulaa_test
-python3 stowaway_tests.py          # about a minute
+python3 stowaway_tests.py          # a few minutes; add --quick for about a minute
 python3 find_my_twin_tests.py      # about 15 seconds
 # add --quick to either for a shorter run
 ```

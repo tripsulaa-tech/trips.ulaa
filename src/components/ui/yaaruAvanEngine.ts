@@ -10,7 +10,7 @@ import type { SoloSpecialId, SpecialId } from './yaaruAvanSpecials';
 export type Role = 'explorer' | 'stowaway' | 'lost';
 
 export const MIN_PLAYERS = 3;
-export const MAX_PLAYERS = 15;
+export const MAX_PLAYERS = 20;
 
 /** Undercover's scores: Tourists 2 each, a winning Stranger 10, a winning Pickpocket 6
  *  (a Pickpocket wins by lasting to the end or by guessing the Tourists' word). */
@@ -296,6 +296,8 @@ export interface SavedSetup {
   level: Level;
   dares: boolean;
   specials: boolean;
+  /** One-phone only: each description round a random player describes by gestures. */
+  meme: boolean;
 }
 
 const DEFAULT_SETUP: SavedSetup = {
@@ -306,6 +308,7 @@ const DEFAULT_SETUP: SavedSetup = {
   level: 'medium',
   dares: false,
   specials: false,
+  meme: false,
 };
 
 export function loadSetup(): SavedSetup {
@@ -325,6 +328,7 @@ export function loadSetup(): SavedSetup {
       hideCounts: !!v.hideCounts,
       dares: !!v.dares,
       specials: !!v.specials,
+      meme: !!v.meme,
     };
   } catch { return DEFAULT_SETUP; }
 }

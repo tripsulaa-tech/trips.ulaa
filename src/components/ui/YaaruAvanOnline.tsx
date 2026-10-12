@@ -307,7 +307,7 @@ function SpecialPicker({ initial, players, busy, onSave, onCancel }: {
         </span>
       </div>
 
-      <SpecialList on={on} onToggle={toggle} />
+      <SpecialList on={on} onToggle={toggle} players={players} />
 
       <button type="button" disabled={busy} onClick={() => onSave(draft)} className={`${primaryBtn} disabled:opacity-60`}>
         <Check size={18} weight="bold" /> {draft.length === 0 ? 'Done (no special roles)' : `Done (${draft.length} ticked)`}
@@ -468,19 +468,39 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     : null;
   const voters = players.filter(p => p.voter);
   const publicRoles = players.filter(p => p.public_special);
+  // The Goddess of Justice is announced to everyone once the words are dealt; every other role is secret.
+  const goddessLine = (p: { name: string; alive: boolean }) =>
+    `⚖️ ${p.name} is the Goddess of Justice. ${p.alive ? 'She' : 'She is out, but she still'} decides any tied vote.`;
   const outSpecial = room.last_result?.special ? specialDisplayName(room.last_result.special, !!room.last_result.dip) : null;
   const paybackBy = room.last_result?.payback_by ? byId.get(room.last_result.payback_by)?.name : undefined;
   const loverName = room.last_result?.lover ? byId.get(room.last_result.lover)?.name : undefined;
   const bounceFromName = room.last_result?.bounce_from ? byId.get(room.last_result.bounce_from)?.name : undefined;
   const goddessId = room.last_result?.tiebreak ? room.last_result.leader : undefined;
   const goddess = goddessId ? byId.get(goddessId) : undefined;
+  const hostPick = !!room.last_result?.host_pick;
+  // Boomerang: the votes against them moved onto the voters, who are now tied.
+  const boomerangName = room.last_result?.saved ? (room.last_result.name ?? 'Someone') : null;
+  const bounceNames = (room.last_result?.bounce_names ?? []).join(' and ');
+  const boomerangBanner = boomerangName && (
+    <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3 text-left">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]">The Boomerang</p>
+      <p className="text-sm font-bold text-white">
+        {boomerangName} stays aboard. The votes bounced back onto {bounceNames || 'the voters'}{bounceNames ? `, so ${bounceNames} are now tied.` : '. Vote again.'}
+      </p>
+    </div>
+  );
   const tiedPlayers = (room.last_result?.tied ?? []).map(id => byId.get(id)).filter((p): p is NonNullable<typeof p> => !!p);
   const order = room.describe_order ?? [];
+  // A tie with no Goddess: the tied players describe once more, then the others vote again among them.
+  const tieRedo = !!room.last_result?.redo;
+  const tieNames = (room.last_result?.names ?? []).join(' and ');
+  const iAmTied = tieRedo && !!room.bounce?.includes(me.id);
   const speakerId = order[room.describe_pos];
   const speaker = speakerId ? byId.get(speakerId) : undefined;
   const myTurn = speakerId === me.id;
   const lastSpeaker = room.describe_pos + 1 >= order.length;
-  const guessWordOwner = room.last_result?.role === 'explorer' ? "Strangers'" : "Tourists'";
+  // Only a Pickpocket guesses, and always the Tourists' word (also when she left with her Lover).
+  const guessWordOwner = "Tourists'";
 
   const hostBanner = !isHost && state.host_away && (
     <div className="rounded-2xl bg-rose-400/10 border border-rose-300/30 px-3 py-2.5 mb-3 text-left">
@@ -678,6 +698,9 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               </li>
             ))}
           </ul>
+          {publicRoles.map(p => (
+            <p key={p.id} className="text-xs text-[#F0CE7A] leading-snug mt-3">{goddessLine(p)}</p>
+          ))}
           {isHost
             ? <button type="button" disabled={busy} onClick={() => void act(() => online.beginVote(room.code))} className={`${players.every(p => p.ready) ? primaryBtn : ghostBtn} mt-4`}>
                 {players.every(p => p.ready) ? 'Everyone has boarded. Start the round' : `Start anyway (${players.filter(p => p.ready).length} of ${n} ready)`} <ArrowRight size={16} weight="bold" />
@@ -695,6 +718,12 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <p className="text-xs text-cream/60">Say one word or a short phrase about your word, aloud. Be truthful, but do not give it away.</p>
               <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
             </div>
+            {tieRedo && (
+              <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3 text-left">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]">Tie-break</p>
+                <p className="text-sm font-bold text-white">{boomerangName ? `The Boomerang's votes bounced back onto ${tieNames}, so they are tied.` : `${tieNames} got the same number of votes.`} {iAmTied ? 'You each' : 'They each'} describe once more, then the other players vote again.</p>
+              </div>
+            )}
             {speaker && (
               <motion.div key={room.describe_pos} initial={reduce ? false : { scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
                 className="rounded-3xl bg-gradient-to-br from-[#FFF6DD] to-[#F0CE7A] text-dark px-5 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
@@ -713,7 +742,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             </ol>
             {publicRoles.map(p => (
               <p key={p.id} className="text-xs text-[#F0CE7A] leading-snug mt-2">
-                {p.public_special === 'tripLeader' ? `Trip Leader ${p.name} breaks any tie.` : `Driver ${p.name} starts every description round.`}
+                {goddessLine(p)}
               </p>
             ))}
             {meP?.alive && me.role !== null && (
@@ -750,7 +779,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
             {publicRoles.map(p => (
               <p key={p.id} className="text-xs text-[#F0CE7A] leading-snug mt-1">
-                {p.public_special === 'tripLeader' ? `Trip Leader ${p.name} breaks any tie.` : `Driver ${p.name} starts every description round.`}
+                {goddessLine(p)}
               </p>
             ))}
           </div>
@@ -769,19 +798,16 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             </div>
           )}
 
-          {room.last_result?.saved && (
-            <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]">The Boomerang</p>
-              <p className="text-sm font-bold text-white">
-                {room.last_result.name ?? 'Someone'} stays aboard. The votes bounced back onto {(room.last_result.bounce_names ?? []).join(' and ') || 'the voters'}. Vote again among them.
-              </p>
-            </div>
-          )}
+          {boomerangBanner}
 
           {room.last_result?.tie && (
             <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]">It was a tie</p>
-              <p className="text-sm font-bold text-white">{(room.last_result.names ?? []).join(' and ')} got the same number of votes. Talk again, then vote again.</p>
+              <p className="text-sm font-bold text-white">
+                {tieRedo
+                  ? `${tieNames} described once more. The other players vote again, and only ${tieNames} can be voted out.`
+                  : `${(room.last_result.names ?? []).join(' and ')} got the same number of votes. Talk again, then vote again.`}
+              </p>
             </div>
           )}
 
@@ -801,7 +827,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               </button>
               {meP?.voted && <p className="mt-2 text-center text-xs font-bold text-emerald-300"><CheckCircle size={14} weight="fill" className="inline -mt-0.5 mr-1" />Your vote is in</p>}
             </>
-          ) : waiting('You are offboard, so you cannot vote. Watch the others decide.')}
+          ) : waiting(iAmTied && meP?.alive ? 'You were tied, so the other players decide this vote. Watch them choose.' : 'You are offboard, so you cannot vote. Watch the others decide.')}
           {me.can_vote && !meP?.alive && <p className="-mt-2 mb-3 text-center text-[11px] text-cream/50">You are offboard, but as the Ghost your vote still counts.</p>}
 
           <p className={`${eyebrow} mt-4 mb-1.5`}>{voters.filter(p => p.voted).length} of {voters.length} voted</p>
@@ -824,10 +850,15 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           <div className="mb-3">
             <p className={eyebrow}>It was a tie</p>
             <h2 className="font-display text-2xl font-extrabold text-white leading-tight">
-              {goddessId === me.id ? 'Goddess of Justice, you decide' : `${goddess?.name ?? 'The Goddess of Justice'} decides`}
+              {hostPick
+                ? (goddessId === me.id ? 'Still tied. You decide' : `Still tied. ${goddess?.name ?? 'The host'} decides`)
+                : (goddessId === me.id ? 'Goddess of Justice, you decide' : `${goddess?.name ?? 'The Goddess of Justice'} decides`)}
             </h2>
+            {boomerangBanner}
             <p className="text-xs text-cream/60">
-              {tiedPlayers.map(p => p.name).join(' and ')} got the same number of votes. The Goddess of Justice picks who goes offboard, even if she is already out.
+              {hostPick
+                ? `${tiedPlayers.map(p => p.name).join(' and ')} are still tied after describing once more. The host picks who goes offboard.`
+                : `${tiedPlayers.map(p => p.name).join(' and ')} got the same number of votes. The Goddess of Justice picks who goes offboard, even if she is already out.`}
             </p>
           </div>
           {(goddessId === me.id || (isHost && !!goddess?.away)) ? (
@@ -840,7 +871,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 </button>
               ))}
             </div>
-          ) : waiting(`Waiting for ${goddess?.name ?? 'the Goddess of Justice'} to choose…`)}
+          ) : waiting(`Waiting for ${goddess?.name ?? (hostPick ? 'the host' : 'the Goddess of Justice')} to choose…`)}
         </div>
       )}
 

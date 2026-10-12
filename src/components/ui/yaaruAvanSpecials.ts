@@ -44,7 +44,7 @@ export const MIN_PLAYERS: Partial<Record<SpecialId, number>> = {
 export const SPECIAL_BLURB: Record<SpecialId, string> = {
   clown: 'The Joy Fool earns 4 bonus points if they are the first player voted out of the game.',
   returnTicket: 'The first time the Boomerang receives the majority of votes, they are not eliminated. Instead, all votes against the Boomerang are redirected back to the players who cast them!',
-  tripLeader: 'If a vote ends in a tie, the Goddess of Justice decides which player will be eliminated. She can make this decision even if she has already been eliminated.',
+  tripLeader: 'If a vote ends in a tie, the Goddess of Justice decides which player will be eliminated. She can make this decision even if she has already been eliminated. Everyone is told who she is once the words are dealt.',
   backseatRider: 'Even after being eliminated, the Ghost retains the power to vote during future voting rounds.',
   lovers: 'Two players are secretly in love. If one lover is eliminated, the other is automatically eliminated too. This role is available when playing with 5 or more players.',
   luckyDip: 'At the start of each game, the Falafel Vendor receives a random special ability. Use it wisely and discover what surprises await! Available with 4 or more players.',
@@ -173,8 +173,9 @@ export function describeSpecial(a: SpecialLike): string | null {
   return base;
 }
 
-/** Specials everyone can see on the vote screen. None right now: all roles are secret. */
-export const PUBLIC_SPECIALS: readonly SpecialId[] = [];
+/** Specials announced to everyone once the words are dealt: only the Goddess of Justice.
+ *  Every other role stays secret. (A Falafel Vendor who draws her is announced too.) */
+export const PUBLIC_SPECIALS: readonly SpecialId[] = ['tripLeader'];
 
 /** The bits of a seat the bonus rules need. */
 export interface BonusSeat {

@@ -99,6 +99,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [level, setLevel] = useState<Level>(initial.level);
   const [useDares, setUseDares] = useState(initial.dares);
   const [useSpecials, setUseSpecials] = useState(initial.specials);
+  // Mr. Meme (one phone only): each description round a random player describes by gestures.
+  const [useMeme, setUseMeme] = useState(initial.meme);
   // Which special roles are ticked in the role list (all of them to start with).
   const [specialIds, setSpecialIds] = useState<SpecialId[]>([...ENABLED_SPECIALS]);
   const [muted, setMuted] = useState<boolean>(() => {
@@ -117,13 +119,24 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [stopNo, setStopNo] = useState(1);          // stop within the round
   const [descOrder, setDescOrder] = useState<number[]>([]); // speaking order for the description round (seat indexes)
   const [descPos, setDescPos] = useState(0);
+  // Seat index of this stop's Mr. Meme (null when Mr. Meme is off).
+  const [memeIdx, setMemeIdx] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [voters, setVoters] = useState<number[]>([]);
   const [lastOut, setLastOut] = useState<number | null>(null);
+  // Mr. White (Pickpocket) always guesses when eliminated, even as a Lover who leaves with their
+  // partner. `guessQueue` holds the Pickpockets still waiting for their guess; `guessAfter` is the
+  // player whose elimination started it (the one a Revenger payback or the next stop follows).
+  const [guessQueue, setGuessQueue] = useState<number[]>([]);
+  const [guessAfter, setGuessAfter] = useState<number | null>(null);
   // Boomerang: after the votes bounce, only the players who cast them can be voted out.
   const [bounce, setBounce] = useState<number[] | null>(null);
   // Vote tied: the Goddess of Justice (if one was dealt) decides, even if she is already out.
   const [tieOpen, setTieOpen] = useState(false);
+  // Tie with no Goddess (Undercover FAQ): the tied players describe once more, then the others vote
+  // again among them. `tiedIdx` is set for that re-vote; `tickTied` is the host's pick of who is tied.
+  const [tiedIdx, setTiedIdx] = useState<number[] | null>(null);
+  const [tickTied, setTickTied] = useState<number[]>([]);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [gained, setGained] = useState<Record<string, number>>({});
   const [dare, setDare] = useState<string | null>(null);
@@ -165,8 +178,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // Persist setup as it changes. A roster handed in by the host is not
   // remembered as this device's own list of names.
   useEffect(() => {
-    saveSetup({ names: hasPreset ? initial.names : names, stowaways, lost, hideCounts, level, dares: useDares, specials: useSpecials });
-  }, [names, stowaways, lost, hideCounts, level, useDares, useSpecials, hasPreset, initial.names]);
+    saveSetup({ names: hasPreset ? initial.names : names, stowaways, lost, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme });
+  }, [names, stowaways, lost, hideCounts, level, useDares, useSpecials, useMeme, hasPreset, initial.names]);
 
   useEffect(() => () => {
     timersRef.current.forEach(id => window.clearTimeout(id));
@@ -248,11 +261,15 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const startStop = (stop: number, from: number, list: Seat[] = seats) => {
     const order = describeOrder(list, from, stop);
     setBounce(null);
+    setTiedIdx(null);
+    setTickTied([]);
     setStopNo(stop);
     setSelected(null);
     setVoters([]);
     setDescOrder(order);
     setDescPos(0);
+    // Mr. Meme: a random speaker this stop describes with gestures instead of words.
+    setMemeIdx(useMeme && order.length > 0 ? shuffle(order)[0] : null);
     setPhase(order.length > 0 ? 'describe' : 'vote');
     play('go');
   };
@@ -263,6 +280,24 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setVoters([]);
     setTieOpen(false);
     setPhase('vote');
+    play('go');
+  };
+
+  // No Goddess and the vote is tied: the tied players each describe once more, then the other
+  // players vote again, and only the tied players can be voted out.
+  const startTieBreak = () => {
+    const order = [...tickTied].sort((a, b) => a - b);
+    if (order.length < 2) return;
+    setTiedIdx(order);
+    setTickTied([]);
+    setBounce(null);
+    setMemeIdx(null);
+    setSelected(null);
+    setVoters([]);
+    setTieOpen(false);
+    setDescOrder(order);
+    setDescPos(0);
+    setPhase('describe');
     play('go');
   };
 
@@ -294,7 +329,17 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // A Backseat Rider who is out still votes from the back seat.
   const voterIdx = seats.map((s, i) => (s.alive || (s.outOrder !== undefined && activeSpecial(s) === 'backseatRider') ? i : -1)).filter(i => i >= 0);
   // After a Boomerang bounce only the players who voted against it are up for the vote.
-  const candidateIdx = bounce ? aliveIdx.filter(i => bounce.includes(i)) : aliveIdx;
+  const candidateIdx = bounce ? aliveIdx.filter(i => bounce.includes(i)) : tiedIdx ? aliveIdx.filter(i => tiedIdx.includes(i)) : aliveIdx;
+  // The Goddess of Justice is announced to everyone once the words are dealt (every other role stays secret).
+  const goddessSeat = useSpecials && specialIds.includes('tripLeader') ? seats.find(s => activeSpecial(s) === 'tripLeader') : undefined;
+  const goddessLine = goddessSeat
+    ? `⚖️ ${goddessSeat.name} is the Goddess of Justice. ${goddessSeat.alive ? 'She' : 'She is out, but she still'} decides any tied vote.`
+    : null;
+  // Undercover rule: a Boomerang's first majority bounces the votes back onto the voters,
+  // so at least one player still aboard must be ticked as a voter before we can go on.
+  const boomerangNeedsVoters = selected !== null
+    && activeSpecial(seats[selected]) === 'returnTicket' && !seats[selected].ticketUsed
+    && !voters.some(vi => vi !== selected && seats[vi]?.alive);
   const toggleVoter = (i: number) => setVoters(v => (v.includes(i) ? v.filter(x => x !== i) : [...v, i]));
 
   // Takes a player offboard. Lovers go together: their partner leaves right after them.
@@ -318,15 +363,52 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     // The votes bounce back onto the players who cast them, who are voted on instead.
     if (activeSpecial(out) === 'returnTicket' && !out.ticketUsed) {
       const bounced = voters.filter(vi => vi !== selected && seats[vi]?.alive);
-      setSeats(seats.map((s, i) => (i === selected ? { ...s, ticketUsed: true } : s)));
-      setBounce(bounced.length > 0 ? bounced : null);
+      // Like Undercover, the votes bounce back onto the voters, so the voters must be known.
+      // (The button is disabled until one is ticked; this is the safety net.)
+      if (bounced.length === 0) return;
+      const marked = seats.map((s, i) => (i === selected ? { ...s, ticketUsed: true } : s));
+      setSeats(marked);
       setLastOut(selected);
       setSelected(null);
       setVoters([]);
       setPhase('saved');
       play('gold');
       buzz([30, 40, 30]);
-      later(REVEAL_MS, () => goVote());
+      if (bounced.length === 1) {
+        // One voter: the whole bounce lands on them, no second vote (same as the online rooms).
+        const target = bounced[0];
+        later(REVEAL_MS, () => {
+          const updated = eliminate(marked, target, stopNo);
+          setBounce(null);
+          setSeats(updated);
+          setLastOut(target);
+          setPhase('offboard');
+          play('power');
+          buzz([30, 40, 30]);
+          later(REVEAL_MS, () => afterReveal(updated, target));
+        });
+        return;
+      }
+      // Several voters: the votes move onto them, one each, so they are tied.
+      // The tie rules take over: the Goddess picks, or they describe once more and the others re-vote.
+      const tied = [...bounced].sort((a, b) => a - b);
+      later(REVEAL_MS, () => {
+        if (goddessSeat) {
+          setBounce(tied);
+          setTiedIdx(null);
+          goVote();
+          return;
+        }
+        setBounce(null);
+        setTiedIdx(tied);
+        setTickTied([]);
+        setMemeIdx(null);
+        setDescOrder(tied);
+        setDescPos(0);
+        setTieOpen(false);
+        setPhase('describe');
+        play('go');
+      });
       return;
     }
     // Votes: anyone who pointed at a sneaky player was right; at an Explorer, wrong.
@@ -377,8 +459,19 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
 
   const afterReveal = (list: Seat[], outIdx: number) => {
     const out = list[outIdx];
-    if (out.role === 'lost') { setPhase('guess'); return; }
-    afterGuess(list, outIdx);
+    // Undercover: Mr. White always gets a last guess when eliminated. That includes a Pickpocket
+    // who leaves right after their Lover. The player who was voted out guesses first.
+    const queue: number[] = [];
+    if (out.role === 'lost') queue.push(outIdx);
+    if (activeSpecial(out) === 'lovers' && out.partner) {
+      const pi = list.findIndex(s => s.name === out.partner && s.outStop === out.outStop && (s.outOrder ?? 0) === (out.outOrder ?? 0) + 1);
+      if (pi >= 0 && list[pi].role === 'lost') queue.push(pi);
+    }
+    if (queue.length === 0) { afterGuess(list, outIdx); return; }
+    setGuessAfter(outIdx);
+    setGuessQueue(queue.slice(1));
+    setLastOut(queue[0]);
+    setPhase('guess');
   };
 
   // Everything that can follow someone leaving: a win, a Payback, or the next stop.
@@ -405,7 +498,15 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
       return;
     }
     play('bad');
-    afterGuess(seats, lastOut);
+    // Another Pickpocket left with them (two Lovers who are both Pickpockets): their turn to guess.
+    if (guessQueue.length > 0) {
+      setLastOut(guessQueue[0]);
+      setGuessQueue(guessQueue.slice(1));
+      return;
+    }
+    const after = guessAfter ?? lastOut;
+    setLastOut(after);
+    afterGuess(seats, after);
   };
 
   // Payback: the player who just left takes one more with them.
@@ -664,6 +765,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                   { k: 'hide', on: hideCounts, set: setHideCounts, t: 'Hide the counts', d: 'Nobody knows if a Pickpocket exists. Much more tense.' },
                   { k: 'dare', on: useDares, set: setUseDares, t: 'Trip dares', d: 'The losing side draws a silly dare.' },
                   { k: 'special', on: useSpecials, set: setUseSpecials, t: 'Special roles', d: 'The Joy Fool, Boomerang, Revenger, Lovers and more. Up to one per 3 players.' },
+                  { k: 'meme', on: useMeme, set: setUseMeme, t: 'Mr. Meme', d: 'Each description round, a random player describes their word with gestures, not words. Only switch on if everyone can see each other.' },
                 ].map(o => (
                   <button key={o.k} type="button" role="switch" aria-checked={o.on} onClick={() => o.set(!o.on)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left">
                     <span className="flex-1 min-w-0">
@@ -680,6 +782,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               {useSpecials && (
                 <SpecialList
                   on={new Set(specialIds)}
+                  players={playerCount}
                   onToggle={id => setSpecialIds(ids => ENABLED_SPECIALS.filter(x => (x === id ? !ids.includes(x) : ids.includes(x))))}
                 />
               )}
@@ -797,7 +900,17 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 <p className="text-[10px] font-bold uppercase tracking-widest text-dark/50">{descPos === 0 ? 'Starts' : `Speaker ${descPos + 1} of ${descOrder.length}`}</p>
                 <p className="font-display text-3xl font-extrabold leading-tight break-words">{seats[descOrder[descPos]].name}</p>
                 <p className="text-xs font-bold text-dark/60 mt-1">Seat {seats[descOrder[descPos]].seat}</p>
+                {memeIdx !== null && descOrder[descPos] === memeIdx && (
+                  <p className="mt-2 inline-block rounded-full bg-dark/90 text-[#F0CE7A] text-xs font-bold px-3 py-1">🎭 Mr. Meme: gestures only, no talking</p>
+                )}
               </motion.div>
+              {tiedIdx && (
+                <p className="text-xs font-bold text-[#F0CE7A] leading-snug mt-3">Tie-break: {tiedIdx.map(i => seats[i].name).join(' and ')} each describe once more. Then the other players vote again.</p>
+              )}
+              {goddessLine && <p className="text-xs text-[#F0CE7A] leading-snug mt-3">{goddessLine}</p>}
+              {memeIdx !== null && (
+                <p className="text-xs text-[#F0CE7A] leading-snug mt-2">🎭 Mr. Meme this round: {seats[memeIdx].name} describes their word with gestures instead of speaking.</p>
+              )}
               <ol className="flex flex-wrap justify-center gap-1.5 mt-4" aria-label="Speaking order">
                 {descOrder.map((i, k) => (
                   <li key={i} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${k === descPos ? 'bg-gold/25 border-gold/60 text-[#F0CE7A]' : k < descPos ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
@@ -819,8 +932,10 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Who goes offboard?</h2>
                 <p className="text-xs text-cream/60">Discuss who is bluffing, then tap the person the group picked.</p>
                 <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
+                {goddessLine && <p className="text-xs text-[#F0CE7A] leading-snug mt-1">{goddessLine}</p>}
               </div>
-              {bounce && <p className="text-xs font-bold text-[#F0CE7A] leading-snug mb-3">The votes bounced back. Only the players who voted against the Boomerang can be voted out.</p>}
+              {tiedIdx && !bounce && <p className="text-xs font-bold text-[#F0CE7A] leading-snug mb-3">Tie-break re-vote: only {tiedIdx.map(i => seats[i].name).join(' and ')} can be voted out. They sit this vote out, so the other players decide.</p>}
+              {bounce && <p className="text-xs font-bold text-[#F0CE7A] leading-snug mb-3">The votes bounced back onto {bounce.map(i => seats[i].name).join(' and ')}, so they are tied. {goddessSeat?.name ?? 'The Goddess'} picks who goes offboard.</p>}
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {candidateIdx.map(i => (
                   <button
@@ -840,7 +955,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 <div className="mb-4">
                   <p className="text-xs font-semibold text-cream/70 mb-1.5">Who voted for {seats[selected].name}? <span className="text-cream/40">(optional, for the awards)</span></p>
                   <div className="flex flex-wrap gap-1.5">
-                    {voterIdx.filter(i => i !== selected).map(i => (
+                    {voterIdx.filter(i => i !== selected && !(tiedIdx && !bounce && tiedIdx.includes(i))).map(i => (
                       <button key={i} type="button" onClick={() => toggleVoter(i)} aria-pressed={voters.includes(i)}
                         className={`rounded-full px-2.5 py-1 text-[11px] font-bold border transition-colors ${voters.includes(i) ? 'bg-gold/25 border-gold/60 text-[#F0CE7A]' : 'bg-white/[0.06] border-white/15 text-cream/70'}`}>
                         {seats[i].name}
@@ -850,26 +965,45 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 </div>
               )}
 
-              {useSpecials && specialIds.includes('tripLeader') && (
-                <div className="mb-4">
-                  <button type="button" onClick={() => setTieOpen(o => !o)} aria-expanded={tieOpen}
-                    className="text-xs font-bold text-[#F0CE7A] underline underline-offset-2">
-                    {tieOpen ? 'Hide tie-break' : 'Vote tied?'}
-                  </button>
-                  {tieOpen && (() => {
-                    const goddess = seats.find(s => activeSpecial(s) === 'tripLeader');
-                    return (
-                      <p className="text-xs text-cream/80 leading-snug mt-1.5 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2">
-                        {goddess
-                          ? `${goddess.name} is the Goddess of Justice${goddess.alive ? '' : ' (already out, but she still decides)'}. She picks who goes offboard from the tied players. Tap that person above.`
-                          : 'Nobody is the Goddess of Justice this round, so the group decides the tie. Tap the person above.'}
-                      </p>
-                    );
-                  })()}
-                </div>
-              )}
+              <div className="mb-4">
+                <button type="button" onClick={() => setTieOpen(o => !o)} aria-expanded={tieOpen}
+                  className="text-xs font-bold text-[#F0CE7A] underline underline-offset-2">
+                  {tieOpen ? 'Hide tie-break' : 'Vote tied?'}
+                </button>
+                {tieOpen && (
+                  <div className="text-xs text-cream/80 leading-snug mt-1.5 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2">
+                    {goddessSeat ? (
+                      <p>{goddessSeat.name} is the Goddess of Justice{goddessSeat.alive ? '' : ' (already out, but she still decides)'}. She picks who goes offboard from the tied players. Tap that person above.</p>
+                    ) : tiedIdx || bounce ? (
+                      <p>Still tied? Then the group decides. Tap the person above.</p>
+                    ) : (
+                      <>
+                        <p>Tick the players who are tied. They each describe once more, then the others vote again among them.</p>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {candidateIdx.map(i => (
+                            <button key={i} type="button" aria-pressed={tickTied.includes(i)}
+                              onClick={() => setTickTied(t => (t.includes(i) ? t.filter(x => x !== i) : [...t, i]))}
+                              className={`rounded-full px-2.5 py-1 text-[11px] font-bold border transition-colors ${tickTied.includes(i) ? 'bg-gold/25 border-gold/60 text-[#F0CE7A]' : 'bg-white/[0.06] border-white/15 text-cream/70'}`}>
+                              {seats[i].name}
+                            </button>
+                          ))}
+                        </div>
+                        <button type="button" onClick={startTieBreak} disabled={tickTied.length < 2}
+                          className={`${ghostBtn} mt-2 disabled:opacity-40 disabled:pointer-events-none`}>
+                          Tied players describe once more <ArrowRight size={14} weight="bold" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
 
-              <button type="button" onClick={confirmOffboard} disabled={selected === null} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>
+              {boomerangNeedsVoters && (
+                <p className="text-xs font-bold text-[#F0CE7A] leading-snug mb-3">
+                  {seats[selected as number].name} is the Boomerang. Tick everyone who voted for them above, so their votes can bounce back.
+                </p>
+              )}
+              <button type="button" onClick={confirmOffboard} disabled={selected === null || boomerangNeedsVoters} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>
                 <Airplane size={18} weight="fill" /> {selected === null ? 'Pick someone' : `Offboard ${seats[selected].name}`}
               </button>
             </div>
@@ -918,6 +1052,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               </motion.div>
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">Last chance</span>
               <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{out.name} was the Pickpocket</h2>
+              {activeSpecial(out) === 'lovers' && <p className="text-xs font-bold text-[#F0CE7A] mt-1">They left with their Lover, and still get a last guess.</p>}
               <p className="text-sm text-cream/65 mt-2 mb-5 px-4">{out.name}, say your guess for the Tourists' word out loud. The group decides if it is right.</p>
               <p className="text-xs text-cream/45 mb-5 px-4">Close enough counts. Spelling does not matter.</p>
               <div className="grid grid-cols-2 gap-2">
@@ -941,7 +1076,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 <Ticket size={52} weight="duotone" />
               </motion.div>
               <p className="font-display text-3xl font-extrabold text-white leading-tight">{out.name} stays aboard!</p>
-              <p className="text-sm text-cream/60 mt-2 px-6">The Boomerang bounces the votes back onto the players who cast them. Vote again among them.</p>
+              <p className="text-sm text-cream/60 mt-2 px-6">The Boomerang bounces the votes back onto the players who cast them. Each of them now has a vote against them, so they are tied.</p>
             </div>
           )}
 
