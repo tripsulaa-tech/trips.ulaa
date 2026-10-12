@@ -25,6 +25,8 @@ interface OnlineRoom {
   dares: boolean;
   hide_counts: boolean;
   specials: boolean;
+  /** Which specials the host ticked. null = all of them. */
+  special_ids: SpecialId[] | null;
   /** Description round: who speaks, in order, and whose turn it is (0-based). */
   describe_order: string[];
   describe_pos: number;
@@ -186,10 +188,10 @@ export const online = {
     rpc<{ code: string; player_id: string }>('stowaway_join', { p_code: code, p_name: name, p_token: t() }),
   state: (code: string) => rpc<OnlineState>('stowaway_state', { p_code: code, p_token: t() }),
   claimHost: (code: string) => rpc('stowaway_claim_host', { p_code: code, p_token: t() }),
-  setSettings: (code: string, s: { stowaways: number; lost: number; level: string; hideCounts: boolean; dares: boolean; specials: boolean }) =>
+  setSettings: (code: string, s: { stowaways: number; lost: number; level: string; hideCounts: boolean; dares: boolean; specials: boolean; specialIds: SpecialId[] | null }) =>
     rpc('stowaway_set_settings', {
       p_code: code, p_token: t(), p_stowaways: s.stowaways, p_lost: s.lost, p_level: s.level,
-      p_hide_counts: s.hideCounts, p_dares: s.dares, p_specials: s.specials,
+      p_hide_counts: s.hideCounts, p_dares: s.dares, p_specials: s.specials, p_special_ids: s.specialIds,
     }),
   setLocked: (code: string, locked: boolean) => rpc('stowaway_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
   kick: (code: string, player: string) => rpc('stowaway_kick', { p_code: code, p_token: t(), p_player: player }),

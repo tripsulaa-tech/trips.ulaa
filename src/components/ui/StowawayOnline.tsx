@@ -4,9 +4,9 @@ import {
   Play, ArrowRight, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
   Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle, XCircle, MagicWand,
   Gift, Question, Copy, LockSimple, LockSimpleOpen, WifiSlash, DeviceMobile, Hash, UsersThree, ChatCircleDots,
+  Smiley, Moon, Armchair, SteeringWheel, Handshake, Sword, ArrowUUpLeft, DiceFive, CaretRight, Check, ArrowLeft,
 } from '@phosphor-icons/react';
 import { SITE_HOST } from '../../constants/site';
-import { useAuth } from '../../context/useAuth';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { buildScoreCard } from './packBagScoreCard';
@@ -27,7 +27,8 @@ import {
   online, OnlineError, joinLink, normalizeCode, loadOnlineSession, saveOnlineSession, clearOnlineSession,
 } from './stowawayRoomApi';
 import type { OnlinePhase } from './stowawayRoomApi';
-import { describeSpecial, specialDisplayName } from './stowawaySpecials';
+import { describeSpecial, specialDisplayName, SPECIALS, SPECIAL_BLURB, maxSpecials } from './stowawaySpecials';
+import type { SpecialId } from './stowawaySpecials';
 import { useOnlineRoom } from './useOnlineRoom';
 import { useStowawayContentSync } from './useGameContentSync';
 
@@ -35,8 +36,6 @@ import { useStowawayContentSync } from './useGameContentSync';
 // live in Supabase (see add_stowaway_online.sql); this file is only the screens.
 // The group talks it out aloud (in person or on a call). The phone handles the
 // secret word, private voting and the scores.
-
-const cleanHostCode = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const MUTE_KEY = 'ulaa:packbag:muted'; // one sound setting for all the games
 
@@ -89,11 +88,6 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
     return saved && (!wanted || saved.code === wanted) ? saved.code : null;
   });
   const [view, setView] = useState<'menu' | 'host' | 'join'>(wanted && !code ? 'join' : 'menu');
-  // Hosting needs a trip's host code unless an admin is signed in. The database
-  // enforces this (add_stowaway_host_codes.sql); this only decides what to show.
-  const { user } = useAuth();
-  const needsHostCode = !user;
-  const [hostCode, setHostCode] = useState('');
   const [name, setName] = useState(loadPlayerName);
   const [joinCode, setJoinCode] = useState(wanted);
   const [busy, setBusy] = useState(false);
@@ -103,14 +97,13 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
     const clean = cleanName(name);
     if (!clean) { setError('Please type your name.'); return; }
     if (kind === 'join' && normalizeCode(joinCode).length !== 4) { setError('Room codes have 4 letters or numbers.'); return; }
-    if (kind === 'host' && needsHostCode && cleanHostCode(hostCode).length < 8) { setError('Type the host code from the Ulaa team.'); return; }
     ensure();
     setBusy(true);
     setError('');
     try {
       savePlayerName(clean);
       const res = kind === 'host'
-        ? await online.create(clean, tripTitle, needsHostCode ? cleanHostCode(hostCode) : undefined)
+        ? await online.create(clean, tripTitle)
         : await online.join(normalizeCode(joinCode), clean);
       saveOnlineSession(res.code);
       play('good');
@@ -146,24 +139,6 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
 
       {view !== 'menu' && (
         <div className="text-left mt-3">
-          {view === 'host' && needsHostCode && (
-            <>
-              <label className={`${eyebrow} block mb-1.5`} htmlFor="stowaway-host-code">Host code</label>
-              <input
-                id="stowaway-host-code"
-                value={hostCode}
-                onChange={e => setHostCode(e.target.value.toUpperCase().slice(0, 9))}
-                autoCapitalize="characters"
-                autoComplete="off"
-                autoCorrect="off"
-                spellCheck={false}
-                maxLength={9}
-                placeholder="ABCD-2345"
-                className={`${inputCls} text-center font-display text-2xl tracking-[0.2em] uppercase mb-1`}
-              />
-              <p className="text-[11px] text-cream/50 mb-3">Your trip's host code, from the Ulaa team. Friends only need the room code.</p>
-            </>
-          )}
           {view === 'join' && (
             <>
               <label className={`${eyebrow} block mb-1.5`} htmlFor="stowaway-code">Room code</label>
@@ -294,6 +269,90 @@ function Toggle({ on, onChange, title, desc, disabled }: {
   );
 }
 
+// ───────────────────────────── Special roles picker ─────────────────────────────
+
+const ALL_SPECIAL_IDS: readonly SpecialId[] = SPECIALS.map(d => d.id);
+
+const SPECIAL_LOOK: Record<SpecialId, { icon: typeof Smiley; tone: string }> = {
+  clown: { icon: Smiley, tone: 'from-amber-300 to-orange-400 text-amber-950' },
+  rivals: { icon: Sword, tone: 'from-rose-300 to-red-400 text-rose-950' },
+  sleepyhead: { icon: Moon, tone: 'from-indigo-300 to-violet-400 text-indigo-950' },
+  returnTicket: { icon: Ticket, tone: 'from-emerald-300 to-teal-400 text-emerald-950' },
+  tripLeader: { icon: Crown, tone: 'from-[#F0CE7A] to-gold text-dark' },
+  backseatRider: { icon: Armchair, tone: 'from-sky-300 to-blue-400 text-sky-950' },
+  driver: { icon: SteeringWheel, tone: 'from-slate-300 to-slate-400 text-slate-900' },
+  buddies: { icon: Handshake, tone: 'from-lime-300 to-green-400 text-green-950' },
+  payback: { icon: ArrowUUpLeft, tone: 'from-fuchsia-300 to-pink-400 text-fuchsia-950' },
+  luckyDip: { icon: DiceFive, tone: 'from-yellow-200 to-amber-300 text-amber-950' },
+};
+
+/** The ids the host has ticked: none while the switch is off, all when no list was saved. */
+const pickedSpecials = (room: { specials: boolean; special_ids: SpecialId[] | null }): SpecialId[] =>
+  !room.specials ? [] : room.special_ids ? ALL_SPECIAL_IDS.filter(id => room.special_ids!.includes(id)) : [...ALL_SPECIAL_IDS];
+
+function SpecialPicker({ initial, players, busy, onSave, onCancel }: {
+  initial: SpecialId[]; players: number; busy: boolean;
+  onSave: (ids: SpecialId[]) => void; onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState<SpecialId[]>(initial);
+  const on = new Set(draft);
+  const toggle = (id: SpecialId) => setDraft(ALL_SPECIAL_IDS.filter(x => (x === id ? !on.has(x) : on.has(x))));
+  const slots = maxSpecials(players);
+
+  return (
+    <div className="text-left">
+      <button type="button" onClick={onCancel} className="inline-flex items-center gap-1 text-xs font-semibold text-cream/60 hover:text-white mb-2 transition-colors">
+        <ArrowLeft size={14} weight="bold" /> Back
+      </button>
+      <h3 className="font-display text-2xl font-extrabold text-white leading-tight">Special roles</h3>
+      <p className="text-xs text-cream/60 mt-1 mb-3">
+        Tick the ones you want in play. Each round, up to one special per 3 players is dealt from your ticked list
+        {players >= 3 ? ` (${slots} with ${players} players)` : ''}. Rivals and Buddies use two players.
+      </p>
+
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-cream/50 tabular-nums">{draft.length} of {ALL_SPECIAL_IDS.length} ticked</span>
+        <span className="flex gap-3 text-xs font-bold">
+          <button type="button" onClick={() => setDraft([...ALL_SPECIAL_IDS])} className="text-[#F0CE7A] hover:underline">Tick all</button>
+          <button type="button" onClick={() => setDraft([])} className="text-cream/60 hover:underline">Clear</button>
+        </span>
+      </div>
+
+      <ul className={`${glass} divide-y divide-white/10 mb-4`}>
+        {SPECIALS.map(def => {
+          const look = SPECIAL_LOOK[def.id];
+          const Icon = look.icon;
+          const checked = on.has(def.id);
+          return (
+            <li key={def.id}>
+              <button type="button" role="checkbox" aria-checked={checked} onClick={() => toggle(def.id)}
+                className="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-white/[0.04] transition-colors">
+                <span className={`w-11 h-11 rounded-xl bg-gradient-to-br ${look.tone} flex items-center justify-center shrink-0 shadow-md`} aria-hidden="true">
+                  <Icon size={24} weight="duotone" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-sm font-bold text-white leading-tight">{def.name}</span>
+                    {def.pair && <span className="text-[9px] font-bold uppercase tracking-wider text-cream/60 bg-white/10 rounded-full px-1.5 py-0.5">2 players</span>}
+                  </span>
+                  <span className="block text-[12px] leading-snug text-cream/60 mt-0.5">{SPECIAL_BLURB[def.id]}</span>
+                </span>
+                <span className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${checked ? 'bg-primary border-primary text-white' : 'border-white/30 text-transparent'}`} aria-hidden="true">
+                  <Check size={14} weight="bold" />
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <button type="button" disabled={busy} onClick={() => onSave(draft)} className={`${primaryBtn} disabled:opacity-60`}>
+        <Check size={18} weight="bold" /> {draft.length === 0 ? 'Done (no special roles)' : `Done (${draft.length} ticked)`}
+      </button>
+    </div>
+  );
+}
+
 // ───────────────────────────── The room ─────────────────────────────
 
 function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onLeft: () => void; onExit: () => void }) {
@@ -309,6 +368,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const [guessDraft, setGuessDraft] = useState('');
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [pickingSpecials, setPickingSpecials] = useState(false);
   const noticeTimer = useRef<number | null>(null);
 
   const room = state?.room ?? null;
@@ -416,10 +476,10 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const validRoles = n >= MIN_PLAYERS && rolesValid(n, eff.stowaways, eff.lost);
   const explorers = n - eff.stowaways - eff.lost;
 
-  const saveSettings = (patch: Partial<{ stowaways: number; lost: number; level: Level; hideCounts: boolean; dares: boolean; specials: boolean }>) =>
+  const saveSettings = (patch: Partial<{ stowaways: number; lost: number; level: Level; hideCounts: boolean; dares: boolean; specials: boolean; specialIds: SpecialId[] | null }>) =>
     act(() => online.setSettings(room.code, {
       stowaways: eff.stowaways, lost: eff.lost, level: room.level, hideCounts: room.hide_counts,
-      dares: room.dares, specials: room.specials, ...patch,
+      dares: room.dares, specials: room.specials, specialIds: room.special_ids ?? null, ...patch,
     }));
 
   const copyLink = async () => {
@@ -484,8 +544,24 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       {notice && <p role="alert" className="rounded-xl bg-rose-400/15 border border-rose-300/30 text-rose-100 text-xs font-semibold px-3 py-2 mb-3">{notice}</p>}
       {hostBanner}
 
+      {/* ── Lobby: special roles picker (host) ── */}
+      {phase === 'lobby' && isHost && pickingSpecials && (
+        <SpecialPicker
+          initial={pickedSpecials(room)}
+          players={n}
+          busy={busy}
+          onCancel={() => setPickingSpecials(false)}
+          onSave={ids => {
+            void saveSettings(ids.length === 0
+              ? { specials: false, specialIds: [] }
+              : { specials: true, specialIds: ids.length === ALL_SPECIAL_IDS.length ? null : ids }
+            ).then(() => setPickingSpecials(false));
+          }}
+        />
+      )}
+
       {/* ── Lobby ── */}
-      {phase === 'lobby' && (
+      {phase === 'lobby' && !(isHost && pickingSpecials) && (
         <div>
           <div className={`${glass} text-center py-4 mb-3`}>
             <p className={eyebrow}>Room code</p>
@@ -576,7 +652,19 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <div className={`${glass} divide-y divide-white/10 mb-4`}>
                 <Toggle on={room.hide_counts} onChange={v => void saveSettings({ hideCounts: v })} disabled={busy} title="Hide the counts" desc="Only you can see the role split. Nobody else knows if a Stranger exists." />
                 <Toggle on={room.dares} onChange={v => void saveSettings({ dares: v })} disabled={busy} title="Trip dares" desc="The losing side gets a silly dare." />
-                <Toggle on={room.specials} onChange={v => void saveSettings({ specials: v })} disabled={busy} title="Special roles" desc="Clown, Rivals, Payback, Return Ticket and more. Up to one per 3 players." />
+                <button type="button" onClick={() => { ensure(); setPickingSpecials(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors">
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-bold text-white leading-tight">Special roles</span>
+                    <span className="block text-[11px] text-cream/50">
+                      {pickedSpecials(room).length === 0
+                        ? 'Off. Tap to choose which ones.'
+                        : pickedSpecials(room).length === ALL_SPECIAL_IDS.length
+                          ? `All ${ALL_SPECIAL_IDS.length} on. Tap to choose.`
+                          : `${pickedSpecials(room).length} of ${ALL_SPECIAL_IDS.length} on. Tap to choose.`}
+                    </span>
+                  </span>
+                  <CaretRight size={16} weight="bold" className="text-cream/40" aria-hidden="true" />
+                </button>
               </div>
 
               <button type="button" disabled={busy || !validRoles} onClick={() => { void act(() => online.startRound(room.code, nextDare(), false)); }} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
@@ -587,7 +675,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <div className={`${glass} px-3 py-3 mb-3 text-sm text-cream/70`}>
               <p className="font-bold text-white mb-1">Game settings</p>
               <p>{LEVELS.find(l => l.id === room.level)?.label} words{room.hide_counts ? ', hidden role counts' : state.counts ? `, ${state.counts.explorers} Travellers, ${state.counts.stowaways} Pickpocket${state.counts.stowaways === 1 ? '' : 's'}${state.counts.lost ? `, ${state.counts.lost} Stranger` : ''}` : ''}.</p>
-              {room.specials && <p className="text-xs text-cream/50 mt-1">Special roles are on.</p>}
+              {room.specials && <p className="text-xs text-cream/50 mt-1">Special roles: {pickedSpecials(room).map(id => specialDisplayName(id)).join(', ')}.</p>}
               {room.locked && <p className="text-xs text-cream/50 mt-1"><LockSimple size={12} weight="fill" className="inline -mt-0.5" /> The host locked the room.</p>}
             </div>
           )}

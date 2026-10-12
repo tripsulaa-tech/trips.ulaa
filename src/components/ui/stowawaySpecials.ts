@@ -33,6 +33,20 @@ export const SPECIALS: readonly SpecialDef[] = [
   { id: 'luckyDip', name: 'Lucky Dip', batch: 3, pair: false },
 ];
 
+/** One-line "what is it for" for each special, for the host's picker (not per player). */
+export const SPECIAL_BLURB: Record<SpecialId, string> = {
+  clown: 'Get voted out in the first 2 stops and score +4, whatever your role.',
+  rivals: 'Two players are Rivals. If your Rival is voted out before you, +2.',
+  sleepyhead: 'Asleep at Stop 1: skips describing and stays silent. Still aboard at the end: +1.',
+  returnTicket: 'The first time you are voted out, you stay aboard and the group votes again.',
+  tripLeader: 'Breaks any tied vote. Everyone can see who the Trip Leader is.',
+  backseatRider: 'When voted out, one guess at the other side\'s word: +3 if right. Keeps voting.',
+  driver: 'Starts the description round at every stop. Everyone can see who the Driver is.',
+  buddies: 'Two players are Buddies. Both still aboard at the end: +2 each.',
+  payback: 'When voted out, take one other player with you. +2 if they were on the other side.',
+  luckyDip: 'Turns into a random ability from the ticked ones (never a pair or Payback).',
+};
+
 const DEF_BY_ID = new Map(SPECIALS.map(d => [d.id, d]));
 
 export const specialName = (id: SpecialId): string => DEF_BY_ID.get(id)?.name ?? id;
