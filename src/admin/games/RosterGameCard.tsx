@@ -24,11 +24,13 @@ interface RosterGameCardProps {
   create: (names: string[], tripTitle: string) => Promise<string>;
   update: (code: string, names: string[], tripTitle: string) => Promise<boolean>;
   migrationFile: string;
+  /** Extra content under the card's share row (e.g. Stowaway's host code). */
+  extra?: ReactNode;
 }
 
 type Share = { code: string; sig: string; tripId: string };
 
-export default function RosterGameCard({ roster, id, title, path, minPlayers, maxPlayers, renderGame, create, update, migrationFile }: RosterGameCardProps) {
+export default function RosterGameCard({ roster, id, title, path, minPlayers, maxPlayers, renderGame, create, update, migrationFile, extra }: RosterGameCardProps) {
   const toast = useToast();
   const key = `ulaa:admin-games:share:${id}`;
   const { tripId, trip } = roster;
@@ -107,11 +109,16 @@ export default function RosterGameCard({ roster, id, title, path, minPlayers, ma
         </button>
       ) : undefined}
       note={canShare && tripId && !mine ? 'The link opens with these players already in.' : undefined}
-      footer={linkStale && canShare ? (
-        <p role="status" className="flex flex-wrap items-center gap-x-2 text-xs text-dark-muted">
-          Players changed since this link was made.
-          <button type="button" onClick={() => void updateLink()} disabled={sharing} className="font-button font-semibold text-primary hover:underline disabled:opacity-50 min-h-[32px]">{sharing ? 'Updating…' : 'Update link'}</button>
-        </p>
+      footer={(linkStale && canShare) || extra ? (
+        <>
+          {linkStale && canShare && (
+            <p role="status" className="flex flex-wrap items-center gap-x-2 text-xs text-dark-muted">
+              Players changed since this link was made.
+              <button type="button" onClick={() => void updateLink()} disabled={sharing} className="font-button font-semibold text-primary hover:underline disabled:opacity-50 min-h-[32px]">{sharing ? 'Updating…' : 'Update link'}</button>
+            </p>
+          )}
+          {extra}
+        </>
       ) : undefined}
     />
   );

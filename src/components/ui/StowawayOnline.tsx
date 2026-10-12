@@ -6,6 +6,7 @@ import {
   Gift, Question, Copy, LockSimple, LockSimpleOpen, WifiSlash, DeviceMobile, Hash, UsersThree, ChatCircleDots,
 } from '@phosphor-icons/react';
 import { SITE_HOST } from '../../constants/site';
+import { useAuth } from '../../context/useAuth';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { buildScoreCard } from './packBagScoreCard';
@@ -34,6 +35,8 @@ import { useStowawayContentSync } from './useGameContentSync';
 // live in Supabase (see add_stowaway_online.sql); this file is only the screens.
 // The group talks it out aloud (in person or on a call). The phone handles the
 // secret word, private voting and the scores.
+
+const cleanHostCode = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
 const MUTE_KEY = 'ulaa:packbag:muted'; // one sound setting for all the games
 
@@ -86,6 +89,11 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
     return saved && (!wanted || saved.code === wanted) ? saved.code : null;
   });
   const [view, setView] = useState<'menu' | 'host' | 'join'>(wanted && !code ? 'join' : 'menu');
+  // Hosting needs a trip's host code unless an admin is signed in. The database
+  // enforces this (add_stowaway_host_codes.sql); this only decides what to show.
+  const { user } = useAuth();
+  const needsHostCode = !user;
+  const [hostCode, setHostCode] = useState('');
   const [name, setName] = useState(loadPlayerName);
   const [joinCode, setJoinCode] = useState(wanted);
   const [busy, setBusy] = useState(false);
@@ -95,13 +103,14 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
     const clean = cleanName(name);
     if (!clean) { setError('Please type your name.'); return; }
     if (kind === 'join' && normalizeCode(joinCode).length !== 4) { setError('Room codes have 4 letters or numbers.'); return; }
+    if (kind === 'host' && needsHostCode && cleanHostCode(hostCode).length < 8) { setError('Type the host code from the Ulaa team.'); return; }
     ensure();
     setBusy(true);
     setError('');
     try {
       savePlayerName(clean);
       const res = kind === 'host'
-        ? await online.create(clean, tripTitle)
+        ? await online.create(clean, tripTitle, needsHostCode ? cleanHostCode(hostCode) : undefined)
         : await online.join(normalizeCode(joinCode), clean);
       saveOnlineSession(res.code);
       play('good');
@@ -137,6 +146,24 @@ export default function StowawayOnline({ tripTitle, initialCode, onExit }: Stowa
 
       {view !== 'menu' && (
         <div className="text-left mt-3">
+          {view === 'host' && needsHostCode && (
+            <>
+              <label className={`${eyebrow} block mb-1.5`} htmlFor="stowaway-host-code">Host code</label>
+              <input
+                id="stowaway-host-code"
+                value={hostCode}
+                onChange={e => setHostCode(e.target.value.toUpperCase().slice(0, 9))}
+                autoCapitalize="characters"
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={9}
+                placeholder="ABCD-2345"
+                className={`${inputCls} text-center font-display text-2xl tracking-[0.2em] uppercase mb-1`}
+              />
+              <p className="text-[11px] text-cream/50 mb-3">Your trip's host code, from the Ulaa team. Friends only need the room code.</p>
+            </>
+          )}
           {view === 'join' && (
             <>
               <label className={`${eyebrow} block mb-1.5`} htmlFor="stowaway-code">Room code</label>

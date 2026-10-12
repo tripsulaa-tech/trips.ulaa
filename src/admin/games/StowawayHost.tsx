@@ -1,11 +1,13 @@
 import StowawayGame from '../../components/ui/StowawayGame';
 import { createStowawayShare, updateStowawayShare } from '../../services/api/stowawayShare';
 import RosterGameCard from './RosterGameCard';
+import StowawayHostCodePanel from './StowawayHostCodePanel';
 import type { TripRoster } from './useTripRoster';
 
 // Admin -> Games -> Play: Stowaway for the ticked travellers (3 to 15 players;
 // pass and play on this phone, or a short share link: /play/stowaway/game/:code).
-// The game's own "Play online with friends" option is still on its tile.
+// The game's own "Play online with friends" option is still on its tile; below
+// it, the trip's host code lets travellers host their own online room.
 export default function StowawayHost({ roster }: { roster: TripRoster }) {
   return (
     <RosterGameCard
@@ -21,6 +23,7 @@ export default function StowawayHost({ roster }: { roster: TripRoster }) {
       create={createStowawayShare}
       update={updateStowawayShare}
       migrationFile="add_stowaway_share_links.sql"
+      extra={roster.tripId ? <StowawayHostCodePanel key={roster.tripId} tripId={roster.tripId} tripTitle={roster.trip?.title ?? ''} /> : undefined}
     />
   );
 }
