@@ -133,7 +133,6 @@ export default function AlbumPage() {
     return (
       <Layout>
         <NotFoundState
-          icon={<Images size={28} />}
           title="Album not found"
           message="This album may have been removed or the link is out of date. Browse our other travel stories instead."
           actionLabel="Back to All Albums"

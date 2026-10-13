@@ -1,12 +1,7 @@
-import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import Button from './Button';
-import SectionTitle from './SectionTitle';
+import NotFoundScene from './NotFoundScene';
 
 interface NotFoundStateProps {
-  /** A phosphor icon element, e.g. `<Compass size={28} />`. */
-  icon: ReactNode;
-  /** Small eyebrow above the title, matching the app's other section headers. Defaults to '404'. */
+  /** Script line above the title. Defaults to "Off the map". */
   label?: string;
   title: string;
   message: string;
@@ -16,22 +11,17 @@ interface NotFoundStateProps {
   onActionClick?: () => void;
 }
 
-// Full-page "not found" state (wrong/removed slug) — shares the same
-// heading treatment, copy structure, and CTA button as the trips-listing
-// pages' empty/no-results states, instead of a single bare line of text.
-export default function NotFoundState({ icon, label = '404', title, message, actionLabel, actionTo, onActionClick }: NotFoundStateProps) {
+// "Not found" for a page that exists but whose record doesn't (wrong or
+// removed trip/album slug). Shares NotFoundScene with the catch-all 404 page,
+// so both look the same; callers only supply the specific wording and where
+// the main button goes.
+export default function NotFoundState({ label, title, message, actionLabel, actionTo, onActionClick }: NotFoundStateProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center text-center px-4 py-20">
-      <span
-        className="w-16 h-16 rounded-full bg-background-warm flex items-center justify-center text-primary mb-5"
-        aria-hidden="true"
-      >
-        {icon}
-      </span>
-      <SectionTitle variant="plain" align="center" size="xl" label={label} title={title} subtitle={message} />
-      <Link to={actionTo} onClick={onActionClick} className="mt-7">
-        <Button variant="primary">{actionLabel}</Button>
-      </Link>
-    </div>
+    <NotFoundScene
+      label={label}
+      title={title}
+      message={message}
+      primary={{ label: actionLabel, to: actionTo, onClick: onActionClick }}
+    />
   );
 }

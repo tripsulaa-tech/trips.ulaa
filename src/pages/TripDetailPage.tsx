@@ -36,7 +36,6 @@ import TripSpecialOfferPopup from './trip-detail/TripSpecialOfferPopup';
 import TripEarlyBirdPopup from './trip-detail/TripEarlyBirdPopup';
 import { getEarlyBirdSeatsOffer } from '../components/ui/earlyBirdSeatsOffer';
 import { useIsDesktop } from './trip-detail/tripDetailUtils';
-import { Compass } from '@phosphor-icons/react';
 
 import { pageTitle } from '../constants/site';
 export default function TripDetailPage() {
@@ -358,7 +357,6 @@ export default function TripDetailPage() {
     return (
       <Layout>
         <NotFoundState
-          icon={<Compass size={28} />}
           title="Trip not found"
           message="This trip may have been removed or the link is out of date. Check out our other upcoming adventures instead."
           actionLabel={isPreview ? 'Back to Trips admin' : 'View All Trips'}
