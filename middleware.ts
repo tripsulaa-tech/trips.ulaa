@@ -27,6 +27,7 @@
 import { SITE_ORIGIN, SITE_NAME, SITE_DESCRIPTION } from './src/constants/site.js';
 
 export const config = {
+  runtime: 'nodejs',
   matcher: ['/trips/:path*', '/completed-trips/:path*'],
 };
 
