@@ -24,7 +24,7 @@
 // against Vercel's current Middleware docs when you deploy, since this
 // wasn't run against a live deployment.
 
-import { SITE_ORIGIN, SITE_NAME, SITE_DESCRIPTION } from './src/constants/site';
+import { SITE_ORIGIN, SITE_NAME, SITE_DESCRIPTION } from './src/constants/site.js';
 
 export const config = {
   matcher: ['/trips/:path*', '/completed-trips/:path*'],
