@@ -160,7 +160,9 @@ export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
     getEarlyBirdSeatsTaken(),
   ]);
   if (error) throw error;
-  return (data || []).map(trip => ({ ...trip, waitlist_reserved: reservedCounts[trip.id] || 0, early_bird_seats_taken: earlyTaken[trip.id] || 0 })) as UpcomingTrip[];
+  // The select string is built at runtime, so Supabase can't infer the row type; cast explicitly.
+  const rows = (data || []) as unknown as (Record<string, unknown> & { id: string })[];
+  return rows.map(trip => ({ ...trip, waitlist_reserved: reservedCounts[trip.id] || 0, early_bird_seats_taken: earlyTaken[trip.id] || 0 })) as unknown as UpcomingTrip[];
 }
 
 export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip | null> {
@@ -175,7 +177,8 @@ export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip 
     getEarlyBirdSeatsTaken(),
   ]);
   if (error) return null;
-  return { ...data, waitlist_reserved: reservedCounts[data.id] || 0, early_bird_seats_taken: earlyTaken[data.id] || 0 } as UpcomingTrip;
+  const row = data as unknown as Record<string, unknown> & { id: string };
+  return { ...row, waitlist_reserved: reservedCounts[row.id] || 0, early_bird_seats_taken: earlyTaken[row.id] || 0 } as unknown as UpcomingTrip;
 }
 
 /** If a trip's link was changed (see add_trip_slug_rename.sql), returns the
@@ -232,7 +235,7 @@ export async function getAllUpcomingTripsAdmin(): Promise<UpcomingTrip[]> {
     .order('created_at', { ascending: false });
   if (error) throw error;
   const earlyTaken = await getEarlyBirdSeatsTaken();
-  return (data || []).map(trip => ({ ...trip, early_bird_seats_taken: earlyTaken[trip.id] || 0 })) as UpcomingTrip[];
+  return (data || []).map(trip => ({ ...trip, early_bird_seats_taken: earlyTaken[trip.id] || 0 })) as unknown as UpcomingTrip[];
 }
 
 export async function createUpcomingTrip(trip: Partial<UpcomingTrip>): Promise<UpcomingTrip> {
