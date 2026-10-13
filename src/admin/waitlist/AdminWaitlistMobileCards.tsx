@@ -3,6 +3,7 @@ import {
   Trash as Trash2,
   Envelope as Mail,
   Phone,
+  Siren,
   ChatDots as MessageSquare,
   Users,
   UserPlus,
@@ -145,7 +146,7 @@ export default function AdminWaitlistMobileCards({
                   </p>
                 )}
                 {e.city && <p>{e.city}</p>}
-                {e.emergency_contact && <p>Emergency: {e.emergency_contact}</p>}
+                {e.emergency_contact && <p className="flex items-center gap-1"><Siren size={12} weight="fill" className="shrink-0 text-red-500" aria-hidden="true" /> <span className="font-semibold text-red-500">Emergency:</span> {e.emergency_contact}</p>}
                 {!(e.age || e.food_preference || foodBreakdown(e)) && (
                   <p className="flex items-center gap-1.5">
                     <CalendarDays size={11} className="shrink-0" aria-hidden="true" /> {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}

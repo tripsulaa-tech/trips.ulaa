@@ -663,8 +663,6 @@ function YaaruAvanEditor({ onDirty }: { onDirty: OnDirty }) {
     return { value: { pairs, dares } };
   };
 
-  const sel = 'px-2 py-2 rounded-md border-2 border-background-warm bg-background text-sm text-dark focus:border-primary outline-none';
-
   return (
     <div className="space-y-4">
       <Card>
@@ -698,12 +696,12 @@ function YaaruAvanEditor({ onDirty }: { onDirty: OnDirty }) {
                 <li key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_9rem_6.5rem_auto] gap-2 items-center">
                   <input aria-label={`Pair ${i + 1}, first word`} value={p.a} maxLength={40} onChange={e => setPair(i, { a: e.target.value })} className={inputClass} placeholder="Word A" />
                   <input aria-label={`Pair ${i + 1}, second word`} value={p.b} maxLength={40} onChange={e => setPair(i, { b: e.target.value })} className={inputClass} placeholder="Word B" />
-                  <select aria-label={`Pair ${i + 1} category`} value={p.category} onChange={e => setPair(i, { category: e.target.value as typeof p.category })} className={`${sel} hidden sm:block`}>
-                    {YAARU_AVAN_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-                  </select>
-                  <select aria-label={`Pair ${i + 1} level`} value={p.level} onChange={e => setPair(i, { level: e.target.value as typeof p.level })} className={`${sel} hidden sm:block`}>
-                    {YAARU_AVAN_LEVELS.map(l => <option key={l} value={l}>{LEVELS.find(x => x.id === l)?.label}</option>)}
-                  </select>
+                  <div className="hidden sm:block" aria-label={`Pair ${i + 1} category`}>
+                    <Select<string> size="sm" value={p.category} onChange={v => setPair(i, { category: v as typeof p.category })} options={YAARU_AVAN_CATEGORIES.map(c => ({ value: c, label: CATEGORY_LABEL[c] }))} />
+                  </div>
+                  <div className="hidden sm:block" aria-label={`Pair ${i + 1} level`}>
+                    <Select<string> size="sm" value={p.level} onChange={v => setPair(i, { level: v as typeof p.level })} options={YAARU_AVAN_LEVELS.map(l => ({ value: l, label: LEVELS.find(x => x.id === l)?.label ?? l }))} />
+                  </div>
                   <button type="button" aria-label={`Delete pair ${p.a} and ${p.b}`} onClick={() => setDraft(d => ({ ...d, pairs: d.pairs.filter((_, idx) => idx !== i) }))} className="w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
                 </li>
               ))}

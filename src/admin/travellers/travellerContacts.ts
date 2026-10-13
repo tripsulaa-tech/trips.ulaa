@@ -37,7 +37,12 @@ type TravellerTripGroup = {
 export type TravellerContact = {
   key: string;
   fullName: string;
+  // Primary phone (what the contact is grouped by).
   phone: string;
+  // Every number we hold for this traveller, primary first: the primary
+  // phone plus, when different, the emergency-contact field — which is
+  // where a traveller's second number is kept (no separate column).
+  phones: string[];
   email: string;
   city?: string;
   emergencyContact?: string;
@@ -66,19 +71,20 @@ export type TravellerContact = {
   rows: Enquiry[];
 };
 
-// Same fuzzy identity used by the possible-duplicate warning in
-// AdminAddEnquiryModal (see phoneSignature/emailSignature) — groups rows
-// primarily by phone (digits-only, last 10), falling back to email, then
-// to the trimmed/lowercased name. Every row reaching this function already
-// has a non-blank phone (see buildTravellerContacts' filter below), so the
-// email/name fallbacks mainly guard against a phone too short/malformed
-// for phoneSignature to normalize.
+// Identity = same person name + same (fuzzy) phone. Phone alone is NOT enough:
+// two different travellers can share one number (a parent booking for a
+// friend, a family phone), and silently collapsing them hid real people.
+// Those cases stay as separate contacts and are surfaced to the admin to
+// review and merge instead — see findSharedPhoneGroups() below. Same
+// fuzzy phone signature as the possible-duplicate warning in
+// AdminAddEnquiryModal (digits-only, last 10).
+export function nameKey(name: string | null | undefined): string {
+  return (name || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
 function contactKey(e: Enquiry): string {
-  const p = phoneSignature(e.phone);
-  if (p) return `phone:${p}`;
-  const em = emailSignature(e.email);
-  if (em) return `email:${em}`;
-  return `name:${e.full_name.trim().toLowerCase()}`;
+  const p = phoneSignature(e.phone) || `raw:${(e.phone || '').trim().toLowerCase()}`;
+  return `${nameKey(e.full_name)}|${p}`;
 }
 
 // Groups a contact's own rows by trip — trip_id when the trip is still a
@@ -165,13 +171,19 @@ export function buildTravellerContacts(enquiries: Enquiry[]): TravellerContact[]
     const lastActivityAt = rows.reduce((latest, r) => (r.created_at > latest ? r.created_at : latest), rows[0].created_at);
     const registeredAt = rows.reduce((earliest, r) => (r.created_at < earliest ? r.created_at : earliest), rows[0].created_at);
 
+    const phone = pickBest(rows, 'phone');
+    const emergencyContact = pickBest(rows, 'emergency_contact') || undefined;
+    const phones = [phone];
+    if (emergencyContact && phoneSignature(emergencyContact) !== phoneSignature(phone)) phones.push(emergencyContact);
+
     contacts.push({
       key,
       fullName: pickBest(rows, 'full_name') || 'Unnamed traveller',
-      phone: pickBest(rows, 'phone'),
+      phone,
+      phones,
       email: pickBestEmail(rows),
       city: pickBest(rows, 'city') || undefined,
-      emergencyContact: pickBest(rows, 'emergency_contact') || undefined,
+      emergencyContact,
       foodPreference: rows.find(r => r.food_preference)?.food_preference || null,
       trips,
       tripCount: trips.length,
@@ -193,9 +205,29 @@ export function contactMatchesQuery(c: TravellerContact, query: string): boolean
   if (!q) return true;
   return (
     c.fullName.toLowerCase().includes(q) ||
-    c.phone.toLowerCase().includes(q) ||
+    c.phones.some(p => p.toLowerCase().includes(q)) ||
     c.email.toLowerCase().includes(q) ||
     (!!c.city && c.city.toLowerCase().includes(q)) ||
     c.trips.some(t => t.tripTitle.toLowerCase().includes(q))
   );
+}
+
+/** Distinct travellers (different names) that share the same primary phone
+ *  number. Each entry is one number with the contacts using it — shown to the
+ *  admin as "possible same person, review & merge". Contacts with the same
+ *  name already collapse into one card, so every group here has 2+ names. */
+export type SharedPhoneGroup = { signature: string; phone: string; contacts: TravellerContact[] };
+
+export function findSharedPhoneGroups(all: TravellerContact[]): SharedPhoneGroup[] {
+  const bySig = new Map<string, TravellerContact[]>();
+  for (const c of all) {
+    const sig = phoneSignature(c.phone);
+    if (!sig) continue;
+    const list = bySig.get(sig);
+    if (list) list.push(c);
+    else bySig.set(sig, [c]);
+  }
+  return [...bySig.entries()]
+    .filter(([, list]) => list.length > 1)
+    .map(([signature, contacts]) => ({ signature, phone: contacts[0].phone, contacts }));
 }

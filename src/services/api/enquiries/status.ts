@@ -120,6 +120,9 @@ export async function updateEnquiryDetails(
     full_name?: string;
     email?: string;
     phone?: string;
+    // Second number for a traveller (also the "Emergency contact" field on the
+    // booking form). Blank/null clears it.
+    emergency_contact?: string | null;
     city?: string | null;
     age?: number | null;
     trip_id?: string | null;
@@ -174,6 +177,11 @@ export async function updateEnquiryDetails(
     if (!trimmed) throw new Error('Phone cannot be empty.');
     track('Phone', current.phone, trimmed);
     patch.phone = trimmed;
+  }
+  if (fields.emergency_contact !== undefined) {
+    const val = (fields.emergency_contact || '').trim() || null;
+    track('Emergency / 2nd phone', current.emergency_contact || '', val || '');
+    patch.emergency_contact = val;
   }
   if (fields.city !== undefined) {
     const val = fields.city || null;

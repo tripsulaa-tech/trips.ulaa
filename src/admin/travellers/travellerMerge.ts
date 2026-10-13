@@ -1,4 +1,4 @@
-import type { TravellerContact } from './travellerContacts';
+import { nameKey, type TravellerContact } from './travellerContacts';
 import { emailSignature, phoneSignature } from '../enquiries/AdminEnquiriesShared';
 
 // Merging works by rewriting the identity fields (name/phone/email/city) of
@@ -24,17 +24,51 @@ export function findMergeConflicts(keep: TravellerContact, other: TravellerConta
   return [...titles];
 }
 
+const numKey = (n: string) => phoneSignature(n) || n.trim().toLowerCase();
+
+// What the merged traveller ends up holding. A traveller keeps ONE primary
+// phone plus ONE second number (stored in the emergency-contact field), so a
+// merge works out which numbers would need to survive besides the primary:
+// the kept contact's second number and both numbers of the other contact,
+// minus anything that's the same number. If that's more than one, there's no
+// room and nothing is overwritten — the admin has to clear one first.
+export function planMerge(keep: TravellerContact, other: TravellerContact): {
+  phone: string;
+  second: string;
+  conflict: boolean;
+  extras: string[];
+} {
+  const primary = numKey(keep.phone);
+  const seen = new Set<string>([primary]);
+  const extras: string[] = [];
+  for (const n of [keep.emergencyContact, other.phone, other.emergencyContact]) {
+    const v = (n || '').trim();
+    if (!v) continue;
+    const k = numKey(v);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    extras.push(v);
+  }
+  return { phone: keep.phone, second: extras[0] || '', conflict: extras.length > 1, extras };
+}
+
 // Likely duplicates of `source` to offer before the admin types anything:
-// same email, same first name, or same last 4 phone digits.
+// same phone number (different name — the "shared number" case) first, then
+// same email, same name / first name, or same last 4 phone digits.
 export function suggestMergeCandidates(source: TravellerContact, all: TravellerContact[]): TravellerContact[] {
   const firstName = source.fullName.trim().toLowerCase().split(/\s+/)[0];
+  const fullName = nameKey(source.fullName);
+  const phone = phoneSignature(source.phone);
   const email = emailSignature(source.email);
   const last4 = (phoneSignature(source.phone) || '').slice(-4);
+  const sharesPhone = (c: TravellerContact) => !!phone && phoneSignature(c.phone) === phone;
   return all.filter(c => {
     if (c.key === source.key) return false;
+    if (sharesPhone(c)) return true;
     if (email && emailSignature(c.email) === email) return true;
+    if (fullName && nameKey(c.fullName) === fullName) return true;
     if (firstName && firstName.length > 1 && c.fullName.trim().toLowerCase().split(/\s+/)[0] === firstName) return true;
     if (last4.length === 4 && (phoneSignature(c.phone) || '').slice(-4) === last4) return true;
     return false;
-  });
+  }).sort((a, b) => Number(sharesPhone(b)) - Number(sharesPhone(a)));
 }

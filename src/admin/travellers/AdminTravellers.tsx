@@ -8,6 +8,7 @@ import AdminTravellerCard from './AdminTravellerCard';
 import AdminTravellersDesktopTable from './AdminTravellersDesktopTable';
 import AdminEditTravellerModal from './AdminEditTravellerModal';
 import AdminMergeTravellerModal from './AdminMergeTravellerModal';
+import AdminSharedPhoneAlert from './AdminSharedPhoneAlert';
 
 // Shared by both the mobile filter card and the desktop bar above the
 // table — same button, just two different places to sit depending on
@@ -51,7 +52,8 @@ export default function AdminTravellers() {
     deletingKey,
     handleDelete,
     allContacts,
-    mergeTarget, setMergeTarget,
+    mergeTarget, mergeOtherKey, openMerge, closeMerge,
+    sharedPhoneGroups, sharedPhoneKeys,
     merging,
     handleMerge,
   } = useTravellers();
@@ -70,6 +72,8 @@ export default function AdminTravellers() {
       <div className="space-y-4 sm:space-y-6">
         <KpiCards cards={KPI_CARDS} columns={4} />
         <KpiCarousel cards={KPI_CARDS} />
+
+        {!loading && <AdminSharedPhoneAlert groups={sharedPhoneGroups} onReview={openMerge} />}
 
         {/* Mobile (below sm): filter card with its own search + toggle,
             above the stacked card list. */}
@@ -143,9 +147,10 @@ export default function AdminTravellers() {
                   key={contact.key}
                   contact={contact}
                   onEdit={() => setEditTarget(contact)}
-                  onMerge={() => setMergeTarget(contact)}
+                  onMerge={() => openMerge(contact)}
                   onDelete={() => handleDelete(contact)}
                   deleting={deletingKey === contact.key}
+                  sharedPhone={sharedPhoneKeys.has(contact.key)}
                 />
               ))}
             </div>
@@ -162,9 +167,10 @@ export default function AdminTravellers() {
               totalPages={totalPages}
               setPage={setPage}
               onEdit={setEditTarget}
-              onMerge={setMergeTarget}
+              onMerge={c => openMerge(c)}
               onDelete={handleDelete}
               deletingKey={deletingKey}
+              sharedPhoneKeys={sharedPhoneKeys}
             />
           </>
         )}
@@ -185,10 +191,11 @@ export default function AdminTravellers() {
       />
 
       <AdminMergeTravellerModal
-        key={mergeTarget?.key ?? 'none'}
+        key={`${mergeTarget?.key ?? 'none'}|${mergeOtherKey ?? ''}`}
         source={mergeTarget}
+        initialOtherKey={mergeOtherKey}
         allContacts={allContacts}
-        onClose={() => { if (!merging) setMergeTarget(null); }}
+        onClose={() => { if (!merging) closeMerge(); }}
         onMerge={handleMerge}
         merging={merging}
       />

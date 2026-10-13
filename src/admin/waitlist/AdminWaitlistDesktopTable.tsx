@@ -4,6 +4,7 @@ import {
   Trash as Trash2,
   Envelope as Mail,
   Phone,
+  Siren,
   ChatDots as MessageSquare,
   Users,
   UserPlus,
@@ -158,7 +159,7 @@ export default function AdminWaitlistDesktopTable({
                   <p className="flex items-center gap-1 text-xs"><Mail size={11} className="shrink-0" aria-hidden="true" /> {realEmail(e.email) || 'No email'}</p>
                   <p className="flex items-center gap-1 text-xs mt-0.5"><Phone size={11} className="shrink-0" aria-hidden="true" /> {e.phone}</p>
                   {e.city && <p className="text-xs mt-0.5">{e.city}</p>}
-                  {e.emergency_contact && <p className="text-xs mt-0.5">Emergency: {e.emergency_contact}</p>}
+                  {e.emergency_contact && <p className="flex items-center gap-1 text-xs mt-0.5"><Siren size={11} weight="fill" className="shrink-0 text-red-500" aria-hidden="true" /> <span className="font-semibold text-red-500">Emergency:</span> {e.emergency_contact}</p>}
                   <div className="mt-1.5">
                     <ContactQuickLinks phone={e.phone} email={realEmail(e.email)} name={e.full_name} tripTitle={e.trip_title} />
                   </div>

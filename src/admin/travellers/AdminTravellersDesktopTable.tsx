@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Phone, Envelope as Mail, MapPin, Repeat,
+  Phone, Envelope as Mail, MapPin, Repeat, Warning, Siren,
   PencilSimple as Edit2, Trash as Trash2, ArrowsMerge,
   CaretUp as ChevronUp, CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
@@ -23,6 +23,8 @@ interface AdminTravellersDesktopTableProps {
   onMerge: (contact: TravellerContact) => void;
   onDelete: (contact: TravellerContact) => void;
   deletingKey: string | null;
+  // Keys of contacts whose phone number is also used by a different traveller.
+  sharedPhoneKeys?: Set<string>;
 }
 
 /** Desktop/tablet table view of the Contact Book — same data and actions
@@ -35,7 +37,7 @@ interface AdminTravellersDesktopTableProps {
  *  the mobile card. */
 export default function AdminTravellersDesktopTable({
   pageItems, rangeStart, rangeEnd, total, searchQuery, setSearchQuery,
-  safePage, totalPages, setPage, onEdit, onMerge, onDelete, deletingKey,
+  safePage, totalPages, setPage, onEdit, onMerge, onDelete, deletingKey, sharedPhoneKeys,
 }: AdminTravellersDesktopTableProps) {
   // Which contacts have their "+N more" trips opened out (by contact key).
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
@@ -92,6 +94,16 @@ export default function AdminTravellersDesktopTable({
                               <Repeat size={9} aria-hidden="true" /> {contact.joinedTripCount} trips
                             </span>
                           )}
+                          {sharedPhoneKeys?.has(contact.key) && (
+                            <button
+                              type="button"
+                              onClick={() => onMerge(contact)}
+                              title="Another traveller uses this phone number — click to review and merge"
+                              className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 shrink-0 hover:bg-amber-200 transition-colors"
+                            >
+                              <Warning size={9} aria-hidden="true" /> Shared number
+                            </button>
+                          )}
                         </div>
                         <p className="text-xs text-dark-muted truncate">Registered {formatDate(contact.registeredAt)}</p>
                       </div>
@@ -99,16 +111,22 @@ export default function AdminTravellersDesktopTable({
                   </td>
                   <td className="px-4 py-4 hidden md:table-cell">
                     <div className="min-w-0">
-                      {contact.phone ? (
-                        <a
-                          href={getWhatsAppLink(contact.phone)}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={`Message ${contact.fullName} on WhatsApp`}
-                          className="flex items-center gap-1.5 font-medium text-dark truncate hover:text-primary transition-colors"
-                        >
-                          <Phone size={12} className="shrink-0" aria-hidden="true" /> {contact.phone}
-                        </a>
+                      {contact.phones.some(Boolean) ? (
+                        contact.phones.map((ph, i) => (
+                          <a
+                            key={ph}
+                            href={getWhatsAppLink(ph)}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={`Message ${contact.fullName} on WhatsApp`}
+                            className="flex items-center gap-1.5 font-medium text-dark truncate hover:text-primary transition-colors"
+                          >
+                            {i > 0
+                              ? <Siren size={12} weight="fill" className="shrink-0 text-red-500" aria-hidden="true" />
+                              : <Phone size={12} className="shrink-0" aria-hidden="true" />} {ph}
+                            {i > 0 && <span className="text-2xs font-semibold text-red-500">Emergency</span>}
+                          </a>
+                        ))
                       ) : (
                         <p className="font-medium text-dark-muted/60 truncate">No phone on file</p>
                       )}

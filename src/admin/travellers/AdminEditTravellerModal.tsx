@@ -10,24 +10,27 @@ import Button from '../../components/ui/Button';
 import Modal from '../../components/ui/Modal';
 import type { TravellerContact } from './travellerContacts';
 import {
-  validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity,
+  validateFullName, validatePhone, validateOptionalPhone, validateOptionalEmail, validateOptionalCity,
 } from '../../utils/formValidation';
-import { getCitySuggestions, getEmailSuggestions } from '../enquiries/AdminEnquiriesShared';
+import { getCitySuggestions, getEmailSuggestions, phoneSignature } from '../enquiries/AdminEnquiriesShared';
 import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
 import { useSuggestionField } from '../useSuggestionField';
 
 export type TravellerEditForm = {
   full_name: string;
   phone: string;
+  // Second number — stored in the emergency-contact field.
+  second_phone: string;
   email: string;
   city: string;
 };
 
 function seedForm(contact: TravellerContact | null): TravellerEditForm {
-  if (!contact) return { full_name: '', phone: '', email: '', city: '' };
+  if (!contact) return { full_name: '', phone: '', second_phone: '', email: '', city: '' };
   return {
     full_name: contact.fullName === 'Unnamed traveller' ? '' : contact.fullName,
     phone: contact.phone,
+    second_phone: contact.emergencyContact || '',
     email: contact.email,
     city: contact.city || '',
   };
@@ -69,11 +72,18 @@ export default function AdminEditTravellerModal({
     const err = validatePhone(form.phone);
     return err === true ? undefined : err;
   })();
+  const secondPhoneError = (() => {
+    if (!form.second_phone.trim()) return undefined;
+    const err = validateOptionalPhone(form.second_phone);
+    if (err !== true) return err;
+    if (phoneSignature(form.second_phone) === phoneSignature(form.phone)) return 'Same as the main phone number.';
+    return undefined;
+  })();
   const emailErrorRaw = validateOptionalEmail(form.email);
   const emailError = emailErrorRaw === true ? undefined : emailErrorRaw;
   const cityErrorRaw = validateOptionalCity(form.city);
   const cityError = cityErrorRaw === true ? undefined : cityErrorRaw;
-  const hasErrors = !!(nameError || phoneError || emailError || cityError);
+  const hasErrors = !!(nameError || phoneError || secondPhoneError || emailError || cityError);
 
   const citySuggestField = useSuggestionField(getCitySuggestions, city => {
     setForm(f => ({ ...f, city }));
@@ -126,21 +136,38 @@ export default function AdminEditTravellerModal({
             />
             {touched && phoneError && <p id="tc-edit-phone-error" role="alert" className="text-red-500 text-xs mt-1">{phoneError}</p>}
           </div>
-          <div className="relative">
-            <label htmlFor="tc-edit-email" className="block text-sm font-medium text-dark mb-1">Email</label>
+          <div>
+            <label htmlFor="tc-edit-phone2" className="block text-sm font-medium text-dark mb-1">Emergency contact</label>
             <input
-              id="tc-edit-email"
-              type="email"
-              value={form.email}
-              onChange={e => { setForm(f => ({ ...f, email: e.target.value })); emailSuggestField.handleInput(e.target.value); }}
-              onBlur={() => { setTouched(true); emailSuggestField.close(); }}
-              aria-describedby={touched && emailError ? 'tc-edit-email-error' : undefined}
+              id="tc-edit-phone2"
+              type="tel"
+              value={form.second_phone}
+              onChange={e => setForm(f => ({ ...f, second_phone: e.target.value }))}
+              onBlur={() => setTouched(true)}
+              aria-describedby={touched && secondPhoneError ? 'tc-edit-phone2-error' : 'tc-edit-phone2-hint'}
               className={inputClass}
               placeholder="Optional"
             />
-            {touched && emailError && <p id="tc-edit-email-error" role="alert" className="text-red-500 text-xs mt-1">{emailError}</p>}
-            {emailSuggestField.open && <SuggestionDropdown items={emailSuggestField.suggestions} onSelect={emailSuggestField.select} />}
+            {touched && secondPhoneError && <p id="tc-edit-phone2-error" role="alert" className="text-red-500 text-xs mt-1">{secondPhoneError}</p>}
           </div>
+        </div>
+        <p id="tc-edit-phone2-hint" className="text-2xs text-dark-muted -mt-2">
+          This number is saved as the booking's Emergency contact.
+        </p>
+        <div className="relative">
+          <label htmlFor="tc-edit-email" className="block text-sm font-medium text-dark mb-1">Email</label>
+          <input
+            id="tc-edit-email"
+            type="email"
+            value={form.email}
+            onChange={e => { setForm(f => ({ ...f, email: e.target.value })); emailSuggestField.handleInput(e.target.value); }}
+            onBlur={() => { setTouched(true); emailSuggestField.close(); }}
+            aria-describedby={touched && emailError ? 'tc-edit-email-error' : undefined}
+            className={inputClass}
+            placeholder="Optional"
+          />
+          {touched && emailError && <p id="tc-edit-email-error" role="alert" className="text-red-500 text-xs mt-1">{emailError}</p>}
+          {emailSuggestField.open && <SuggestionDropdown items={emailSuggestField.suggestions} onSelect={emailSuggestField.select} />}
         </div>
         <div className="relative">
           <label htmlFor="tc-edit-city" className="block text-sm font-medium text-dark mb-1">City</label>

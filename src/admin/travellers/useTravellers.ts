@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getEnquiries, updateEnquiryDetails, deleteEnquiry } from '../../services/api';
 import type { Enquiry } from '../../types/types-index';
-import { buildTravellerContacts, contactMatchesQuery } from './travellerContacts';
-import { findMergeConflicts } from './travellerMerge';
+import { buildTravellerContacts, contactMatchesQuery, findSharedPhoneGroups } from './travellerContacts';
+import { findMergeConflicts, planMerge } from './travellerMerge';
 import type { TravellerContact } from './travellerContacts';
 import type { TravellerEditForm } from './AdminEditTravellerModal';
 import { useAlert } from '../../components/ui/useAlert';
 import { useToast } from '../../components/ui/useToast';
 import { useConfirm } from '../../components/ui/useConfirm';
-import { validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity } from '../../utils/formValidation';
+import { validateFullName, validatePhone, validateOptionalPhone, validateOptionalEmail, validateOptionalCity } from '../../utils/formValidation';
+import { phoneSignature } from '../enquiries/AdminEnquiriesShared';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
 import { useAdminPageSize } from '../../hooks/useAdminPageSize';
 
@@ -54,6 +55,9 @@ export function useTravellers() {
   // is the contact whose Merge button was pressed; the admin then picks the
   // contact to merge it with inside the modal.
   const [mergeTarget, setMergeTarget] = useState<TravellerContact | null>(null);
+  // Contact to pre-select as the merge partner (set when opened from the
+  // shared-phone alert, so the admin lands straight on the pair to review).
+  const [mergeOtherKey, setMergeOtherKey] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
 
   // Tracks which contact's delete is in flight (by key) so only that
@@ -70,6 +74,23 @@ export function useTravellers() {
   }, []);
 
   const allContacts = useMemo(() => buildTravellerContacts(enquiries), [enquiries]);
+
+  // Different travellers sharing one phone number — flagged to the admin to
+  // review and merge rather than being collapsed automatically.
+  const sharedPhoneGroups = useMemo(() => findSharedPhoneGroups(allContacts), [allContacts]);
+  const sharedPhoneKeys = useMemo(
+    () => new Set(sharedPhoneGroups.flatMap(g => g.contacts.map(c => c.key))),
+    [sharedPhoneGroups]
+  );
+
+  const openMerge = (contact: TravellerContact, otherKey?: string) => {
+    setMergeOtherKey(otherKey ?? null);
+    setMergeTarget(contact);
+  };
+  const closeMerge = () => {
+    setMergeTarget(null);
+    setMergeOtherKey(null);
+  };
 
   const contacts = useMemo(
     () => allContacts
@@ -139,6 +160,7 @@ export function useTravellers() {
     const firstError = [
       validateFullName(form.full_name),
       validatePhone(form.phone),
+      validateOptionalPhone(form.second_phone),
       validateOptionalEmail(form.email),
       validateOptionalCity(form.city),
     ].find(r => r !== true);
@@ -146,11 +168,16 @@ export function useTravellers() {
       await alert(firstError as string);
       return;
     }
+    if (form.second_phone.trim() && phoneSignature(form.second_phone) === phoneSignature(form.phone)) {
+      await alert('The second number is the same as the main phone number.');
+      return;
+    }
     setSavingEdit(true);
     try {
       await Promise.all(editTarget.rows.map(row => updateEnquiryDetails(row.id, row, {
         full_name: form.full_name,
         phone: form.phone,
+        emergency_contact: form.second_phone.trim() || null,
         email: form.email,
         city: form.city || null,
       })));
@@ -168,29 +195,41 @@ export function useTravellers() {
     }
   };
 
-  // Merges two contacts into one by rewriting name/phone/email/city on every
-  // enquiry behind `other` so it matches `keep` — buildTravellerContacts()
-  // then collapses them into a single contact on its own (it groups by
-  // phone). Trips, payments and invoices are untouched. Done one row at a
-  // time (not Promise.all) so that if a row is rejected we know exactly how
-  // many moved and can say so, rather than leaving the admin guessing.
-  // Blank email/city are never written over real values: they're only sent
-  // when there's something to send.
+  // Merges two contacts into one. Every enquiry behind `other` is rewritten
+  // to carry `keep`'s name and primary phone (so buildTravellerContacts()
+  // collapses them into one contact on its own — it groups by name + phone),
+  // and the number that would otherwise be lost is kept as the traveller's
+  // second number (the emergency-contact field) on every row — so a merged
+  // traveller shows both phones. See planMerge() for when there's no room
+  // for that and the merge is refused. Trips, payments and invoices are
+  // untouched. Done one row at a time (not Promise.all) so that if a row is
+  // rejected we know exactly how many moved and can say so. Blank email/city
+  // are never written over real values.
   const handleMerge = async (keep: TravellerContact, other: TravellerContact) => {
     const conflicts = findMergeConflicts(keep, other);
     if (conflicts.length > 0) {
       await alert(`Both contacts already have an active enquiry for: ${conflicts.join(', ')}. Cancel or delete the duplicate first, then merge.`);
       return;
     }
+    const plan = planMerge(keep, other);
+    if (plan.conflict) {
+      await alert(`These two travellers have ${plan.extras.length + 1} different phone numbers (${[keep.phone, ...plan.extras].join(', ')}) but only a main phone and one second number can be stored. Edit one of them to remove a number first, then merge.`);
+      return;
+    }
     const name = keep.fullName !== 'Unnamed traveller' ? keep.fullName : other.fullName;
     const email = keep.email || other.email;
     const city = keep.city || other.city;
-    const fields: { full_name: string; phone: string; email?: string; city?: string } = {
+    const fields: { full_name: string; phone: string; emergency_contact: string | null; email?: string; city?: string } = {
       full_name: name,
       phone: keep.phone,
+      emergency_contact: plan.second || null,
     };
     if (email) fields.email = email;
     if (city) fields.city = city;
+
+    // Rows of the kept contact only need touching if their second number
+    // changes (e.g. it just gained the other contact's phone).
+    const keepRowsToUpdate = keep.rows.filter(r => (r.emergency_contact || '').trim() !== plan.second);
 
     setMerging(true);
     let moved = 0;
@@ -204,6 +243,16 @@ export function useTravellers() {
         lastError = err;
       }
     }
+    if (!lastError) {
+      for (const row of keepRowsToUpdate) {
+        try {
+          await updateEnquiryDetails(row.id, row, { emergency_contact: plan.second || null });
+        } catch (err) {
+          console.error(err);
+          lastError = err;
+        }
+      }
+    }
     setMerging(false);
     load();
     if (lastError) {
@@ -215,7 +264,8 @@ export function useTravellers() {
       );
       return;
     }
-    setMergeTarget(null);
+    closeMerge();
+    toast.success('Travellers merged.');
   };
 
   // Permanently removes every enquiry row behind this contact — i.e. their
@@ -252,7 +302,8 @@ export function useTravellers() {
     deletingKey,
     handleDelete,
     allContacts,
-    mergeTarget, setMergeTarget,
+    mergeTarget, mergeOtherKey, openMerge, closeMerge,
+    sharedPhoneGroups, sharedPhoneKeys,
     merging,
     handleMerge,
     totalCount: allContacts.length,

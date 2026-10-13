@@ -12,7 +12,7 @@ import { formatPhone } from '../../utils/formatPhone';
 import { getInitials } from '../../utils/utils-index';
 import { contactMatchesQuery } from './travellerContacts';
 import type { TravellerContact } from './travellerContacts';
-import { findMergeConflicts, suggestMergeCandidates } from './travellerMerge';
+import { findMergeConflicts, planMerge, suggestMergeCandidates } from './travellerMerge';
 
 const MAX_RESULTS = 6;
 
@@ -25,7 +25,7 @@ function ContactSummary({ contact }: { contact: TravellerContact }) {
       <div className="min-w-0">
         <p className="text-sm font-semibold text-dark truncate">{contact.fullName}</p>
         <p className="text-xs text-dark-muted truncate">
-          {contact.phone ? formatPhone(contact.phone) : 'No phone'}
+          {contact.phones.some(Boolean) ? contact.phones.map(formatPhone).join(' · ') : 'No phone'}
           {contact.email ? ` · ${contact.email}` : ''}
         </p>
         <p className="text-2xs text-dark-muted truncate">
@@ -43,20 +43,26 @@ function ContactSummary({ contact }: { contact: TravellerContact }) {
 // cleanly each time a different contact's Merge is opened.
 export default function AdminMergeTravellerModal({
   source,
+  initialOtherKey = null,
   allContacts,
   onClose,
   onMerge,
   merging,
 }: {
   source: TravellerContact | null;
+  // Contact to pre-select as the merge partner (e.g. from the shared-phone alert).
+  initialOtherKey?: string | null;
   allContacts: TravellerContact[];
   onClose: () => void;
   onMerge: (keep: TravellerContact, other: TravellerContact) => void;
   merging: boolean;
 }) {
   const [query, setQuery] = useState('');
-  const [otherKey, setOtherKey] = useState<string | null>(null);
-  const [keepSide, setKeepSide] = useState<'source' | 'other'>('source');
+  const [otherKey, setOtherKey] = useState<string | null>(initialOtherKey);
+  const [keepSide, setKeepSide] = useState<'source' | 'other'>(() => {
+    const o = initialOtherKey ? allContacts.find(c => c.key === initialOtherKey) : undefined;
+    return source && o && o.joinedTripCount > source.joinedTripCount ? 'other' : 'source';
+  });
 
   const candidates = useMemo(() => {
     if (!source) return [];
@@ -76,7 +82,8 @@ export default function AdminMergeTravellerModal({
   const keep = source && other ? (keepSide === 'source' ? source : other) : null;
   const drop = source && other ? (keepSide === 'source' ? other : source) : null;
   const conflicts = keep && drop ? findMergeConflicts(keep, drop) : [];
-  const canMerge = !!keep && !!drop && conflicts.length === 0 && !merging;
+  const plan = keep && drop ? planMerge(keep, drop) : null;
+  const canMerge = !!keep && !!drop && conflicts.length === 0 && !plan?.conflict && !merging;
 
   return (
     <Modal
@@ -102,8 +109,9 @@ export default function AdminMergeTravellerModal({
       {source && (
         <div className="space-y-5">
           <p className="text-sm text-dark-muted">
-            Use this when the same person has been saved twice (for example with two phone numbers).
-            Nothing is deleted — every trip, payment and invoice stays; the two contacts just become one.
+            Use this when the same person has been saved twice (for example with two phone numbers, or two
+            travellers sharing one number). Both phone numbers are kept on the merged traveller. Nothing is
+            deleted — every trip, payment and invoice stays; the two contacts just become one.
           </p>
 
           <div>
@@ -140,7 +148,7 @@ export default function AdminMergeTravellerModal({
               )}
             </div>
             <p className="text-2xs text-dark-muted mt-1.5">
-              {query.trim() ? 'Matching contacts' : 'Possible matches (same email, first name or last 4 digits) — or search above'}
+              {query.trim() ? 'Matching contacts' : 'Possible matches (same phone, email, name or last 4 digits) — or search above'}
             </p>
             <ul className="mt-2 space-y-1.5" role="listbox" aria-label="Contacts to merge with">
               {candidates.length === 0 ? (
@@ -199,6 +207,15 @@ export default function AdminMergeTravellerModal({
                 {' '}from {drop.fullName} will move to <span className="font-semibold">{keep.fullName}</span>
                 {' '}({keep.phone ? formatPhone(keep.phone) : 'no phone'}).
               </p>
+              {plan && (
+                <p className="text-xs text-dark-muted">
+                  Phone numbers after merge:{' '}
+                  <span className="font-semibold text-dark">
+                    {[plan.phone, plan.second].filter(Boolean).map(formatPhone).join(' · ')}
+                  </span>
+                  {plan.second ? ' (the second number is saved as the Emergency contact)' : ''}
+                </p>
+              )}
               {((!keep.email && drop.email) || (!keep.city && drop.city)) && (
                 <p className="text-xs text-dark-muted">
                   The {[!keep.email && drop.email ? 'email' : '', !keep.city && drop.city ? 'city' : ''].filter(Boolean).join(' and ')}{' '}
@@ -209,6 +226,20 @@ export default function AdminMergeTravellerModal({
                 Each moved enquiry gets a "Details updated" entry on its Activity Timeline. This can't be undone automatically —
                 to split them again you'd edit the details back.
               </p>
+            </div>
+          )}
+
+          {plan?.conflict && conflicts.length === 0 && (
+            <div className="flex items-start gap-2.5 rounded-md bg-amber-50 text-amber-800 px-3 py-3 text-sm" role="alert">
+              <Warning size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <p className="font-semibold">Too many different phone numbers to keep</p>
+                <p className="mt-1">{[plan.phone, ...plan.extras].map(formatPhone).join(' · ')}</p>
+                <p className="mt-1 text-xs">
+                  A traveller holds a main phone and one Emergency contact number. Use Edit on one of them to remove a number
+                  (or fix a wrong one), then merge.
+                </p>
+              </div>
             </div>
           )}
 

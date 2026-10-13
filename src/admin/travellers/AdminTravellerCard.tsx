@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Phone, Envelope as Mail, MapPin, Repeat,
+  Phone, Envelope as Mail, MapPin, Repeat, Warning, Siren,
   PencilSimple as Edit2, Trash as Trash2, ArrowsMerge,
   CaretUp as ChevronUp, CaretDown as ChevronDown,
 } from '@phosphor-icons/react';
@@ -29,12 +29,15 @@ export default function AdminTravellerCard({
   onMerge,
   onDelete,
   deleting,
+  sharedPhone = false,
 }: {
   contact: TravellerContact;
   onEdit: () => void;
   onMerge: () => void;
   onDelete: () => void;
   deleting: boolean;
+  // True when a different traveller uses the same phone number.
+  sharedPhone?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const latestTrip = contact.trips[0];
@@ -55,6 +58,16 @@ export default function AdminTravellerCard({
                   <Repeat size={9} aria-hidden="true" /> {contact.joinedTripCount} trips
                 </span>
               )}
+              {sharedPhone && (
+                <button
+                  type="button"
+                  onClick={onMerge}
+                  title="Another traveller uses this phone number — tap to review and merge"
+                  className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 shrink-0"
+                >
+                  <Warning size={9} aria-hidden="true" /> Shared number
+                </button>
+              )}
             </div>
             <p className="text-xs text-dark-muted truncate">
               Registered {formatDate(contact.registeredAt)}
@@ -69,15 +82,21 @@ export default function AdminTravellerCard({
       </div>
 
       <div className="flex flex-col gap-1 text-sm text-dark-muted leading-relaxed">
-        {contact.phone ? (
-          <a
-            href={getWhatsAppLink(contact.phone)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 hover:text-primary transition-colors"
-          >
-            <Phone size={12} aria-hidden="true" /> {contact.phone}
-          </a>
+        {contact.phones.some(Boolean) ? (
+          contact.phones.map((ph, i) => (
+            <a
+              key={ph}
+              href={getWhatsAppLink(ph)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+            >
+              {i > 0
+                ? <Siren size={12} weight="fill" className="text-red-500" aria-hidden="true" />
+                : <Phone size={12} aria-hidden="true" />} {ph}
+              {i > 0 && <span className="text-2xs font-semibold text-red-500">Emergency</span>}
+            </a>
+          ))
         ) : (
           <span className="inline-flex items-center gap-1 text-dark-muted/60">
             <Phone size={12} aria-hidden="true" /> No phone on file

@@ -14,6 +14,7 @@ import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import type { SortDirection } from './dataTableUtils';
 import { useAdminPageSize, PAGE_SIZE_OPTIONS } from '../../hooks/useAdminPageSize';
+import Select from './Select';
 
 // Shared "table card" header — title + live "Showing X–Y of N" subtitle on
 // the left, search bar aligned to the right in the same row. Used by both
@@ -42,17 +43,19 @@ interface TableHeaderBarProps {
 function PageSizeSelect({ storeKey }: { storeKey: string }) {
   const [size, setSize] = useAdminPageSize(storeKey);
   return (
-    <label className="flex items-center gap-1.5 text-xs text-dark-muted shrink-0">
-      <span className="hidden sm:inline">Rows</span>
-      <select
-        value={size}
-        onChange={e => setSize(Number(e.target.value))}
-        aria-label="Rows per page"
-        className="py-1.5 pl-2 pr-6 rounded-md border-2 border-background-warm bg-background font-body text-dark text-sm focus:border-primary outline-none transition-colors"
-      >
-        {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
-      </select>
-    </label>
+    <div className="flex items-center gap-1.5 text-xs text-dark-muted shrink-0">
+      <span className="hidden sm:inline" aria-hidden="true">Rows</span>
+      {/* App-themed dropdown (same Select used across the admin) instead of the
+          native OS <select>, whose open list can't be styled. */}
+      <div className="w-[4.5rem]" aria-label="Rows per page">
+        <Select<number>
+          value={size}
+          onChange={setSize}
+          options={PAGE_SIZE_OPTIONS.map(n => ({ value: n, label: String(n) }))}
+          size="sm"
+        />
+      </div>
+    </div>
   );
 }
 
