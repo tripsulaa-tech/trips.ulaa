@@ -24,7 +24,7 @@ interface ImageUploadFieldProps {
   // Overrides the default ~100KB compression target (see compressImage in
   // services/api.ts) for fields where quality matters more than shaving
   // storage — e.g. the trip cover image, which passes
-  // COVER_IMAGE_TARGET_SIZE_BYTES (2MB) so it stays crisp at full width.
+  // COVER_IMAGE_TARGET_SIZE_BYTES (400KB) so it stays crisp at full width.
   maxSizeBytes?: number;
   // Short recommended-size/aspect note shown under the label (e.g. "Square,
   // at least 800×800px") so admins know what to upload before they pick a

@@ -8,12 +8,12 @@ const SHOW_AFTER_PX = 400;
 
 interface ScrollToTopButtonProps {
   /**
-   * Overrides the default `left-6` position.
+   * Overrides the default `left-4 lg:left-6` position.
    */
   leftClass?: string;
 }
 
-export default function ScrollToTopButton({ leftClass = 'left-6' }: ScrollToTopButtonProps) {
+export default function ScrollToTopButton({ leftClass = 'left-4 lg:left-6' }: ScrollToTopButtonProps) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {

@@ -8,7 +8,7 @@ export default function FloatingWhatsApp() {
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div className="fixed bottom-28 lg:bottom-6 right-6 z-50 flex items-center gap-3 [body.fullscreen-modal-open_&]:hidden">
+    <div className="fixed bottom-28 lg:bottom-6 right-4 lg:right-6 z-50 flex items-center gap-3 [body.fullscreen-modal-open_&]:hidden">
       <AnimatePresence>
         {hovered && (
           <motion.div
@@ -30,9 +30,9 @@ export default function FloatingWhatsApp() {
         whileTap={{ scale: 0.95 }}
         onHoverStart={() => setHovered(true)}
         onHoverEnd={() => setHovered(false)}
-        className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-warm-lg text-white transition-colors"
+        className="w-12 h-12 lg:w-14 lg:h-14 rounded-full bg-green-500 hover:bg-green-600 flex items-center justify-center shadow-warm-lg text-white transition-colors"
       >
-        <WhatsAppIcon className="w-7 h-7" />
+        <WhatsAppIcon className="w-6 h-6 lg:w-7 lg:h-7" />
       </motion.a>
     </div>
   );

@@ -23,11 +23,13 @@ import { supabase } from '../supabase';
 // re-encoding would kill the animation).
 const TARGET_SIZE_BYTES = 100 * 1024; // 100KB — default target for most uploads
 // Trip cover images are the large hero photo on the trip detail page, so they're
-// allowed to stay much bigger (up to 2MB) than the default target — that's the
+// allowed to stay much bigger (up to 400KB) than the default target — that's the
 // difference between "compressed until it's visibly soft" and "still crisp at
 // full width". See COVER_IMAGE_TARGET_SIZE_BYTES usage on the Cover Image field
 // in Admin → Upcoming Trips → Media.
-export const COVER_IMAGE_TARGET_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+// 400KB: a 1920px WebP at quality ~0.75-0.85 is visually indistinguishable from the original
+// and keeps Supabase cached egress (5GB/month on the free plan) under control.
+export const COVER_IMAGE_TARGET_SIZE_BYTES = 400 * 1024; // 400KB
 const MAX_DIMENSION = 1920; // px, longest side — plenty for any use in this app
 const MIN_QUALITY = 0.5; // quality floor for any single pass; resize instead of going lower
 const QUALITY_STEP = 0.05; // fine-grained steps so we don't overshoot past a good size/quality tradeoff
