@@ -18,6 +18,9 @@ export default function TripFinanceBreakdown({ finance, summary: s, estimated = 
   return (
     <>
       <div className="flex justify-between"><span className="text-dark-muted">Total Revenue ({s.travelerCount} booked{estimated ? ', est.' : ''})</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
+      {s.retainedRevenue > 0 && (
+        <div className="flex justify-between"><span className="text-dark-muted">Kept from cancelled / no-show bookings</span><span className="text-dark font-medium">+ {formatPrice(s.retainedRevenue)}</span></div>
+      )}
       <div className="flex justify-between"><span className="text-dark-muted">Ulaa's Total Costs</span><span className="text-dark">{formatPrice(s.ulaaCosts)}</span></div>
       <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>
       {s.costItems.map(c => (

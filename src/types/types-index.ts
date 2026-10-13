@@ -411,6 +411,10 @@ export interface TripRevenueSnapshot {
   totalRevenue: number;
   childFareCount: number;
   optionCounts: Record<string, number>;
+  // Paid minus refunded on cancelled / no-show bookings (see
+  // retainedFromCancellations in utils/tripFinance.ts). Optional: snapshots
+  // saved before this existed don't carry it and read as 0.
+  retainedRevenue?: number;
 }
 
 export interface TripFinanceSnapshot {

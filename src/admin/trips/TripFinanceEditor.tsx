@@ -226,7 +226,7 @@ export default function TripFinanceEditor({ finance, onChange, options, revenue,
         // trip with nothing booked yet — see useTripFinanceData.
         const usingReal = !!revenue;
         const s = revenue
-          ? computeTripFinanceSummary(finance, revenue.bookedCount, revenue.totalRevenue, revenue.childFareCount, revenue.optionCounts)
+          ? computeTripFinanceSummary(finance, revenue.bookedCount, revenue.totalRevenue, revenue.childFareCount, revenue.optionCounts, revenue.retainedRevenue)
           : computeTripFinanceSummary(finance, estimate.seats, estimate.price * estimate.seats);
         return (
           <div className="md:col-span-2 bg-background-warm/60 rounded-md p-4 space-y-1.5 text-sm">
@@ -236,6 +236,9 @@ export default function TripFinanceEditor({ finance, onChange, options, revenue,
                 : `(estimate: ${s.travelerCount} seats × regular price; no bookings yet)`}
             </span></h4>
             <div className="flex justify-between"><span className="text-dark-muted">Total Revenue</span><span className="text-dark font-medium">{formatPrice(s.totalRevenue)}</span></div>
+            {s.retainedRevenue > 0 && (
+              <div className="flex justify-between"><span className="text-dark-muted">Kept from cancelled / no-show bookings</span><span className="text-dark font-medium">+ {formatPrice(s.retainedRevenue)}</span></div>
+            )}
             <div className="flex justify-between border-t border-background-warm pt-1.5"><span className="text-dark-muted">Ulaa's Total Costs</span><span className="text-dark font-medium">{formatPrice(s.ulaaCosts)}</span></div>
             <div className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">Agency Cost</span><span className="text-dark-muted">{formatPrice(s.agencyCost)}</span></div>
             {s.costItems.map(c => (

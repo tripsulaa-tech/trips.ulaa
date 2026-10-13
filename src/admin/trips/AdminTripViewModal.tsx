@@ -360,7 +360,7 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
                     // loading — see useTripFinanceData.
                     const usingReal = !!actualRevenue;
                     const s = actualRevenue
-                      ? computeTripFinanceSummary(trip.trip_finance, actualRevenue.bookedCount, actualRevenue.totalRevenue, actualRevenue.childFareCount, actualRevenue.optionCounts)
+                      ? computeTripFinanceSummary(trip.trip_finance, actualRevenue.bookedCount, actualRevenue.totalRevenue, actualRevenue.childFareCount, actualRevenue.optionCounts, actualRevenue.retainedRevenue)
                       : computeTripFinanceSummary(trip.trip_finance, trip.seats_booked, (trip.price || 0) * trip.seats_booked);
                     return <TripFinanceBreakdown finance={trip.trip_finance} summary={s} estimated={!usingReal} />;
                   })()}

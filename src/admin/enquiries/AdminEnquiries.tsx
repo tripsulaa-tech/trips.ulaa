@@ -16,6 +16,7 @@ import FoodMark from '../../components/ui/FoodMark';
 import { paginate, useDragScroll } from '../../components/ui/dataTableUtils';
 import type { CompletedTrip, Enquiry, UpcomingTrip, WaitlistEntry } from '../../types/types-index';
 import { formatDateRange, formatPrice, seatsLeft, buildGroupLetterMap, formatBatchLabel, formatDate } from '../../utils/utils-index';
+import { retainedFromCancellations } from '../../utils/tripFinance';
 import type { GroupUnit } from '../../utils/utils-index';
 import {
   foodPreferenceKey, SOURCE_CONFIG, JOURNEY_STAGE_CONFIG,
@@ -777,16 +778,43 @@ export default function AdminEnquiries() {
             <div className="flex items-center gap-4 p-4 flex-1 min-w-0 md:basis-1/3">
               <div className="min-w-0 flex-1">
                 <p className="text-dark-muted text-xs font-medium mb-1.5">Payments</p>
-                <div className="flex items-center gap-6">
-                  <div>
-                    <p className="text-dark-muted text-xs">Collected</p>
-                    <p className="text-green-700 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries.filter(isBooked)).collected)}</p>
-                  </div>
-                  <div>
-                    <p className="text-dark-muted text-xs">Pending</p>
-                    <p className="text-amber-600 font-semibold text-sm">{formatPrice(paymentTotals(scopedEnquiries.filter(isBooked)).pending)}</p>
-                  </div>
-                </div>
+                {(() => {
+                  // Total Amount = what we should collect from booked travellers.
+                  // Collected + Pending split that total. Cancellation charges
+                  // are extra money kept from cancelled / no-show bookings
+                  // (paid - refunded) and are NOT part of the total amount.
+                  const totals = paymentTotals(scopedEnquiries.filter(isBooked));
+                  const cancellationCharges = retainedFromCancellations(scopedEnquiries);
+                  const collectedPct = totals.expected ? Math.min(100, Math.round((totals.collected / totals.expected) * 100)) : 0;
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-start flex-wrap gap-x-5 gap-y-2">
+                        <div title="Total amount to collect from booked travellers">
+                          <p className="text-dark-muted text-xs">Total Amount</p>
+                          <p className="text-dark font-bold text-base">{formatPrice(totals.expected)}</p>
+                        </div>
+                        <div title="Already received from booked travellers">
+                          <p className="text-dark-muted text-xs">Collected</p>
+                          <p className="text-green-700 font-semibold text-sm">{formatPrice(totals.collected)}</p>
+                        </div>
+                        <div title="Still to be received from booked travellers">
+                          <p className="text-dark-muted text-xs">Pending</p>
+                          <p className="text-amber-600 font-semibold text-sm">{formatPrice(totals.pending)}</p>
+                        </div>
+                        <div title="Extra money kept from cancelled or no-show bookings (paid minus refunded). Not part of Total Amount.">
+                          <p className="text-dark-muted text-xs">Extra (Cancellation)</p>
+                          <p className="text-primary font-semibold text-sm">{formatPrice(cancellationCharges)}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2" title={`${collectedPct}% of Total Amount collected`}>
+                        <div className="flex-1 h-1.5 rounded-full bg-background-warm overflow-hidden">
+                          <div className="h-full bg-green-600 rounded-full" style={{ width: `${collectedPct}%` }} />
+                        </div>
+                        <span className="text-dark-muted text-2xs font-semibold shrink-0">{collectedPct}% collected</span>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
               {activeGroup?.trip && (
                 <Link

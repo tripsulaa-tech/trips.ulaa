@@ -56,7 +56,7 @@ import type { Enquiry, UpcomingTrip, CompletedTrip, Payment, TripFinance, TripFi
 import { isBooked, isCancelled } from './enquiries/AdminEnquiriesShared';
 import { closedReasonBreakdown, isNotInterested } from './enquiries/AdminEnquiryCommon';
 import { formatPrice } from '../utils/utils-index';
-import { computeTripFinanceSummary, emptyTripFinance } from '../utils/tripFinance';
+import { computeTripFinanceSummary, emptyTripFinance, retainedFromCancellations } from '../utils/tripFinance';
 import { countOptionSelections } from '../utils/tripOptions';
 import { downloadTripExcelReport, downloadAllTripsExcelReport } from '../utils/tripExcelReport';
 
@@ -353,8 +353,9 @@ function buildFinanceTrip(src: FinanceSource, enquiries: Enquiry[]) {
         totalRevenue: tripBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0),
         childFareCount: tripBookings.filter(e => e.has_child_addon).length,
         optionCounts: countOptionSelections(tripBookings),
+        retainedRevenue: retainedFromCancellations(enquiries.filter(e => e.trip_id === src.id)),
       };
-  const summary = computeTripFinanceSummary(src.finance, rev.bookedCount, rev.totalRevenue, rev.childFareCount, rev.optionCounts);
+  const summary = computeTripFinanceSummary(src.finance, rev.bookedCount, rev.totalRevenue, rev.childFareCount, rev.optionCounts, rev.retainedRevenue ?? 0);
   // finance is the raw Finances-tab record, kept next to the rolled-up
   // summary so the Excel export can itemize the cost lines.
   return { id: src.id, title: src.title, startDate: src.startDate, finance: src.finance, ...summary };
@@ -618,7 +619,11 @@ export default function AdminReports() {
     return relevantTrips
       .map(t => {
         const tripEnquiries = enquiries.filter(e => e.trip_id === t.id && isBooked(e));
+        // Collected = only what booked travellers paid. Cancellation money
+        // is shown separately as "Extra" so Total Amount = Collected + Pending.
+        const expected = tripEnquiries.reduce((sum, e) => sum + (e.total_amount || 0), 0);
         const collected = tripEnquiries.reduce((sum, e) => sum + (e.amount_paid || 0), 0);
+        const extra = retainedFromCancellations(enquiries.filter(e => e.trip_id === t.id));
         const pendingAmt = tripEnquiries
           .filter(e => e.total_amount)
           .reduce((sum, e) => sum + Math.max(0, (e.total_amount || 0) - (e.amount_paid || 0)), 0);
@@ -629,8 +634,10 @@ export default function AdminReports() {
           seatsBooked: tripEnquiries.length,
           totalSeats: t.total_seats || 0,
           occupancyPct: pct(tripEnquiries.length, t.total_seats || 0),
+          expected,
           collected,
           pending: pendingAmt,
+          extra,
         };
       })
       .sort((a, b) => (a.startDate || '').localeCompare(b.startDate || ''));
@@ -689,7 +696,7 @@ export default function AdminReports() {
   const financeTotals = useMemo(() => {
     return financeByTrip.reduce(
       (acc, t) => ({
-        totalRevenue: acc.totalRevenue + t.totalRevenue,
+        totalRevenue: acc.totalRevenue + t.grossRevenue,
         totalCosts: acc.totalCosts + t.totalCosts,
         netProfit: acc.netProfit + t.netProfit,
       }),
@@ -820,6 +827,11 @@ export default function AdminReports() {
       vegCount,
       nonVegCount,
       revenue: t.totalRevenue,
+      // Real money received / still owed, from live bookings. Undefined for a
+      // finished trip whose bookings are gone (only the saved total remains).
+      collected: tripBookings.length > 0 ? tripBookings.reduce((sum, e) => sum + (e.amount_paid || 0), 0) : undefined,
+      pending: tripBookings.length > 0 ? balances.reduce((sum, b) => sum + b.balance, 0) : undefined,
+      retainedRevenue: t.retainedRevenue,
       ulaaCosts: t.ulaaCosts,
       organiserCosts: t.organiserCosts,
       totalCosts: t.totalCosts,
@@ -1103,7 +1115,10 @@ export default function AdminReports() {
                         <motion.tr key={t.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="border-b border-background-warm last:border-0 hover:bg-background-warm/30">
                           <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[220px]">{t.title}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right">{t.travelerCount}</td>
-                          <td className="px-4 py-2.5 text-dark font-semibold text-right whitespace-nowrap">{formatPrice(t.totalRevenue)}</td>
+                          <td className="px-4 py-2.5 text-dark font-semibold text-right whitespace-nowrap">
+                            {formatPrice(t.grossRevenue)}
+                            {t.retainedRevenue > 0 && <span className="block text-[11px] font-normal text-dark-muted">incl. {formatPrice(t.retainedRevenue)} kept from cancelled/no-show</span>}
+                          </td>
                           <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(t.totalCosts)}</td>
                           <td className={`px-4 py-2.5 font-semibold text-right whitespace-nowrap ${t.netProfit < 0 ? 'text-red-600' : 'text-green-700'}`}>
                             {formatPrice(t.netProfit)}
@@ -1160,7 +1175,7 @@ export default function AdminReports() {
             {tripBreakdown.length > 0 && (
               <ReportSection title="Per-Trip Breakdown" subtitle="Upcoming trips · current standing" icon={Compass} tone="primary">
                 <div className="bg-white rounded-lg shadow-card overflow-hidden overflow-x-auto">
-                  <table className="w-full text-sm min-w-[560px]">
+                  <table className="w-full text-sm min-w-[700px]">
                     <thead>
                       <tr className="border-b border-background-warm text-left">
                         <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide">
@@ -1168,8 +1183,10 @@ export default function AdminReports() {
                         </th>
                         <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Seats</th>
                         <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Occupancy</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Total Amount</th>
                         <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Collected</th>
                         <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Pending</th>
+                        <th className="px-4 py-2.5 font-button font-bold text-dark-muted text-xs uppercase tracking-wide text-right">Extra (Cancellation)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1178,8 +1195,10 @@ export default function AdminReports() {
                           <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[220px]">{t.title}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{t.seatsBooked}/{t.totalSeats}</td>
                           <td className="px-4 py-2.5 text-dark font-semibold text-right">{t.occupancyPct}%</td>
+                          <td className="px-4 py-2.5 text-dark font-semibold text-right whitespace-nowrap">{formatPrice(t.expected)}</td>
                           <td className="px-4 py-2.5 text-green-700 font-semibold text-right whitespace-nowrap">{formatPrice(t.collected)}</td>
-                          <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(t.pending)}</td>
+                          <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(t.pending)}</td>
+                          <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(t.extra)}</td>
                         </motion.tr>
                       ))}
                     </tbody>

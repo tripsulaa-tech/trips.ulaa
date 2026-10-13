@@ -19,7 +19,7 @@ import {
   updateUpcomingTrip,
   saveTripFinanceSnapshot,
 } from '../services/api';
-import { computeTripFinanceSummary, emptyTripFinance, foldLegacyCosts } from '../utils/tripFinance';
+import { computeTripFinanceSummary, emptyTripFinance, foldLegacyCosts, retainedFromCancellations } from '../utils/tripFinance';
 import { countOptionSelections } from '../utils/tripOptions';
 import { formatDate, formatPrice } from '../utils/utils-index';
 import { scrollToTextMatch } from '../utils/scroll';
@@ -120,6 +120,7 @@ function buildRows(
       totalRevenue: bookings.reduce((sum, e) => sum + (e.total_amount || 0), 0),
       childFareCount: bookings.filter(e => e.has_child_addon).length,
       optionCounts: countOptionSelections(bookings),
+      retainedRevenue: retainedFromCancellations(enquiries.filter(e => e.trip_id === id)),
     };
 
     // Live data wins while the upcoming trip (or its bookings) still exist;
@@ -141,7 +142,7 @@ function buildRows(
       pricing,
       revenue,
       summary: finance
-        ? computeTripFinanceSummary(finance, revenue.bookedCount, revenue.totalRevenue, revenue.childFareCount, revenue.optionCounts)
+        ? computeTripFinanceSummary(finance, revenue.bookedCount, revenue.totalRevenue, revenue.childFareCount, revenue.optionCounts, revenue.retainedRevenue ?? 0)
         : null,
       totalSeats: up?.total_seats ?? snap?.total_seats ?? null,
       seatsBooked: up?.seats_booked ?? snap?.seats_booked ?? null,
@@ -358,7 +359,7 @@ export default function AdminTripFinance() {
 
   const totals = useMemo(() => visible.reduce(
     (acc, r) => r.summary
-      ? { revenue: acc.revenue + r.summary.totalRevenue, costs: acc.costs + r.summary.totalCosts, profit: acc.profit + r.summary.netProfit, trips: acc.trips + 1 }
+      ? { revenue: acc.revenue + r.summary.grossRevenue, costs: acc.costs + r.summary.totalCosts, profit: acc.profit + r.summary.netProfit, trips: acc.trips + 1 }
       : acc,
     { revenue: 0, costs: 0, profit: 0, trips: 0 },
   ), [visible]);
@@ -480,7 +481,7 @@ export default function AdminTripFinance() {
                     {s ? (
                       <>
                         <div className="hidden md:grid grid-cols-3 gap-8 text-right">
-                          <div><p className="text-sm text-dark">{formatPrice(s.totalRevenue)}</p><p className="text-[11px] text-dark-muted">Revenue</p></div>
+                          <div><p className="text-sm text-dark">{formatPrice(s.grossRevenue)}</p><p className="text-[11px] text-dark-muted">Revenue{s.retainedRevenue > 0 ? ' (incl. kept)' : ''}</p></div>
                           <div><p className="text-sm text-dark">{formatPrice(s.totalCosts)}</p><p className="text-[11px] text-dark-muted">Costs</p></div>
                           <div><p className={`text-sm font-semibold ${profitTone}`}>{formatPrice(s.netProfit)}</p><p className="text-[11px] text-dark-muted">Net profit</p></div>
                         </div>

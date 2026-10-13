@@ -3,6 +3,7 @@ import { getEnquiries } from '../../services/api';
 import type { Enquiry } from '../../types/types-index';
 import { isBooked } from '../enquiries/AdminEnquiriesShared';
 import { countOptionSelections } from '../../utils/tripOptions';
+import { retainedFromCancellations } from '../../utils/tripFinance';
 
 export interface TripRevenue {
   bookedCount: number;
@@ -14,6 +15,9 @@ export interface TripRevenue {
   childFareCount: number;
   // option id -> how many bookings picked it (see enquiries.selected_option_ids).
   optionCounts: Record<string, number>;
+  // Paid minus refunded on this trip's cancelled / no-show bookings — money
+  // the trip kept that isn't in totalRevenue. See retainedFromCancellations.
+  retainedRevenue?: number;
 }
 
 // Loads every enquiry once (same source AdminEnquiries/AdminReports read)
@@ -46,6 +50,7 @@ export function useTripFinanceData() {
       totalRevenue: bookings.reduce((sum, e) => sum + (e.total_amount || 0), 0),
       childFareCount: bookings.filter(e => e.has_child_addon).length,
       optionCounts: countOptionSelections(bookings),
+      retainedRevenue: retainedFromCancellations(enquiries.filter(e => e.trip_id === tripId)),
     };
   };
 

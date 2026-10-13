@@ -4,7 +4,7 @@ import type { SortDirection } from '../../components/ui/dataTableUtils';
 import { PACKAGE_CONFIG } from './AdminEnquiryCommon';
 import { paymentStatus, isGroupEntry, isBooked } from './AdminEnquiriesShared';
 import { formatDate } from '../../utils/utils-index';
-import { computeTripFinanceSummary } from '../../utils/tripFinance';
+import { computeTripFinanceSummary, retainedFromCancellations } from '../../utils/tripFinance';
 import { countOptionSelections } from '../../utils/tripOptions';
 import { loadPersisted, savePersisted } from '../../utils/sessionState';
 import { useAdminPageSize } from '../../hooks/useAdminPageSize';
@@ -76,10 +76,11 @@ function financeSummaryByTrip(allTrips: UpcomingTrip[], allEnquiries: Enquiry[])
       const tripBookings = allEnquiries.filter(e => e.trip_id === t.id && isBooked(e));
       const totalRevenue = tripBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0);
       const childFareCount = tripBookings.filter(e => e.has_child_addon).length;
-      const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue, childFareCount, countOptionSelections(tripBookings));
+      const retained = retainedFromCancellations(allEnquiries.filter(e => e.trip_id === t.id));
+      const summary = computeTripFinanceSummary(t.trip_finance, tripBookings.length, totalRevenue, childFareCount, countOptionSelections(tripBookings), retained);
       return { title: t.title || t.destination, ...summary };
     })
-    .sort((a, b) => b.totalRevenue - a.totalRevenue);
+    .sort((a, b) => b.grossRevenue - a.grossRevenue);
 }
 
 type FilterPanelKey = 'trip' | 'query' | 'journey' | 'pay' | 'booked' | 'group' | 'food' | 'package' | 'more' | null;
@@ -247,7 +248,8 @@ export function useEnquiryFilters() {
           scopedBookings.length,
           scopedBookings.reduce((sum, e) => sum + (e.total_amount || 0), 0),
           scopedBookings.filter(e => e.has_child_addon).length,
-          countOptionSelections(scopedBookings)
+          countOptionSelections(scopedBookings),
+          retainedFromCancellations(sortedFiltered)
         )
       : null;
 
@@ -266,9 +268,9 @@ export function useEnquiryFilters() {
       const byTrip = financeSummaryByTrip(allTrips, allEnquiries);
       if (byTrip.length > 0) {
         lines.push(csvRow(['Trip Finance & Profitability (business-wide, all trips with Finances tab filled in)']));
-        lines.push(csvRow(['Trip', 'Travelers', 'Revenue', 'Total Costs', 'Net Profit', 'Profit/Person']));
+        lines.push(csvRow(['Trip', 'Travelers', 'Revenue', 'Kept from Cancelled/No-show', 'Total Costs', 'Net Profit', 'Profit/Person']));
         byTrip.forEach(t => lines.push(csvRow([
-          t.title, t.travelerCount, t.totalRevenue, t.totalCosts, t.netProfit, Math.round(t.profitPerPerson),
+          t.title, t.travelerCount, t.totalRevenue, t.retainedRevenue, t.totalCosts, t.netProfit, Math.round(t.profitPerPerson),
         ])));
         lines.push('');
       }
@@ -280,7 +282,7 @@ export function useEnquiryFilters() {
       'Payment Status', 'Booking Status', 'Refund Amount', 'Lead Status',
       'Source', 'Cancelled', 'Created At',
       ...(financeSummary ? [
-        'Trip Revenue (this export)', 'Trip Total Costs', 'Trip Net Profit', 'Trip Profit/Person',
+        'Trip Revenue (this export)', 'Kept from Cancelled/No-show', 'Trip Total Costs', 'Trip Net Profit', 'Trip Profit/Person',
       ] : []),
     ];
     lines.push(csvRow(headers));
@@ -309,6 +311,7 @@ export function useEnquiryFilters() {
       // as one trip-level summary, not one profit figure per traveller.
       ...(financeSummary ? [
         idx === 0 ? financeSummary.totalRevenue : '',
+        idx === 0 ? financeSummary.retainedRevenue : '',
         idx === 0 ? financeSummary.totalCosts : '',
         idx === 0 ? financeSummary.netProfit : '',
         idx === 0 ? Math.round(financeSummary.profitPerPerson) : '',

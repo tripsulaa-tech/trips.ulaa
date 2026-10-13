@@ -54,6 +54,8 @@ export const groupColorFor = (e: Enquiry, groupColorMap: Map<string, number>): t
   e.group_id ? GROUP_COLOR_PALETTE[groupColorMap.get(e.group_id)!] : null;
 
 export const paymentTotals = (list: Enquiry[]) => ({
+  // Total amount we are supposed to collect from these bookings.
+  expected: list.reduce((sum, e) => sum + (e.total_amount || 0), 0),
   collected: list.reduce((sum, e) => sum + (e.amount_paid || 0), 0),
   pending: list.reduce((sum, e) => {
     if (!e.total_amount) return sum;

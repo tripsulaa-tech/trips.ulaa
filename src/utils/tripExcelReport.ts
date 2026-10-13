@@ -35,7 +35,15 @@ interface TripExcelReportRow {
   travelerCount: number;
   vegCount: number;
   nonVegCount: number;
+  // Total Amount: what all booked (non-cancelled) travelers owe in total.
   revenue: number;
+  // Actually received / still owed from those travelers. Optional: not known
+  // for a finished trip whose bookings are gone (only the total is saved).
+  collected?: number;
+  pending?: number;
+  // Paid by cancelled / no-show bookings and not refunded (cancellation
+  // charges). Optional so older callers still work; reads as 0.
+  retainedRevenue?: number;
   ulaaCosts: number;
   organiserCosts: number;
   totalCosts: number;
@@ -238,7 +246,7 @@ const TRIP_COLS = 6;
 // its last real column (Balance / Amount) ends.
 const BALANCE_COLS = 4;
 const COST_COLS = 5;
-const TRIP_SHEET_COLUMNS = [{ width: 28 }, { width: 16 }, { width: 16 }, { width: 14 }, { width: 14 }, { width: 16 }];
+const TRIP_SHEET_COLUMNS = [{ width: 28 }, { width: 16 }, { width: 16 }, { width: 22 }, { width: 14 }, { width: 16 }];
 
 function buildTripSheetRows(trip: TripExcelReportRow): Row[] {
   const rows: Row[] = [];
@@ -255,10 +263,26 @@ function buildTripSheetRows(trip: TripExcelReportRow): Row[] {
   ], TRIP_COLS));
   rows.push(blankRow(TRIP_COLS));
 
-  rows.push(sectionTitleRow('Cost & Profit Summary', TRIP_COLS));
-  rows.push(columnHeaderRow(['Revenue', 'Ulaa Costs', 'Organiser Costs', 'Total Costs', 'Net Profit', 'Profit/Person'], TRIP_COLS));
+  // Total Amount = what booked travelers owe in total. Collected + Pending
+  // split it. Extra = cancellation charges kept (paid - refunded), outside
+  // the total. Revenue below = Total Amount + Extra, so
+  // Revenue - Total Costs = Net Profit adds up on the sheet.
+  const cancellationCharges = trip.retainedRevenue ?? 0;
+  const totalRevenue = trip.revenue + cancellationCharges;
+  rows.push(sectionTitleRow('Collection Summary', TRIP_COLS));
+  rows.push(columnHeaderRow(['Total Amount', 'Collected', 'Pending', 'Extra (Cancellation)'], TRIP_COLS));
   rows.push(padRow([
-    dataCell(trip.revenue, { align: 'center', tone: 'positive' }),
+    dataCell(trip.revenue, { align: 'center', bold: true }),
+    trip.collected === undefined ? dataCell('-', { align: 'center' }) : dataCell(trip.collected, { align: 'center', tone: 'positive' }),
+    trip.pending === undefined ? dataCell('-', { align: 'center' }) : dataCell(trip.pending, { align: 'center' }),
+    dataCell(cancellationCharges, { align: 'center' }),
+  ], TRIP_COLS));
+  rows.push(blankRow(TRIP_COLS));
+
+  rows.push(sectionTitleRow('Cost & Profit Summary', TRIP_COLS));
+  rows.push(columnHeaderRow(['Revenue (Total + Extra)', 'Ulaa Costs', 'Organiser Costs', 'Total Costs', 'Net Profit', 'Profit/Person'], TRIP_COLS));
+  rows.push(padRow([
+    dataCell(totalRevenue, { align: 'center', tone: 'positive' }),
     dataCell(trip.ulaaCosts, { align: 'center' }),
     dataCell(trip.organiserCosts, { align: 'center' }),
     dataCell(trip.totalCosts, { align: 'center' }),

@@ -120,10 +120,30 @@ export function resolveCostItem(
   return { id: item.id, name: item.name, basis: item.basis, rate, qty, amount: rate * qty };
 }
 
+/** Money a trip keeps from bookings that were cancelled (including no-shows):
+ *  what was paid minus what was refunded, per cancelled booking. Active
+ *  bookings are excluded — they are already counted in totalRevenue. A
+ *  cancelled booking that was fully refunded contributes 0. */
+export function retainedFromCancellations(
+  rows: ReadonlyArray<{ cancelled_at?: string | null; amount_paid?: number | null; refund_amount?: number | null; deleted_at?: string | null }>,
+): number {
+  return rows.reduce((sum, e) => (
+    e.cancelled_at && !e.deleted_at
+      ? sum + Math.max(0, (e.amount_paid || 0) - (e.refund_amount || 0))
+      : sum
+  ), 0);
+}
+
 interface TripFinanceSummary {
   travelerCount: number;
   revenuePerPerson: number;
   totalRevenue: number;
+  // Money kept from cancelled / no-show bookings (paid minus refunded) — see
+  // retainedFromCancellations(). Not part of totalRevenue (that stays the
+  // sum of active bookings, so revenuePerPerson still means "per traveller"),
+  // but it IS part of netProfit and grossRevenue.
+  retainedRevenue: number;
+  grossRevenue: number;           // totalRevenue + retainedRevenue
   agencyCost: number;             // resolved fixed-vs-per-traveler
   childFareCount: number;         // number of booked travelers with a Child Fare add-on
   childFareVendorCost: number;    // child_fare_vendor_amount x childFareCount
@@ -136,7 +156,7 @@ interface TripFinanceSummary {
   organiserItems: ResolvedOrganiserExpense[]; // each organiser expense line, resolved
   organiserCosts: number;         // sum of organiserItems (travel tickets, agency payment, misc, own entry ticket... are expense lines)
   totalCosts: number;             // ulaaCosts + organiserCosts
-  netProfit: number;              // totalRevenue - totalCosts
+  netProfit: number;              // totalRevenue + retainedRevenue - totalCosts
   profitPerPerson: number;        // netProfit / travelerCount (0 if no travelers)
 }
 
@@ -171,6 +191,7 @@ export function computeTripFinanceSummary(
   totalRevenue: number,
   childFareCount: number = 0,
   optionCounts: Record<string, number> = {},
+  retainedRevenue: number = 0,
 ): TripFinanceSummary {
   const f = foldLegacyCosts(finance || emptyTripFinance);
   const travelers = Math.max(0, travelerCount || 0);
@@ -190,12 +211,15 @@ export function computeTripFinanceSummary(
   const organiserItems = (f.organiser_expenses || []).map(resolveOrganiserExpense);
   const organiserCosts = organiserItems.reduce((sum, c) => sum + c.amount, 0);
   const totalCosts = ulaaCosts + organiserCosts;
-  const netProfit = revenue - totalCosts;
+  const retained = Math.max(0, retainedRevenue || 0);
+  const netProfit = revenue + retained - totalCosts;
 
   return {
     travelerCount: travelers,
     revenuePerPerson: travelers > 0 ? revenue / travelers : 0,
     totalRevenue: revenue,
+    retainedRevenue: retained,
+    grossRevenue: revenue + retained,
     agencyCost,
     childFareCount: childFares,
     childFareVendorCost,
