@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
 import { useBranding } from '../hooks/useBranding';
 import Button from '../components/ui/Button';
+import AdminMfaStep from './AdminMfaStep';
 import { getEmailDomainSuggestions } from '../constants/emailDomains';
 import KeyboardNavSuggestionDropdown from '../components/ui/KeyboardNavSuggestionDropdown';
 import { handleSuggestionKeyDown } from '../components/ui/suggestionKeyNav';
@@ -15,7 +16,7 @@ const MAX_EMAIL_SUGGESTIONS = 6;
 
 export default function AdminLogin() {
   const { urls: brand } = useBranding();
-  const { signIn } = useAuth();
+  const { signIn, mfa } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -76,6 +77,7 @@ export default function AdminLogin() {
           <p className="text-dark-muted text-sm mt-1">Sign in to manage Ulaa trips and enquiries.</p>
         </div>
 
+        {mfa ? <AdminMfaStep mfa={mfa} /> : (
         <div className="bg-white rounded-lg shadow-warm-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="relative">
@@ -125,6 +127,7 @@ export default function AdminLogin() {
             </Button>
           </form>
         </div>
+        )}
       </motion.div>
     </div>
   );

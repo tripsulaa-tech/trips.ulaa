@@ -118,6 +118,28 @@ async function getEarlyBirdSeatsTaken(): Promise<Record<string, number>> {
 // the public page/PDF and Admin views all read a trip's leader live from
 // the directory instead of a per-trip copy: trip_leader_id is the only
 // thing stored on the trip row itself.
+// Columns the PUBLIC site may read from upcoming_trips. Deliberately every
+// column EXCEPT trip_finance (internal ad spend / agency / organiser costs):
+// the anon role has no SELECT on it (see restrict_trip_finance_public_read.sql),
+// so a public query must never use select('*'). When you add a column that
+// the public site needs, add it here AND re-run that migration's STEP 2/3.
+const PUBLIC_UPCOMING_TRIP_COLUMNS = [
+  'id', 'title', 'destination', 'slug', 'start_date', 'end_date', 'duration', 'description',
+  'itinerary', 'not_included', 'meeting_point', 'faqs', 'total_seats', 'seats_booked', 'price',
+  'cover_image', 'gallery_images', 'created_at', 'updated_at', 'early_bird_price',
+  'early_bird_deadline', 'early_bird_seats', 'meeting_point_map_url', 'terms_and_conditions',
+  'trip_type', 'cancellation_policy', 'strike_through_price', 'advance_amount',
+  'card_feature_tags', 'min_age', 'max_age', 'meeting_time', 'meeting_terminal',
+  'meeting_details', 'highlight_cards', 'accommodation_description', 'accommodation_photos',
+  'included_items', 'included_groups', 'not_included_items', 'gallery_items', 'fashion_photos',
+  'trip_founder', 'trip_leader_id', 'confidence_items', 'confidence_description',
+  'meeting_address', 'end_banner', 'things_to_carry_items', 'fashion_description',
+  'gallery_description', 'cover_image_crop', 'status', 'hide_pdf_download', 'banner_has_text',
+  'hide_special_offer_promo', 'sort_order', 'special_offer_date', 'special_offer_end_date',
+  'special_offer_name', 'special_offer_price', 'trip_options', 'hero_mobile_image',
+].join(', ');
+
+const PUBLIC_UPCOMING_TRIP_SELECT = `${PUBLIC_UPCOMING_TRIP_COLUMNS}, trip_leader:trip_leaders(*)`;
 const UPCOMING_TRIP_SELECT = '*, trip_leader:trip_leaders(*)';
 
 export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
@@ -125,7 +147,7 @@ export async function getUpcomingTrips(): Promise<UpcomingTrip[]> {
   const [{ data, error }, reservedCounts, earlyTaken] = await Promise.all([
     supabase
       .from('upcoming_trips')
-      .select(UPCOMING_TRIP_SELECT)
+      .select(PUBLIC_UPCOMING_TRIP_SELECT)
       .in('status', ['coming_soon', 'published'])
       .gte('start_date', today)
       // Manual admin-controlled order (see add_trip_sort_order.sql and the
@@ -145,7 +167,7 @@ export async function getUpcomingTripBySlug(slug: string): Promise<UpcomingTrip 
   const [{ data, error }, reservedCounts, earlyTaken] = await Promise.all([
     supabase
       .from('upcoming_trips')
-      .select(UPCOMING_TRIP_SELECT)
+      .select(PUBLIC_UPCOMING_TRIP_SELECT)
       .eq('slug', slug)
       .in('status', ['coming_soon', 'published'])
       .single(),
