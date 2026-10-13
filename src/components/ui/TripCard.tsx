@@ -249,7 +249,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             <span className="offer-gradient-shift inline-flex items-center max-w-[70vw] gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm-lg ring-1 ring-inset ring-white/15">
               <Fire size={14} weight="fill" className="text-yellow-300" />
               <span className="leading-tight">
-                Early Bird{earlyBirdOffer ? ` · Only for ${earlyBirdOffer.totalSeats === 1 ? 'the 1st seat' : `first ${earlyBirdOffer.totalSeats} seats`}` : ''}
+                Early Bird{earlyBirdOffer ? ` · ${earlyBirdOffer.totalSeats === 1 ? 'the 1st seat' : `First ${earlyBirdOffer.totalSeats} seats`}` : ''}
               </span>
             </span>
           )}

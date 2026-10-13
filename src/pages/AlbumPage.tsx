@@ -196,7 +196,7 @@ export default function AlbumPage() {
           to a bottom-weighted scrim (title legibility) plus a light top
           scrim so the sticky navbar doesn't float over a bright sky.
          --------------------------------------------------------------- */}
-      <section className="relative h-[60vh] min-h-[440px] md:h-[70vh] md:min-h-[560px] overflow-hidden">
+      <section className="relative h-[60vh] min-h-[440px] md:h-[70vh] md:min-h-[560px] lg:h-[calc(100svh-4rem)] lg:min-h-[640px] lg:max-h-[900px] overflow-hidden">
         <img
           src={album.cover_image || PLACEHOLDER_IMAGE}
           alt={album.title}
@@ -205,16 +205,16 @@ export default function AlbumPage() {
           fetchPriority="high"
         />
         {/* Scrim: heavy at the bottom and still strong through the middle, so the location line and title stay readable on bright, busy covers. */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(45,33,24,0.92)_0%,rgba(45,33,24,0.6)_40%,rgba(45,33,24,0.2)_72%,rgba(45,33,24,0.22)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(45,33,24,0.92)_0%,rgba(45,33,24,0.6)_40%,rgba(45,33,24,0.2)_72%,rgba(45,33,24,0.22)_100%)] lg:bg-[linear-gradient(to_top,rgba(45,33,24,0.85)_0%,rgba(45,33,24,0.45)_30%,rgba(45,33,24,0.08)_58%,rgba(45,33,24,0.12)_100%)]" />
         {/* Soft fade into the page so the photo doesn't end on a hard edge behind the card. */}
-        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-24 lg:h-14 bg-gradient-to-t from-background to-transparent" />
 
         {/* Controls — solid white circles (readable on any cover, matches the
             app's solid cards) pinned to the top so they stay off the faces.
             pt-24 = the fixed navbar (h-20) + 16px: the hero starts at the very
             top of the page, underneath the navbar, so anything higher is hidden. */}
-        <div className="absolute inset-x-0 top-0 z-10">
-          <div className="max-w-[1344px] mx-auto px-4 sm:px-6 lg:px-8 pt-24 flex items-center justify-between gap-3">
+        <div className="absolute inset-x-0 top-0 z-10 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-[1344px] mx-auto pt-24 flex items-center justify-between gap-3">
             <Link
               to="/completed-trips"
               onClick={() => {
@@ -266,8 +266,8 @@ export default function AlbumPage() {
           </div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0">
-          <div className="max-w-[1344px] mx-auto px-5 sm:px-6 lg:px-8 pb-20 sm:pb-24">
+        <div className="absolute inset-x-0 bottom-0 px-5 sm:px-6 lg:px-8">
+          <div className="max-w-[1344px] mx-auto pb-20 sm:pb-24">
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
               {/* Eyebrow — location + batch as plain text, no badges. */}
               <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-white text-[13px] sm:text-base font-button font-bold uppercase tracking-[0.12em] [text-shadow:0_1px_10px_rgba(0,0,0,0.65)]">
@@ -304,29 +304,29 @@ export default function AlbumPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.15 }}
-            className="rounded-xl bg-white ring-1 ring-black/5 shadow-warm-lg px-4 py-4 sm:px-8 sm:py-5"
+            className="rounded-xl bg-white ring-1 ring-black/5 shadow-warm-lg px-4 py-4 sm:w-fit sm:px-8 sm:py-5"
           >
-            <div className="grid grid-flow-col auto-cols-fr divide-x divide-background-warm">
+            <div className="grid grid-flow-col auto-cols-fr sm:auto-cols-auto divide-x divide-background-warm">
               {META_STATS.map(({ Icon, label, value, short, jumpToGallery }) => {
                 if (value === null) return null;
-                const cellClass = 'flex flex-col items-center justify-center text-center gap-1.5 px-1.5 sm:flex-row sm:gap-3 sm:px-6';
+                const cellClass = 'flex flex-col items-center justify-center text-center gap-1.5 px-1.5 sm:flex-row sm:gap-3 sm:px-8 sm:first:pl-0 sm:last:pr-0';
                 const inner = (
                   <>
                     <span className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
                       <Icon size={19} />
                     </span>
                     <span className="leading-tight sm:text-left">
-                      <span className="block text-[11px] sm:text-xs font-button font-bold uppercase tracking-[0.1em] text-dark-muted">
+                      <span className="block text-[11px] sm:text-xs font-button font-semibold uppercase tracking-[0.1em] text-dark-muted/70">
                         {label}
                       </span>
-                      <span className="mt-0.5 flex items-center justify-center sm:justify-start gap-1 font-bold text-dark text-[15px] sm:text-base whitespace-nowrap">
+                      <span className="mt-0.5 flex items-center justify-center sm:justify-start gap-1 font-bold text-dark group-hover:text-primary transition-colors text-[15px] sm:text-base whitespace-nowrap">
                         {short ? (
                           <>
                             <span className="sm:hidden">{short}</span>
                             <span className="hidden sm:inline">{value}</span>
                           </>
                         ) : value}
-                        {jumpToGallery && <ArrowDown size={13} weight="bold" className="text-primary" aria-hidden="true" />}
+                        {jumpToGallery && <ArrowDown size={13} weight="bold" className="text-primary transition-transform group-hover:translate-y-0.5" aria-hidden="true" />}
                       </span>
                     </span>
                   </>
@@ -337,7 +337,7 @@ export default function AlbumPage() {
                     href="#gallery"
                     onClick={scrollToGallery}
                     aria-label={`${value} photos — jump to gallery`}
-                    className={`${cellClass} rounded-lg hover:bg-background transition-colors`}
+                    className={`${cellClass} group`}
                   >
                     {inner}
                   </a>

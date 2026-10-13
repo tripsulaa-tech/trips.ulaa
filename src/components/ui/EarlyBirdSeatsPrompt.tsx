@@ -9,7 +9,7 @@ import type { EarlyBirdSeatsOffer } from './earlyBirdSeatsOffer';
  *  "3 of 5 early-bird seats left · pay to lock yours", or the last-seat variant. */
 function earlyBirdSeatsCaption(total: number, left: number): string {
   if (left === 1) return 'Last early-bird seat! · first to pay gets it';
-  if (left === total) return `Only ${total} early-bird seats · first ${total} to pay get this price`;
+  if (left === total) return `Only ${total} exclusive Early-bird seats - first 5 payments win!`;
   return `${left} of ${total} early-bird seats left · pay to lock yours`;
 }
 
