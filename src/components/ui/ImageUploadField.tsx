@@ -21,10 +21,9 @@ interface ImageUploadFieldProps {
   // so the filename alone tells you "1784...-attapadi-IMG_8255.webp"
   // belongs to Attapadi, instead of being an anonymous timestamp+filename.
   fileNamePrefix?: string;
-  // Overrides the default ~100KB compression target (see compressImage in
-  // services/api.ts) for fields where quality matters more than shaving
-  // storage — e.g. the trip cover image, which passes
-  // COVER_IMAGE_TARGET_SIZE_BYTES (400KB) so it stays crisp at full width.
+  // Overrides the default 500KB compression target (see compressImage in
+  // services/api/shared.ts) for fields that need a different limit — e.g. logos,
+  // which pass their own byte limit. Most fields can leave this unset.
   maxSizeBytes?: number;
   // Short recommended-size/aspect note shown under the label (e.g. "Square,
   // at least 800×800px") so admins know what to upload before they pick a

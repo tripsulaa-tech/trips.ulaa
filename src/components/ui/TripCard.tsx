@@ -14,12 +14,13 @@ import {
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, getCoverImageStyle, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
 import { getPackageBase, hasPackages, isPackageSoldOut, withBasicPricing } from '../../utils/tripOptions';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
+import TripCardCover from './TripCardCover';
 import { EarlyBirdSeatsStrip } from './EarlyBirdSeatsPrompt';
 import { getEarlyBirdSeatsOffer } from './earlyBirdSeatsOffer';
 
@@ -110,13 +111,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
       >
         <Link to={`/trips/${trip.slug}`} className="relative h-56 md:h-64 overflow-hidden block">
           <div className="w-full h-full transition-transform duration-700 group-hover:scale-110">
-            <img
-              src={trip.cover_image || PLACEHOLDER_IMAGE}
-              alt={trip.title}
-              loading="lazy"
-              className="w-full h-full object-cover"
-              style={getCoverImageStyle(trip.cover_image_crop)}
-            />
+            <TripCardCover src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.title} crop={trip.cover_image_crop} />
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
           <div className="absolute top-4 left-4">
@@ -219,13 +214,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           separate elements lets both scales apply together.
         */}
         <div className="w-full h-full transition-transform duration-700 group-hover:scale-110">
-          <img
-            src={trip.cover_image || PLACEHOLDER_IMAGE}
-            alt={trip.destination}
-            loading="lazy"
-            className="w-full h-full object-cover"
-            style={getCoverImageStyle(trip.cover_image_crop)}
-          />
+          <TripCardCover src={trip.cover_image || PLACEHOLDER_IMAGE} alt={trip.destination} crop={trip.cover_image_crop} />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
 

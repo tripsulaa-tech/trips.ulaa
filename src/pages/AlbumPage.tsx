@@ -1,12 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import type { Icon } from '@phosphor-icons/react';
 import {
   MapPin,
-  Calendar,
-  Users,
-  Images,
   ArrowLeft,
   ShareNetwork as Share2,
   Heart,
@@ -15,6 +11,7 @@ import {
 } from '@phosphor-icons/react';
 import Layout from '../components/layout/Layout';
 import SectionTitle from '../components/ui/SectionTitle';
+import FitOneLine from '../components/ui/FitOneLine';
 import NotFoundState from '../components/ui/NotFoundState';
 import { GalleryGrid } from '../components/ui/GalleryViewer';
 import { AlbumSkeleton } from '../components/ui/Skeletons';
@@ -176,17 +173,43 @@ export default function AlbumPage() {
     );
   }
 
+  // Same like button in two places (photo controls + the "Relive the Journey"
+  // heading) so a visitor can like right where they're looking at the photos.
+  // Both share one state, so they always show the same count and heart.
+  const renderLikeButton = (where: 'hero' | 'gallery') => (
+    <button
+      onClick={toggleLike}
+      disabled={likeBusy}
+      aria-pressed={liked}
+      aria-label={liked ? 'Unlike this album' : 'Like this album'}
+      className={`inline-flex items-center justify-center gap-1.5 h-10 min-w-10 rounded-full text-sm font-button font-bold tabular-nums transition-all active:scale-[0.94] cursor-pointer disabled:opacity-70 disabled:cursor-default ${
+        where === 'hero' ? 'bg-white shadow-warm hover:bg-background' : 'bg-white ring-1 ring-black/10 hover:bg-background-warm'
+      } ${album.likes_count > 0 ? 'px-3.5' : 'px-0'} ${liked ? 'text-red-500' : 'text-dark-muted'}`}
+    >
+      <motion.span
+        key={liked ? 'liked' : 'idle'}
+        initial={{ scale: liked ? 0.5 : 1 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', stiffness: 500, damping: 14 }}
+        className="inline-flex"
+      >
+        <Heart size={19} weight={liked ? 'fill' : 'bold'} />
+      </motion.span>
+      {/* A "0" reads as unpopular — only show the count once there is one. */}
+      {album.likes_count > 0 && album.likes_count}
+    </button>
+  );
+
   // The hero's fact row, assembled once so the card below can render it in
   // a single pass and skip any stat this album doesn't have.
-  const META_STATS: { Icon: Icon; label: string; value: string | null; short?: string; jumpToGallery?: boolean }[] = [
+  const META_STATS: { label: string; value: string | null; short?: string; jumpToGallery?: boolean }[] = [
     {
-      Icon: Calendar,
       label: 'Trip date',
       value: formatDate(album.trip_date, { day: 'numeric', month: 'long', year: 'numeric' }),
       short: formatDate(album.trip_date, { day: 'numeric', month: 'short', year: 'numeric' }),
     },
-    { Icon: Users, label: 'Travelers', value: album.participants ? `${album.participants}` : null },
-    { Icon: Images, label: 'Photos', value: album.gallery_images.length ? `${album.gallery_images.length}` : null, jumpToGallery: true },
+    { label: 'Travelers', value: album.participants ? `${album.participants}` : null },
+    { label: 'Photos', value: album.gallery_images.length ? `${album.gallery_images.length}` : null, jumpToGallery: true },
   ];
 
   return (
@@ -230,27 +253,7 @@ export default function AlbumPage() {
             </Link>
 
             <div className="flex items-center gap-2">
-              <button
-                onClick={toggleLike}
-                disabled={likeBusy}
-                aria-pressed={liked}
-                aria-label={liked ? 'Unlike this album' : 'Like this album'}
-                className={`inline-flex items-center justify-center gap-1.5 h-10 min-w-10 rounded-full bg-white shadow-warm hover:bg-background text-sm font-button font-bold tabular-nums transition-all active:scale-[0.94] cursor-pointer disabled:opacity-70 disabled:cursor-default ${
-                  album.likes_count > 0 ? 'px-3.5' : 'px-0'
-                } ${liked ? 'text-red-500' : 'text-dark-muted'}`}
-              >
-                <motion.span
-                  key={liked ? 'liked' : 'idle'}
-                  initial={{ scale: liked ? 0.5 : 1 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 14 }}
-                  className="inline-flex"
-                >
-                  <Heart size={19} weight={liked ? 'fill' : 'bold'} />
-                </motion.span>
-                {/* A "0" reads as unpopular — only show the count once there is one. */}
-                {album.likes_count > 0 && album.likes_count}
-              </button>
+              {renderLikeButton('hero')}
               <button
                 onClick={handleShare}
                 aria-label={copied ? 'Link copied' : 'Share this album'}
@@ -287,9 +290,11 @@ export default function AlbumPage() {
                 )}
               </div>
 
-              <h1 className="font-display text-[2.5rem] sm:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.02] mt-3 max-w-4xl [text-shadow:0_2px_28px_rgba(0,0,0,0.4)]">
+              {/* One line always: the size set here is the maximum; FitOneLine
+                  shrinks it only as much as a long title needs. */}
+              <FitOneLine className="font-display text-[2.5rem] sm:text-6xl lg:text-7xl font-bold tracking-tight text-white leading-[1.1] mt-3 [text-shadow:0_2px_28px_rgba(0,0,0,0.4)]">
                 {album.title}
-              </h1>
+              </FitOneLine>
             </motion.div>
           </div>
         </div>
@@ -307,14 +312,11 @@ export default function AlbumPage() {
             className="rounded-xl bg-white ring-1 ring-black/5 shadow-warm-lg px-4 py-4 sm:w-fit sm:px-8 sm:py-5"
           >
             <div className="grid grid-flow-col auto-cols-fr sm:auto-cols-auto divide-x divide-background-warm">
-              {META_STATS.map(({ Icon, label, value, short, jumpToGallery }) => {
+              {META_STATS.map(({ label, value, short, jumpToGallery }) => {
                 if (value === null) return null;
-                const cellClass = 'flex flex-col items-center justify-center text-center gap-1.5 px-1.5 sm:flex-row sm:gap-3 sm:px-8 sm:first:pl-0 sm:last:pr-0';
+                const cellClass = 'flex flex-col items-center justify-center text-center px-1.5 sm:px-8 sm:first:pl-0 sm:last:pr-0';
                 const inner = (
                   <>
-                    <span className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                      <Icon size={19} />
-                    </span>
                     <span className="leading-tight sm:text-left">
                       <span className="block text-[11px] sm:text-xs font-button font-semibold uppercase tracking-[0.1em] text-dark-muted/70">
                         {label}
@@ -357,18 +359,17 @@ export default function AlbumPage() {
               one-liner is shown as a plain line so it doesn't cost ~200px. */}
           {album.description && (
             album.description.length >= RECAP_MIN_CHARS ? (
-              <motion.section {...fadeUp()} className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10">
-                <div className="md:col-span-4">
+              <motion.section {...fadeUp()} className="max-w-3xl space-y-6">
+                <div>
                   <SectionTitle
                     variant="plain"
                     align="left"
                     size="lg"
                     label="In short"
                     title="Adventure Recap"
-                    rule
                   />
                 </div>
-                <p className="md:col-span-8 text-dark-muted text-lg sm:text-xl leading-relaxed font-body">
+                <p className="text-dark-muted text-lg sm:text-xl leading-relaxed font-body">
                   {album.description}
                 </p>
               </motion.section>
@@ -382,15 +383,15 @@ export default function AlbumPage() {
           {/* Gallery — before the story: the photos are why people open an album. */}
           {album.gallery_images.length > 0 && (
             <section id="gallery" className="scroll-mt-24">
-              <motion.div {...fadeUp()} className="mb-7 sm:mb-9">
+              <motion.div {...fadeUp()} className="mb-7 sm:mb-9 flex items-end justify-between gap-4">
                 <SectionTitle
                   variant="plain"
                   align="left"
                   size="lg"
                   label="Gallery"
                   title="Relive the Journey"
-                  rule
                 />
+                <div className="shrink-0 pb-1">{renderLikeButton('gallery')}</div>
               </motion.div>
               <GalleryGrid images={album.gallery_images} fallbackLocation={album.destination} />
             </section>

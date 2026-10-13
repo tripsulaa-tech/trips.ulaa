@@ -6,6 +6,7 @@ import {
 } from '@phosphor-icons/react';
 import type { CoverImageCrop } from '../../types/types-index';
 import { getCoverImageStyle } from '../../utils/utils-index';
+import TripCardCover from './TripCardCover';
 
 interface CoverImageCropEditorProps {
   imageUrl: string;
@@ -27,10 +28,12 @@ const MAX_ZOOM = 2.5;
 // in AdminTrips.tsx, hero_mobile_image in types-index.ts) instead of a
 // crop of this cover image, so previewing it here would be misleading.
 const PREVIEW_LAYOUTS: { label: string; sub: string; ratio: string; width: number }[] = [
-  { label: 'Trip Card', sub: 'Home & Trips listing', ratio: '4 / 3', width: 128 },
-  // Width bumped up so its rendered height (128 * 9/21 ≈ 55px) instead
-  // matches Trip Card's height (128 * 3/4 = 96px) — same height, wider box,
-  // instead of both boxes sharing a width and the 21:9 one looking squashed.
+  // The real card photo area is ~5:3 (h-56/h-64 over a ~360-430px wide card), NOT
+  // 4:3 — the old 4:3 preview showed more of the photo than the live card does,
+  // so the card looked more cropped than the preview promised.
+  { label: 'Trip Card', sub: 'Home & Trips listing', ratio: '5 / 3', width: 160 },
+  // Width chosen so its rendered height (224 * 9/21 = 96px) matches Trip
+  // Card's height (160 * 3/5 = 96px) — same height, wider box.
   { label: 'Desktop Cover', sub: 'Trip page hero banner', ratio: '21 / 9', width: 224 },
 ];
 
@@ -92,7 +95,9 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
   };
 
   const handleZoom = (zoom: number) => onChange({ ...crop, zoom });
-  const handleReset = () => onChange({ ...DEFAULT_CROP });
+  // Reset only clears position/zoom — the "show full image" choice is kept.
+  const handleReset = () => onChange({ ...DEFAULT_CROP, fit: crop.fit });
+  const showFullOnCard = crop.fit === 'contain';
 
   if (!imageUrl) return null;
 
@@ -150,6 +155,22 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
               <RotateCcw size={13} /> Reset
             </button>
           </div>
+
+          <label className="flex items-start gap-2 max-w-sm mt-4 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showFullOnCard}
+              onChange={e => onChange({ ...crop, fit: e.target.checked ? 'contain' : 'cover' })}
+              className="mt-0.5 accent-primary"
+            />
+            <span className="text-xs text-dark leading-snug">
+              <span className="font-medium">Show full image on Trip Card</span>
+              <span className="block text-2xs text-dark-muted">
+                Nothing is cropped (good for posters or photos with text); the spare space is filled
+                with a soft blur. The trip page hero still uses the position &amp; zoom above.
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="mt-4 lg:mt-0">
@@ -161,12 +182,16 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
                   className="relative w-full overflow-hidden rounded-md border border-background-warm bg-dark/5"
                   style={{ aspectRatio: layout.ratio }}
                 >
-                  <img
-                    src={imageUrl}
-                    alt={`${layout.label} preview`}
-                    className="w-full h-full object-cover"
-                    style={getCoverImageStyle(crop)}
-                  />
+                  {layout.label === 'Trip Card' ? (
+                    <TripCardCover src={imageUrl} alt={`${layout.label} preview`} crop={crop} loading="eager" />
+                  ) : (
+                    <img
+                      src={imageUrl}
+                      alt={`${layout.label} preview`}
+                      className="w-full h-full object-cover"
+                      style={getCoverImageStyle(crop)}
+                    />
+                  )}
                 </div>
                 <p className="text-2xs font-medium text-dark mt-1">{layout.label}</p>
                 <p className="text-2xs text-dark-muted leading-tight">{layout.sub}</p>

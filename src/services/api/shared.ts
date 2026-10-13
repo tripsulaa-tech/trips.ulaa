@@ -21,15 +21,17 @@ import { supabase } from '../supabase';
 // crisp rather than full-size and blocky. Animated GIFs and files already
 // under the target are left untouched (nothing to gain, and canvas
 // re-encoding would kill the animation).
-const TARGET_SIZE_BYTES = 100 * 1024; // 100KB — default target for most uploads
-// Trip cover images are the large hero photo on the trip detail page, so they're
-// allowed to stay much bigger (up to 400KB) than the default target — that's the
-// difference between "compressed until it's visibly soft" and "still crisp at
-// full width". See COVER_IMAGE_TARGET_SIZE_BYTES usage on the Cover Image field
-// in Admin → Upcoming Trips → Media.
-// 400KB: a 1920px WebP at quality ~0.75-0.85 is visually indistinguishable from the original
-// and keeps Supabase cached egress (5GB/month on the free plan) under control.
-export const COVER_IMAGE_TARGET_SIZE_BYTES = 400 * 1024; // 400KB
+// 500KB ceiling for EVERY admin image upload (trip covers, gallery, album photos,
+// home sections, etc.). It is a ceiling, not a fixed output size: a photo that is
+// already <= 500KB is uploaded untouched (zero quality loss), and a bigger one is
+// only squeezed as far as needed to land under 500KB. A 1920px WebP at quality
+// ~0.75-0.85 is visually indistinguishable from the original for photos, and it
+// keeps Supabase cached egress (5GB/month on the free plan) under control.
+// Call sites that pass their own limit (e.g. logos) keep it.
+const TARGET_SIZE_BYTES = 500 * 1024; // 500KB — default target for all uploads
+// Kept as a named export because the Cover Image fields already import it; it now
+// simply equals the global default.
+export const COVER_IMAGE_TARGET_SIZE_BYTES = TARGET_SIZE_BYTES;
 const MAX_DIMENSION = 1920; // px, longest side — plenty for any use in this app
 const MIN_QUALITY = 0.5; // quality floor for any single pass; resize instead of going lower
 const QUALITY_STEP = 0.05; // fine-grained steps so we don't overshoot past a good size/quality tradeoff

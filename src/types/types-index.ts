@@ -206,6 +206,11 @@ export interface CoverImageCrop {
   x: number;    // 0-100, focal point as % of image width (object-position x)
   y: number;    // 0-100, focal point as % of image height (object-position y)
   zoom: number; // >=1, extra scale on top of object-fit: cover (1 = no zoom)
+  // Trip Card only. 'contain' shows the whole image uncropped (over a blurred
+  // copy of itself) instead of trimming it to the card's shape — for posters /
+  // photos with baked-in text. Optional and stored inside the existing jsonb
+  // column, so no migration; missing = 'cover' (previous behaviour).
+  fit?: 'cover' | 'contain';
 }
 
 export interface UpcomingTrip {
