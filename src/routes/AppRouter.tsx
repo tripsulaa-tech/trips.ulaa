@@ -190,8 +190,8 @@ export default function AppRouter() {
             <Route path="/games" element={<GamesPage />} />
             <Route path="/play/truth-or-dare" element={<TruthOrDarePlayPage />} />
             <Route path="/play/truth-or-dare/:code" element={<TruthOrDarePlayPage />} />
-            <Route path="/play/stowaway" element={<YaaruAvanJoinPage />} />
-            <Route path="/play/stowaway/:code" element={<YaaruAvanJoinPage />} />
+            <Route path="/play/yaaru-avan" element={<YaaruAvanJoinPage />} />
+            <Route path="/play/yaaru-avan/:code" element={<YaaruAvanJoinPage />} />
             <Route path="/play/dumb-charades" element={<DumbCharadesPlayPage />} />
             <Route path="/play/twin" element={<FindMyTwinJoinPage />} />
             <Route path="/play/twin/:code" element={<FindMyTwinJoinPage />} />

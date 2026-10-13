@@ -1,5 +1,5 @@
-// Stowaway: word pairs and dares.
-// Explorers get one word of a pair, Stowaways get the other. Which side is
+// Yaaru Avan: word pairs and dares.
+// Tourists get one word of a pair, Strangers get the other. Which side is
 // which is decided at random every round (see yaaruAvanEngine.ts), so the
 // "first word" is never a giveaway. Every word appears in exactly one pair.
 
@@ -146,57 +146,57 @@ export const DARES: string[] = [
   'Describe your dream trip in exactly ten words.',
 ];
 
-// ── Editable content (Admin -> Games -> Stowaway) ──
+// ── Editable content (Admin -> Games -> Yaaru Avan) ──
 // The engine and the online room read WORD_PAIRS / DARES directly,
 // so saved edits are applied by replacing the contents of those arrays in place
-// (applyStowawayContent). The built-in lists are captured first so the admin can
+// (applyYaaruAvanContent). The built-in lists are captured first so the admin can
 // reset to them.
 
-export interface StowawayPairInput { category: Category; level: Level; a: string; b: string }
-export interface StowawayContent {
-  pairs: StowawayPairInput[];
+export interface YaaruAvanPairInput { category: Category; level: Level; a: string; b: string }
+export interface YaaruAvanContent {
+  pairs: YaaruAvanPairInput[];
   dares: string[];
 }
 
-export const STOWAWAY_CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
-export const STOWAWAY_LEVELS = LEVELS.map(l => l.id);
+export const YAARU_AVAN_CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
+export const YAARU_AVAN_LEVELS = LEVELS.map(l => l.id);
 
-export const STOWAWAY_DEFAULTS: StowawayContent = {
+export const YAARU_AVAN_DEFAULTS: YaaruAvanContent = {
   pairs: WORD_PAIRS.map(({ category, level, a, b }) => ({ category, level, a, b })),
   dares: [...DARES],
 };
 
 const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
 
-export function sanitizeStowawayContent(raw: unknown): StowawayContent | null {
+export function sanitizeYaaruAvanContent(raw: unknown): YaaruAvanContent | null {
   if (!raw || typeof raw !== 'object') return null;
   const r = raw as { pairs?: unknown; dares?: unknown };
 
-  let pairs: StowawayPairInput[] = Array.isArray(r.pairs)
-    ? r.pairs.flatMap((p): StowawayPairInput[] => {
+  let pairs: YaaruAvanPairInput[] = Array.isArray(r.pairs)
+    ? r.pairs.flatMap((p): YaaruAvanPairInput[] => {
       const o = (p ?? {}) as Record<string, unknown>;
       const a = clean(o.a, 40);
       const b = clean(o.b, 40);
       const category = o.category as Category;
       const level = o.level as Level;
-      if (!a || !b || a.toLowerCase() === b.toLowerCase() || !STOWAWAY_CATEGORIES.includes(category) || !STOWAWAY_LEVELS.includes(level)) return [];
+      if (!a || !b || a.toLowerCase() === b.toLowerCase() || !YAARU_AVAN_CATEGORIES.includes(category) || !YAARU_AVAN_LEVELS.includes(level)) return [];
       return [{ category, level, a, b }];
     })
     : [];
   // A round is dealt per level, so every level must keep some pairs.
-  for (const level of STOWAWAY_LEVELS) {
-    if (!pairs.some(p => p.level === level)) pairs = [...pairs, ...STOWAWAY_DEFAULTS.pairs.filter(p => p.level === level)];
+  for (const level of YAARU_AVAN_LEVELS) {
+    if (!pairs.some(p => p.level === level)) pairs = [...pairs, ...YAARU_AVAN_DEFAULTS.pairs.filter(p => p.level === level)];
   }
 
   const dares = Array.isArray(r.dares) ? r.dares.map(d => clean(d, 200)).filter(Boolean) : [];
 
   return {
     pairs,
-    dares: dares.length ? dares : STOWAWAY_DEFAULTS.dares,
+    dares: dares.length ? dares : YAARU_AVAN_DEFAULTS.dares,
   };
 }
 
-export function applyStowawayContent(c: StowawayContent) {
+export function applyYaaruAvanContent(c: YaaruAvanContent) {
   WORD_PAIRS.splice(0, WORD_PAIRS.length, ...c.pairs.map(p => ({ ...p, id: `${slug(p.a)}_${slug(p.b)}` })));
   DARES.splice(0, DARES.length, ...c.dares);
 }

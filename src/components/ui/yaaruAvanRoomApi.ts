@@ -1,4 +1,4 @@
-// Stowaway online: the thin layer between the game screens and Supabase.
+// Yaaru Avan online: the thin layer between the game screens and Supabase.
 // All rules and secrets live in the database (supabase/migration/add_yaaru_avan_online.sql).
 // This file only calls those functions, listens for live changes, and remembers
 // which room this device is sitting in. Each phone only ever receives its OWN
@@ -11,8 +11,8 @@ import { SITE_ORIGIN } from '../../constants/site';
 import type { Role } from './yaaruAvanEngine';
 import type { SpecialId } from './yaaruAvanSpecials';
 
-export type OnlinePhase = 'lobby' | 'deal' | 'describe' | 'vote' | 'tiebreak' | 'offboard' | 'guess' | 'payback' | 'roundEnd' | 'final';
-type OnlineOutcome = 'explorers' | 'stowaways' | 'lost-steal';
+export type OnlinePhase = 'lobby' | 'deal' | 'describe' | 'vote' | 'tiebreak' | 'offboard' | 'guess' | 'revenger' | 'roundEnd' | 'final';
+type OnlineOutcome = 'tourists' | 'strangers' | 'pickpocket-steal';
 
 interface OnlineRoom {
   id: string;
@@ -45,7 +45,7 @@ interface OnlineRoom {
     names?: string[];
     out?: string;
     role?: Role;
-    /** The ability the player who left had (a Lucky Dip's drawn one), and whether it came from a Lucky Dip. */
+    /** The ability the player who left had (a Falafel Vendor's drawn one), and whether it came from a Falafel Vendor. */
     special?: SpecialId | null;
     dip?: boolean;
     /** Boomerang (Return Ticket): the vote against this player bounced; the name is theirs. */
@@ -65,14 +65,14 @@ interface OnlineRoom {
     host_pick?: boolean;
     /** Lovers: the partner who left right after them. */
     lover?: string | null;
-    /** Set when this exit came from a Payback by that player. */
-    payback_by?: string;
+    /** Set when this exit came from a Revenge by that player. */
+    revenge_by?: string;
     votes: Array<{ from: string; to: string }>;
   } | null;
   round_summary: {
     outcome: OnlineOutcome;
-    explorer_word: string;
-    stowaway_word: string;
+    tourist_word: string;
+    stranger_word: string;
     category: string;
     players: Array<{ id: string; role: Role; gained: number; bonus?: number; special?: SpecialId | null; dip?: boolean }>;
   } | null;
@@ -90,21 +90,21 @@ interface OnlinePlayer {
   survived: number;
   correct_votes: number;
   wrong_votes: number;
-  lost_wins: number;
+  pickpocket_wins: number;
   away: boolean;
-  /** Alive, or a Backseat Rider who is out: may vote. */
+  /** Alive, or a Ghost who is out: may vote. */
   voter: boolean;
   /** The Goddess of Justice is announced to everyone once the words are dealt; every other role stays secret. */
-  public_special: 'tripLeader' | null;
+  public_special: 'goddess' | null;
 }
 
 export interface OnlineState {
   now: string;
   me: {
     id: string; role: Role | null; word: string | null;
-    /** The ability that applies to me (a Lucky Dip's drawn one). */
+    /** The ability that applies to me (a Falafel Vendor's drawn one). */
     special: SpecialId | null;
-    /** True when `special` came from a Lucky Dip. */
+    /** True when `special` came from a Falafel Vendor. */
     dip: boolean;
     /** Name of my Duelist or Lover. */
     partner: string | null;
@@ -113,7 +113,7 @@ export interface OnlineState {
   room: OnlineRoom;
   players: OnlinePlayer[];
   host_away: boolean;
-  counts: { explorers: number; stowaways: number; lost: number } | null;
+  counts: { tourists: number; strangers: number; pickpockets: number } | null;
 }
 
 // ── Friendly messages for the errors the database raises ──
@@ -155,8 +155,8 @@ async function rpc<T = void>(fn: string, args: Record<string, unknown>): Promise
 }
 
 // ── This device: a secret token + the room it is sitting in ──
-const TOKEN_KEY = 'ulaa:stowaway:token';
-const SESSION_KEY = 'ulaa:stowaway:online';
+const TOKEN_KEY = 'ulaa:yaaru-avan:token';
+const SESSION_KEY = 'ulaa:yaaru-avan:online';
 
 export function deviceToken(): string {
   try {
@@ -190,7 +190,7 @@ export const normalizeCode = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-
 /** The link people tap to join. The dev server uses its own origin so it can be tested. */
 export function joinLink(code: string): string {
   const origin = import.meta.env.DEV ? window.location.origin : SITE_ORIGIN;
-  return `${origin}/play/stowaway/${code}`;
+  return `${origin}/play/yaaru-avan/${code}`;
 }
 
 // ── Calls ──
@@ -205,9 +205,9 @@ export const online = {
     rpc<{ code: string; player_id: string }>('yaaru_avan_join', { p_code: code, p_name: name, p_token: t() }),
   state: (code: string) => rpc<OnlineState>('yaaru_avan_state', { p_code: code, p_token: t() }),
   claimHost: (code: string) => rpc('yaaru_avan_claim_host', { p_code: code, p_token: t() }),
-  setSettings: (code: string, s: { stowaways: number; lost: number; level: string; hideCounts: boolean; dares: boolean; specials: boolean; specialIds: SpecialId[] | null }) =>
+  setSettings: (code: string, s: { strangers: number; pickpockets: number; level: string; hideCounts: boolean; dares: boolean; specials: boolean; specialIds: SpecialId[] | null }) =>
     rpc('yaaru_avan_set_settings', {
-      p_code: code, p_token: t(), p_stowaways: s.stowaways, p_lost: s.lost, p_level: s.level,
+      p_code: code, p_token: t(), p_strangers: s.strangers, p_pickpockets: s.pickpockets, p_level: s.level,
       p_hide_counts: s.hideCounts, p_dares: s.dares, p_specials: s.specials, p_special_ids: s.specialIds,
     }),
   setLocked: (code: string, locked: boolean) => rpc('yaaru_avan_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
@@ -224,7 +224,7 @@ export const online = {
   submitGuess: (code: string, text: string) => rpc('yaaru_avan_submit_guess', { p_code: code, p_token: t(), p_text: text }),
   judgeGuess: (code: string, correct: boolean) => rpc('yaaru_avan_judge_guess', { p_code: code, p_token: t(), p_correct: correct }),
   tiebreak: (code: string, pick: string) => rpc('yaaru_avan_tiebreak', { p_code: code, p_token: t(), p_pick: pick }),
-  payback: (code: string, victim: string) => rpc('yaaru_avan_payback', { p_code: code, p_token: t(), p_victim: victim }),
+  revenge: (code: string, victim: string) => rpc('yaaru_avan_revenge', { p_code: code, p_token: t(), p_victim: victim }),
   endGame: (code: string) => rpc('yaaru_avan_end_game', { p_code: code, p_token: t() }),
   toLobby: (code: string) => rpc('yaaru_avan_to_lobby', { p_code: code, p_token: t() }),
 };
@@ -233,7 +233,7 @@ export const online = {
  *  Every game action moves the room's counter in `yaaru_avan_signal`; that is the only thing listened to. */
 export function subscribeRoom(roomId: string, onChange: () => void): () => void {
   const channel = supabase
-    .channel(`stowaway:${roomId}`)
+    .channel(`yaaru-avan:${roomId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'yaaru_avan_signal', filter: `room_id=eq.${roomId}` }, onChange)
     .subscribe();
   return () => { void supabase.removeChannel(channel); };

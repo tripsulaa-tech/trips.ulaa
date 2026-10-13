@@ -1,15 +1,15 @@
 import { useEffect } from 'react';
 import { useGameContent } from '../../hooks/useGameContent';
-import { STOWAWAY_DEFAULTS, applyStowawayContent, sanitizeStowawayContent } from './yaaruAvanWords';
+import { YAARU_AVAN_DEFAULTS, applyYaaruAvanContent, sanitizeYaaruAvanContent } from './yaaruAvanWords';
 import { TWIN_PROMPTS_DEFAULTS, applyTwinPrompts, sanitizeTwinPrompts } from './findMyTwinEngine';
 
-// Stowaway and Find My Twin read their lists straight from module-level arrays,
+// Yaaru Avan and Find My Twin read their lists straight from module-level arrays,
 // so the admin's saved edits are loaded and swapped into those arrays here. Safe
 // to call from several components at once: it is idempotent.
 
-export function useStowawayContentSync() {
-  const content = useGameContent('stowaway', STOWAWAY_DEFAULTS, sanitizeStowawayContent);
-  useEffect(() => { applyStowawayContent(content); }, [content]);
+export function useYaaruAvanContentSync() {
+  const content = useGameContent('yaaru-avan', YAARU_AVAN_DEFAULTS, sanitizeYaaruAvanContent);
+  useEffect(() => { applyYaaruAvanContent(content); }, [content]);
 }
 
 export function useTwinPromptsSync() {

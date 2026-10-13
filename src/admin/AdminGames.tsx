@@ -27,8 +27,8 @@ import {
   CHARADES_DEFAULTS, MAX_YEAR, MIN_YEAR, cleanMovie, sanitizeCharadesContent, type CharadesContent, type MovieInput,
 } from '../components/ui/charadesTamilMovies';
 import {
-  CATEGORY_LABEL, LEVELS, STOWAWAY_CATEGORIES, STOWAWAY_DEFAULTS, STOWAWAY_LEVELS, sanitizeStowawayContent,
-  type StowawayContent,
+  CATEGORY_LABEL, LEVELS, YAARU_AVAN_CATEGORIES, YAARU_AVAN_DEFAULTS, YAARU_AVAN_LEVELS, sanitizeYaaruAvanContent,
+  type YaaruAvanContent,
 } from '../components/ui/yaaruAvanWords';
 import {
   TWIN_DEFAULT_WEIGHT, TWIN_ICONS, TWIN_ICON_KEYS, TWIN_MAX_LABEL, TWIN_MAX_QUESTIONS, TWIN_MAX_ROUNDS, TWIN_MAX_WEIGHT,
@@ -630,11 +630,11 @@ function CharadesEditor({ onDirty }: { onDirty: OnDirty }) {
   );
 }
 
-// ─────────────────────────────────── Stowaway ───────────────────────────────────
+// ─────────────────────────────────── Yaaru Avan ───────────────────────────────────
 type StowView = 'pairs' | 'dares';
 
-function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
-  const ed = useGameEditor<StowawayContent>('stowaway', 'stowaway', STOWAWAY_DEFAULTS, sanitizeStowawayContent, onDirty);
+function YaaruAvanEditor({ onDirty }: { onDirty: OnDirty }) {
+  const ed = useGameEditor<YaaruAvanContent>('yaaru-avan', 'yaaru-avan', YAARU_AVAN_DEFAULTS, sanitizeYaaruAvanContent, onDirty);
   const { draft, setDraft } = ed;
   const [view, setView] = useState<StowView>('pairs');
   const [cat, setCat] = useState<string>('all');
@@ -650,10 +650,10 @@ function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
         && (!q || p.a.toLowerCase().includes(q) || p.b.toLowerCase().includes(q)));
   }, [draft.pairs, cat, lvl, search]);
 
-  const setPair = (i: number, patch: Partial<StowawayContent['pairs'][number]>) =>
+  const setPair = (i: number, patch: Partial<YaaruAvanContent['pairs'][number]>) =>
     setDraft(d => ({ ...d, pairs: d.pairs.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) }));
 
-  const prepare = (d: StowawayContent): Prepared<StowawayContent> => {
+  const prepare = (d: YaaruAvanContent): Prepared<YaaruAvanContent> => {
     const pairs = d.pairs.map(p => ({ ...p, a: p.a.replace(/\s+/g, ' ').trim(), b: p.b.replace(/\s+/g, ' ').trim() })).filter(p => p.a || p.b);
     if (pairs.some(p => !p.a || !p.b)) return { error: 'Every word pair needs two words.' };
     if (pairs.some(p => p.a.toLowerCase() === p.b.toLowerCase())) return { error: 'The two words in a pair must be different.' };
@@ -686,11 +686,11 @@ function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
               addLabel="Add pair"
               onAdd={() => {
                 setSearch('');
-                setDraft(d => ({ ...d, pairs: [{ category: (cat === 'all' ? 'places' : cat) as StowawayContent['pairs'][number]['category'], level: (lvl === 'all' ? 'easy' : lvl) as StowawayContent['pairs'][number]['level'], a: '', b: '' }, ...d.pairs] }));
+                setDraft(d => ({ ...d, pairs: [{ category: (cat === 'all' ? 'places' : cat) as YaaruAvanContent['pairs'][number]['category'], level: (lvl === 'all' ? 'easy' : lvl) as YaaruAvanContent['pairs'][number]['level'], a: '', b: '' }, ...d.pairs] }));
               }}
             />
             <div className="flex flex-wrap items-center gap-2">
-              <div className="w-full sm:w-44"><Select<string> value={cat} onChange={v => { setCat(v); setShown(PAGE); }} options={[{ value: 'all', label: 'All categories' }, ...STOWAWAY_CATEGORIES.map(c => ({ value: c, label: CATEGORY_LABEL[c] }))]} /></div>
+              <div className="w-full sm:w-44"><Select<string> value={cat} onChange={v => { setCat(v); setShown(PAGE); }} options={[{ value: 'all', label: 'All categories' }, ...YAARU_AVAN_CATEGORIES.map(c => ({ value: c, label: CATEGORY_LABEL[c] }))]} /></div>
               <div className="w-full sm:w-36"><Select<string> value={lvl} onChange={v => { setLvl(v); setShown(PAGE); }} options={[{ value: 'all', label: 'All levels' }, ...LEVELS.map(l => ({ value: l.id, label: l.label }))]} /></div>
             </div>
             <ul className="space-y-2">
@@ -699,10 +699,10 @@ function StowawayEditor({ onDirty }: { onDirty: OnDirty }) {
                   <input aria-label={`Pair ${i + 1}, first word`} value={p.a} maxLength={40} onChange={e => setPair(i, { a: e.target.value })} className={inputClass} placeholder="Word A" />
                   <input aria-label={`Pair ${i + 1}, second word`} value={p.b} maxLength={40} onChange={e => setPair(i, { b: e.target.value })} className={inputClass} placeholder="Word B" />
                   <select aria-label={`Pair ${i + 1} category`} value={p.category} onChange={e => setPair(i, { category: e.target.value as typeof p.category })} className={`${sel} hidden sm:block`}>
-                    {STOWAWAY_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
+                    {YAARU_AVAN_CATEGORIES.map(c => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
                   </select>
                   <select aria-label={`Pair ${i + 1} level`} value={p.level} onChange={e => setPair(i, { level: e.target.value as typeof p.level })} className={`${sel} hidden sm:block`}>
-                    {STOWAWAY_LEVELS.map(l => <option key={l} value={l}>{LEVELS.find(x => x.id === l)?.label}</option>)}
+                    {YAARU_AVAN_LEVELS.map(l => <option key={l} value={l}>{LEVELS.find(x => x.id === l)?.label}</option>)}
                   </select>
                   <button type="button" aria-label={`Delete pair ${p.a} and ${p.b}`} onClick={() => setDraft(d => ({ ...d, pairs: d.pairs.filter((_, idx) => idx !== i) }))} className="w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
                 </li>
@@ -1005,10 +1005,10 @@ const TABS: { id: GameTab; label: string }[] = [
   { id: 'play', label: 'Play' },
   { id: 'edit', label: 'Edit' },
 ];
-type EditGame = 'tod' | 'stowaway' | 'charades' | 'twin';
+type EditGame = 'tod' | 'yaaru-avan' | 'charades' | 'twin';
 const EDIT_GAMES: { id: EditGame; label: string; blurb: string; Icon: PhosphorIcon }[] = [
   { id: 'tod', label: 'Truth or Dare', blurb: 'Truths, dares, twists', Icon: Sparkle },
-  { id: 'stowaway', label: 'Yaaru Avan?', blurb: 'Word pairs, dares', Icon: Boat },
+  { id: 'yaaru-avan', label: 'Yaaru Avan?', blurb: 'Word pairs, dares', Icon: Boat },
   { id: 'charades', label: 'Dumb Charades', blurb: 'Tamil film list', Icon: FilmSlate },
   { id: 'twin', label: 'Find My Twin', blurb: 'Questions and rounds', Icon: UsersThree },
 ];
@@ -1046,7 +1046,7 @@ function GamePicker({ value, onChange, dirty }: { value: EditGame; onChange: (g:
 const PERSIST_KEY = 'ulaa:admin-games:tab';
 
 export default function AdminGames() {
-  // Older saved values were one tab per game ('tod', 'stowaway', ...): open Edit on that game.
+  // Older saved values were one tab per game ('tod', 'yaaru-avan', ...): open Edit on that game.
   const [saved] = useState(() => loadPersisted<{ tab?: string; game?: string }>(PERSIST_KEY));
   const [tab, setTab] = useState<GameTab>(() => (saved.tab === 'edit' || EDIT_GAMES.some(g => g.id === saved.tab) ? 'edit' : 'play'));
   const [game, setGame] = useState<EditGame>(() => {
@@ -1130,7 +1130,7 @@ export default function AdminGames() {
             <GamePicker value={game} onChange={setGame} dirty={dirtyMap} />
             {/* All four stay mounted so unsaved edits survive switching games. */}
             <div hidden={game !== 'tod'}><TruthOrDareEditor onDirty={onDirty} /></div>
-            <div hidden={game !== 'stowaway'}><StowawayEditor onDirty={onDirty} /></div>
+            <div hidden={game !== 'yaaru-avan'}><YaaruAvanEditor onDirty={onDirty} /></div>
             <div hidden={game !== 'charades'}><CharadesEditor onDirty={onDirty} /></div>
             <div hidden={game !== 'twin'}><TwinEditor onDirty={onDirty} /></div>
           </div>

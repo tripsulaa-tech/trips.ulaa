@@ -1,4 +1,4 @@
-// Stowaway engine: pure game logic (roles, the no-repeat word bag, win checks,
+// Yaaru Avan engine: pure game logic (roles, the no-repeat word bag, win checks,
 // points and awards). No React here, so it stays easy to reason about.
 // Only the word bag, player names and settings are saved on the device.
 
@@ -7,14 +7,14 @@ import type { Category, Level, WordPair } from './yaaruAvanWords';
 import { assignSpecials } from './yaaruAvanSpecials';
 import type { SoloSpecialId, SpecialId } from './yaaruAvanSpecials';
 
-export type Role = 'explorer' | 'stowaway' | 'lost';
+export type Role = 'tourist' | 'stranger' | 'pickpocket';
 
 export const MIN_PLAYERS = 3;
 export const MAX_PLAYERS = 20;
 
 /** Undercover's scores: Tourists 2 each, a winning Stranger 10, a winning Pickpocket 6
  *  (a Pickpocket wins by lasting to the end or by guessing the Tourists' word). */
-export const POINTS = { explorerWin: 2, stowawaySurvive: 10, lostSurvive: 6, lostSteal: 6 } as const;
+export const POINTS = { touristWin: 2, strangerSurvive: 10, pickpocketSurvive: 6, pickpocketSteal: 6 } as const;
 
 export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): T[] {
   const a = [...arr];
@@ -27,56 +27,56 @@ export function shuffle<T>(arr: readonly T[], rng: () => number = Math.random): 
 
 // ── Roles ──
 
-export interface RoleCounts { explorers: number; stowaways: number; lost: number }
+export interface RoleCounts { tourists: number; strangers: number; pickpockets: number }
 
-export const maxLost = (players: number) => (players >= 10 ? 2 : 1);
+export const maxPickpockets = (players: number) => (players >= 10 ? 2 : 1);
 
 /** Tourists must outnumber the sneaky side (Strangers + Pickpockets) at the start. */
-export function countsFor(players: number, stowaways: number, lost: number): RoleCounts {
-  return { explorers: players - stowaways - lost, stowaways, lost };
+export function countsFor(players: number, strangers: number, pickpockets: number): RoleCounts {
+  return { tourists: players - strangers - pickpockets, strangers, pickpockets };
 }
 
-export function rolesValid(players: number, stowaways: number, lost: number): boolean {
+export function rolesValid(players: number, strangers: number, pickpockets: number): boolean {
   if (players < MIN_PLAYERS || players > MAX_PLAYERS) return false;
-  if (stowaways < 0 || lost < 0 || lost > maxLost(players)) return false;
-  if (stowaways + lost < 1) return false; // at least one Stranger or one Pickpocket
-  return players - stowaways - lost > stowaways + lost;
+  if (strangers < 0 || pickpockets < 0 || pickpockets > maxPickpockets(players)) return false;
+  if (strangers + pickpockets < 1) return false; // at least one Stranger or one Pickpocket
+  return players - strangers - pickpockets > strangers + pickpockets;
 }
 
-export function recommendedRoles(players: number): { stowaways: number; lost: number } {
-  const stowaways = players >= 11 ? 3 : players >= 8 ? 2 : 1;
-  const lost = players >= 5 ? 1 : 0;
+export function recommendedRoles(players: number): { strangers: number; pickpockets: number } {
+  const strangers = players >= 11 ? 3 : players >= 8 ? 2 : 1;
+  const pickpockets = players >= 5 ? 1 : 0;
   // Safety net: shrink until valid (only matters for odd future tweaks).
-  let s = stowaways;
-  let l = lost;
+  let s = strangers;
+  let l = pickpockets;
   while (!rolesValid(players, s, l) && l > 0) l -= 1;
   while (!rolesValid(players, s, l) && s > 1) s -= 1;
-  return { stowaways: s, lost: l };
+  return { strangers: s, pickpockets: l };
 }
 
 /** Clamps role counts into a valid split after the player count changes. */
-export function clampRoles(players: number, stowaways: number, lost: number): { stowaways: number; lost: number } {
-  let l = Math.min(lost, maxLost(players));
-  let s = Math.max(0, stowaways);
+export function clampRoles(players: number, strangers: number, pickpockets: number): { strangers: number; pickpockets: number } {
+  let l = Math.min(pickpockets, maxPickpockets(players));
+  let s = Math.max(0, strangers);
   if (s + l < 1) s = 1;
   while (!rolesValid(players, s, l) && l > 0) { l -= 1; if (s + l < 1) s = 1; }
   while (!rolesValid(players, s, l) && s > 1) s -= 1;
-  return { stowaways: s, lost: l };
+  return { strangers: s, pickpockets: l };
 }
 
 export interface Seat {
   name: string;
   role: Role;
-  word: string | null;   // null for the Lost Soul
+  word: string | null;   // null for the Pickpocket
   seat: string;          // ticket seat number, e.g. 14C
   alive: boolean;
   special?: SpecialId;       // optional special role on top of the core role
-  dipAs?: SoloSpecialId;     // Lucky Dip only: the ability it turned into
-  partner?: string;          // Rivals / Lovers only: the other player
+  dipAs?: SoloSpecialId;     // Falafel Vendor only: the ability it turned into
+  partner?: string;          // Duelists / Lovers only: the other player
   outStop?: number;          // stop at which they were voted out (unset while aboard)
   outOrder?: number;         // 1 = first voted out this round, 2 = next, ...
-  ticketUsed?: boolean;      // Return Ticket already used this round
-  paybackDone?: boolean;     // Payback already taken this round
+  boomerangUsed?: boolean;      // Return Ticket already used this round
+  revengeDone?: boolean;     // Revenge already taken this round
 }
 
 function seatNumbers(n: number): string[] {
@@ -91,8 +91,8 @@ function seatNumbers(n: number): string[] {
 
 export interface RoundSetup {
   seats: Seat[];            // in reveal order (shuffled)
-  explorerWord: string;
-  stowawayWord: string;
+  touristWord: string;
+  strangerWord: string;
   pair: WordPair;
 }
 
@@ -100,14 +100,14 @@ export interface SpecialsOptions { enabled: readonly SpecialId[]; count?: number
 
 /** `specials` is optional: leave it out and the deal is exactly as before. */
 export function dealRound(names: string[], c: RoleCounts, pair: WordPair, specials?: SpecialsOptions): RoundSetup {
-  // Random word sides: the app decides which word the Explorers get.
+  // Random word sides: the app decides which word the Tourists get.
   const flip = Math.random() < 0.5;
-  const explorerWord = flip ? pair.a : pair.b;
-  const stowawayWord = flip ? pair.b : pair.a;
+  const touristWord = flip ? pair.a : pair.b;
+  const strangerWord = flip ? pair.b : pair.a;
   const roles: Role[] = shuffle([
-    ...Array<Role>(c.explorers).fill('explorer'),
-    ...Array<Role>(c.stowaways).fill('stowaway'),
-    ...Array<Role>(c.lost).fill('lost'),
+    ...Array<Role>(c.tourists).fill('tourist'),
+    ...Array<Role>(c.strangers).fill('stranger'),
+    ...Array<Role>(c.pickpockets).fill('pickpocket'),
   ]);
   const order = shuffle(names);
   const seatNos = seatNumbers(order.length);
@@ -115,24 +115,24 @@ export function dealRound(names: string[], c: RoleCounts, pair: WordPair, specia
   const seats: Seat[] = order.map((name, i) => ({
     name,
     role: roles[i],
-    word: roles[i] === 'explorer' ? explorerWord : roles[i] === 'stowaway' ? stowawayWord : null,
+    word: roles[i] === 'tourist' ? touristWord : roles[i] === 'stranger' ? strangerWord : null,
     seat: seatNos[i],
     alive: true,
     ...(extra?.get(name) ?? {}),
   }));
-  return { seats, explorerWord, stowawayWord, pair };
+  return { seats, touristWord, strangerWord, pair };
 }
 
 // ── Winning ──
 
-export type Side = 'explorers' | 'sneaky';
+export type Side = 'tourists' | 'sneaky';
 
 function aliveCounts(seats: Seat[]) {
   const alive = seats.filter(s => s.alive);
   return {
-    explorers: alive.filter(s => s.role === 'explorer').length,
-    stowaways: alive.filter(s => s.role === 'stowaway').length,
-    lost: alive.filter(s => s.role === 'lost').length,
+    tourists: alive.filter(s => s.role === 'tourist').length,
+    strangers: alive.filter(s => s.role === 'stranger').length,
+    pickpockets: alive.filter(s => s.role === 'pickpocket').length,
   };
 }
 
@@ -140,9 +140,9 @@ function aliveCounts(seats: Seat[]) {
  *  offboarded. The sneaky side wins when only one Tourist is left. */
 export function checkWinner(seats: Seat[]): Side | null {
   const a = aliveCounts(seats);
-  const sneaky = a.stowaways + a.lost;
-  if (sneaky === 0) return 'explorers';
-  if (a.explorers <= 1) return 'sneaky';
+  const sneaky = a.strangers + a.pickpockets;
+  if (sneaky === 0) return 'tourists';
+  if (a.tourists <= 1) return 'sneaky';
   return null;
 }
 
@@ -164,18 +164,18 @@ export function describeOrder(seats: Seat[], from: number, _stopNo: number): num
 
 // ── Scoring ──
 
-export type Outcome = 'explorers' | 'stowaways' | 'lost-steal';
+export type Outcome = 'tourists' | 'strangers' | 'pickpocket-steal';
 
 export function roundPoints(seats: Seat[], outcome: Outcome): Record<string, number> {
   const pts: Record<string, number> = {};
   seats.forEach(s => { pts[s.name] = 0; });
-  if (outcome === 'explorers') {
-    seats.filter(s => s.role === 'explorer').forEach(s => { pts[s.name] = POINTS.explorerWin; });
-  } else if (outcome === 'stowaways') {
-    seats.filter(s => s.alive && s.role === 'stowaway').forEach(s => { pts[s.name] = POINTS.stowawaySurvive; });
-    seats.filter(s => s.alive && s.role === 'lost').forEach(s => { pts[s.name] = POINTS.lostSurvive; });
+  if (outcome === 'tourists') {
+    seats.filter(s => s.role === 'tourist').forEach(s => { pts[s.name] = POINTS.touristWin; });
+  } else if (outcome === 'strangers') {
+    seats.filter(s => s.alive && s.role === 'stranger').forEach(s => { pts[s.name] = POINTS.strangerSurvive; });
+    seats.filter(s => s.alive && s.role === 'pickpocket').forEach(s => { pts[s.name] = POINTS.pickpocketSurvive; });
   } else {
-    seats.filter(s => s.role === 'lost' && s.alive).forEach(s => { pts[s.name] = POINTS.lostSteal; });
+    seats.filter(s => s.role === 'pickpocket' && s.alive).forEach(s => { pts[s.name] = POINTS.pickpocketSteal; });
   }
   return pts;
 }
@@ -184,13 +184,13 @@ export function roundPoints(seats: Seat[], outcome: Outcome): Record<string, num
 
 export interface PlayerStats {
   points: number;
-  survivedAsStowaway: number;
+  survivedAsStranger: number;
   correctVotes: number;
   wrongVotes: number;
-  lostWins: number;
+  pickpocketWins: number;
 }
 
-export const emptyStats = (): PlayerStats => ({ points: 0, survivedAsStowaway: 0, correctVotes: 0, wrongVotes: 0, lostWins: 0 });
+export const emptyStats = (): PlayerStats => ({ points: 0, survivedAsStranger: 0, correctVotes: 0, wrongVotes: 0, pickpocketWins: 0 });
 
 export interface Award { id: string; title: string; blurb: string; winner: string; score: number }
 
@@ -206,10 +206,10 @@ function top(names: string[], stats: Record<string, PlayerStats>, pick: (s: Play
 
 export function computeAwards(names: string[], stats: Record<string, PlayerStats>): Award[] {
   const defs: Array<[string, string, string, (s: PlayerStats) => number]> = [
-    ['bluffer', 'Best Bluffer', 'Survived the most rounds as a Stranger', s => s.survivedAsStowaway],
+    ['bluffer', 'Best Bluffer', 'Survived the most rounds as a Stranger', s => s.survivedAsStranger],
     ['detective', 'Sharpest Detective', 'Most correct votes', s => s.correctVotes],
-    ['assassin', 'Silent Assassin', 'Stole a win as the Pickpocket', s => s.lostWins],
-    ['lost', 'Lost in Translation', 'Most wrong votes', s => s.wrongVotes],
+    ['assassin', 'Silent Assassin', 'Stole a win as the Pickpocket', s => s.pickpocketWins],
+    ['pickpocket', 'Lost in Translation', 'Most wrong votes', s => s.wrongVotes],
   ];
   const out: Award[] = [];
   defs.forEach(([id, title, blurb, pick]) => {
@@ -223,9 +223,9 @@ export function computeAwards(names: string[], stats: Record<string, PlayerStats
 // Dealt one at a time, so a pair cannot come back until the whole bag has
 // been used. Never two rounds in a row from the same category.
 
-const BAG_KEY = (level: Level) => `ulaa:stowaway:bag:${level}`;
-const LAST_CAT_KEY = 'ulaa:stowaway:lastcat';
-const DARE_KEY = 'ulaa:stowaway:dares';
+const BAG_KEY = (level: Level) => `ulaa:yaaru-avan:bag:${level}`;
+const LAST_CAT_KEY = 'ulaa:yaaru-avan:lastcat';
+const DARE_KEY = 'ulaa:yaaru-avan:dares';
 
 function readList(key: string): string[] {
   try {
@@ -264,7 +264,7 @@ export function drawPair(level: Level, opts: { tripTitle?: string } = {}): WordP
   // (e.g. a Coorg trip), that destination's pair is dealt once, first.
   const title = (opts.tripTitle ?? '').toLowerCase();
   if (title) {
-    const seenKey = 'ulaa:stowaway:tripdealt';
+    const seenKey = 'ulaa:yaaru-avan:tripdealt';
     const dealt = readList(seenKey);
     const hit = WORD_PAIRS.find(p => p.category === 'places' && !dealt.includes(p.id)
       && [p.a, p.b].some(w => new RegExp(`\\b${w.toLowerCase().replace(/[^a-z0-9 ]/g, '')}\\b`).test(title)));
@@ -286,12 +286,12 @@ export function drawDare(): string {
 }
 
 // ── Saved setup (names + options) ──
-const SETUP_KEY = 'ulaa:stowaway:setup';
+const SETUP_KEY = 'ulaa:yaaru-avan:setup';
 
 export interface SavedSetup {
   names: string[];
-  stowaways: number;
-  lost: number;
+  strangers: number;
+  pickpockets: number;
   hideCounts: boolean;
   level: Level;
   dares: boolean;
@@ -302,8 +302,8 @@ export interface SavedSetup {
 
 const DEFAULT_SETUP: SavedSetup = {
   names: ['', '', ''],
-  stowaways: 1,
-  lost: 0,
+  strangers: 1,
+  pickpockets: 0,
   hideCounts: false,
   level: 'medium',
   dares: false,
@@ -322,9 +322,9 @@ export function loadSetup(): SavedSetup {
     while (names.length < MIN_PLAYERS) names.push('');
     const level: Level = v.level === 'easy' || v.level === 'hard' ? v.level : 'medium';
     const filled = names.filter(n => n.trim()).length || names.length;
-    const r = clampRoles(Math.max(MIN_PLAYERS, filled), Number(v.stowaways) || 1, Number(v.lost) || 0);
+    const r = clampRoles(Math.max(MIN_PLAYERS, filled), Number(v.strangers) || 1, Number(v.pickpockets) || 0);
     return {
-      names, level, stowaways: r.stowaways, lost: r.lost,
+      names, level, strangers: r.strangers, pickpockets: r.pickpockets,
       hideCounts: !!v.hideCounts,
       dares: !!v.dares,
       specials: !!v.specials,

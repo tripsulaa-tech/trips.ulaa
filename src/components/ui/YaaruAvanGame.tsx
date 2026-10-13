@@ -16,25 +16,26 @@ import { Confetti, GameTile } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, glass, eyebrow, shareCardImage, cleanName } from './gameUi';
 import YaaruAvanOnline from './YaaruAvanOnline';
 import SpecialList from './YaaruAvanSpecialList';
+import YaaruAvanRules from './YaaruAvanRules';
 import { loadOnlineSession } from './yaaruAvanRoomApi';
 import { LEVELS, CATEGORY_LABEL } from './yaaruAvanWords';
 import type { Level } from './yaaruAvanWords';
 import {
-  MIN_PLAYERS, MAX_PLAYERS, POINTS, maxLost, countsFor, rolesValid, recommendedRoles, clampRoles, describeOrder,
+  MIN_PLAYERS, MAX_PLAYERS, POINTS, maxPickpockets, countsFor, rolesValid, recommendedRoles, clampRoles, describeOrder,
   dealRound, drawPair, drawDare, checkWinner, roundPoints,
   computeAwards, emptyStats, loadSetup, saveSetup, uniqueNames, shuffle,
 } from './yaaruAvanEngine';
 import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './yaaruAvanEngine';
 import { ENABLED_SPECIALS, describeSpecial, activeSpecial, maxSpecials, specialBonus, specialLabel } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
-import { useStowawayContentSync } from './useGameContentSync';
+import { useYaaruAvanContentSync } from './useGameContentSync';
 
-// "Stowaway": a group bluffing game for Coming Soon trips. Two ways to play:
+// "Yaaru Avan?": a group bluffing game for Coming Soon trips. Two ways to play:
 // pass-and-play on one phone (this file), or online with a room code where
 // everyone uses their own phone (YaaruAvanOnline.tsx, backed by Supabase).
 // The rest of this comment describes the pass-and-play mode.
-// Everyone is on the same trip, but a Stowaway sneaked aboard with the wrong
-// plan. Explorers get one word, Stowaways a similar one, and the Lost Soul
+// Everyone is on the same trip, but a Stranger sneaked aboard with the wrong
+// plan. Tourists get one word, Strangers a similar one, and the Pickpocket
 // none at all. Each stop the group talks it out and offboards
 // someone. Front-end only: one phone is passed around, nothing is sent
 // anywhere. Only the word bag, names and settings live in localStorage
@@ -45,16 +46,16 @@ const MUTE_KEY = 'ulaa:packbag:muted'; // shared with the other games: one sound
 const REVEAL_MS = 1900;
 
 type Phase =
-  | 'idle' | 'online' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'payback' | 'roundEnd' | 'final';
+  | 'idle' | 'online' | 'rules' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'revenger' | 'roundEnd' | 'final';
 
-const ROLE_LABEL: Record<Role, string> = { explorer: 'Tourist', stowaway: 'Stranger', lost: 'Pickpocket' };
+const ROLE_LABEL: Record<Role, string> = { tourist: 'Tourist', stranger: 'Stranger', pickpocket: 'Pickpocket' };
 const ROLE_TONE: Record<Role, string> = {
-  explorer: 'from-emerald-300 to-emerald-500 text-emerald-950',
-  stowaway: 'from-[#F0CE7A] to-gold text-dark',
-  lost: 'from-rose-300 to-rose-500 text-rose-950',
+  tourist: 'from-emerald-300 to-emerald-500 text-emerald-950',
+  stranger: 'from-[#F0CE7A] to-gold text-dark',
+  pickpocket: 'from-rose-300 to-rose-500 text-rose-950',
 };
 
-interface StowawayGameProps {
+interface YaaruAvanGameProps {
   tripId?: string;
   tripSlug?: string;
   tripTitle?: string;
@@ -82,8 +83,8 @@ const rowsFor = (preset: string[] | undefined, saved: string[]): string[] => {
   return rows;
 };
 
-export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', className = '', compact = false, thumb = false, row = false, players: presetPlayers, defaultOpen = false }: StowawayGameProps) {
-  useStowawayContentSync();
+export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', className = '', compact = false, thumb = false, row = false, players: presetPlayers, defaultOpen = false }: YaaruAvanGameProps) {
+  useYaaruAvanContentSync();
   const reduce = useReducedMotion();
 
   // ── Setup (saved on this device) ──
@@ -93,8 +94,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [phase, setPhase] = useState<Phase>(defaultOpen ? 'setup' : 'idle');
   const [savedRoom, setSavedRoom] = useState<string | null>(null);
   const [names, setNames] = useState<string[]>(() => rowsFor(presetPlayers, initial.names));
-  const [stowaways, setStowaways] = useState(() => (hasPreset ? clampRoles(Math.max(MIN_PLAYERS, presetNames(presetPlayers).length), initial.stowaways, initial.lost).stowaways : initial.stowaways));
-  const [lost, setLost] = useState(() => (hasPreset ? clampRoles(Math.max(MIN_PLAYERS, presetNames(presetPlayers).length), initial.stowaways, initial.lost).lost : initial.lost));
+  const [strangers, setStrangers] = useState(() => (hasPreset ? clampRoles(Math.max(MIN_PLAYERS, presetNames(presetPlayers).length), initial.strangers, initial.pickpockets).strangers : initial.strangers));
+  const [pickpockets, setPickpockets] = useState(() => (hasPreset ? clampRoles(Math.max(MIN_PLAYERS, presetNames(presetPlayers).length), initial.strangers, initial.pickpockets).pickpockets : initial.pickpockets));
   const [hideCounts, setHideCounts] = useState(initial.hideCounts);
   const [level, setLevel] = useState<Level>(initial.level);
   const [useDares, setUseDares] = useState(initial.dares);
@@ -126,7 +127,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [lastOut, setLastOut] = useState<number | null>(null);
   // Mr. White (Pickpocket) always guesses when eliminated, even as a Lover who leaves with their
   // partner. `guessQueue` holds the Pickpockets still waiting for their guess; `guessAfter` is the
-  // player whose elimination started it (the one a Revenger payback or the next stop follows).
+  // player whose elimination started it (the one a Revenger revenge or the next stop follows).
   const [guessQueue, setGuessQueue] = useState<number[]>([]);
   const [guessAfter, setGuessAfter] = useState<number | null>(null);
   // Boomerang: after the votes bounce, only the players who cast them can be voted out.
@@ -154,8 +155,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
 
   const filled = names.map(cleanName).filter(Boolean);
   const playerCount = filled.length;
-  const counts = countsFor(Math.max(playerCount, MIN_PLAYERS), stowaways, lost);
-  const valid = playerCount >= MIN_PLAYERS && rolesValid(playerCount, stowaways, lost);
+  const counts = countsFor(Math.max(playerCount, MIN_PLAYERS), strangers, pickpockets);
+  const valid = playerCount >= MIN_PLAYERS && rolesValid(playerCount, strangers, pickpockets);
 
   // The roster changed (another trip picked, someone ticked present/absent):
   // refill the setup list and keep the role counts valid. Only the setup
@@ -168,9 +169,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
       const list = presetNames(presetPlayers);
       setNames(rowsFor(presetPlayers, []));
       if (list.length >= MIN_PLAYERS) {
-        const r = clampRoles(list.length, stowaways, lost);
-        setStowaways(r.stowaways);
-        setLost(r.lost);
+        const r = clampRoles(list.length, strangers, pickpockets);
+        setStrangers(r.strangers);
+        setPickpockets(r.pickpockets);
       }
     }
   }
@@ -178,8 +179,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // Persist setup as it changes. A roster handed in by the host is not
   // remembered as this device's own list of names.
   useEffect(() => {
-    saveSetup({ names: hasPreset ? initial.names : names, stowaways, lost, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme });
-  }, [names, stowaways, lost, hideCounts, level, useDares, useSpecials, useMeme, hasPreset, initial.names]);
+    saveSetup({ names: hasPreset ? initial.names : names, strangers, pickpockets, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme });
+  }, [names, strangers, pickpockets, hideCounts, level, useDares, useSpecials, useMeme, hasPreset, initial.names]);
 
   useEffect(() => () => {
     timersRef.current.forEach(id => window.clearTimeout(id));
@@ -198,8 +199,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const adjustRoles = (n: number, s: number, l: number) => {
     if (n < MIN_PLAYERS) return;
     const r = clampRoles(n, s, l);
-    setStowaways(r.stowaways);
-    setLost(r.lost);
+    setStrangers(r.strangers);
+    setPickpockets(r.pickpockets);
   };
   const setName = (i: number, v: string) => setNames(ns => ns.map((n, k) => (k === i ? v.slice(0, 18) : n)));
   const addPlayer = () => {
@@ -210,14 +211,14 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     if (names.length <= MIN_PLAYERS) { setName(i, ''); return; }
     const next = names.filter((_, k) => k !== i);
     setNames(next);
-    adjustRoles(next.map(cleanName).filter(Boolean).length, stowaways, lost);
+    adjustRoles(next.map(cleanName).filter(Boolean).length, strangers, pickpockets);
   };
-  const onNameBlur = () => adjustRoles(playerCount, stowaways, lost);
+  const onNameBlur = () => adjustRoles(playerCount, strangers, pickpockets);
 
   const useRecommended = () => {
     const r = recommendedRoles(playerCount);
-    setStowaways(r.stowaways);
-    setLost(r.lost);
+    setStrangers(r.strangers);
+    setPickpockets(r.pickpockets);
     play('flip');
   };
 
@@ -238,7 +239,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const beginRound = (list: string[], no: number) => {
     clearTimers();
     const pair = drawPair(level, { tripTitle: no === 1 ? tripTitle : undefined });
-    const r = dealRound(list, countsFor(list.length, stowaways, lost), pair,
+    const r = dealRound(list, countsFor(list.length, strangers, pickpockets), pair,
       useSpecials && specialIds.length > 0 ? { enabled: specialIds, count: maxSpecials(list.length) } : undefined);
     setRound(r);
     setSeats(r.seats);
@@ -326,19 +327,19 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
 
   // ── Voting and offboarding ──
   const aliveIdx = seats.map((s, i) => (s.alive ? i : -1)).filter(i => i >= 0);
-  // A Backseat Rider who is out still votes from the back seat.
-  const voterIdx = seats.map((s, i) => (s.alive || (s.outOrder !== undefined && activeSpecial(s) === 'backseatRider') ? i : -1)).filter(i => i >= 0);
+  // A Ghost who is out still votes from the back seat.
+  const voterIdx = seats.map((s, i) => (s.alive || (s.outOrder !== undefined && activeSpecial(s) === 'ghost') ? i : -1)).filter(i => i >= 0);
   // After a Boomerang bounce only the players who voted against it are up for the vote.
   const candidateIdx = bounce ? aliveIdx.filter(i => bounce.includes(i)) : tiedIdx ? aliveIdx.filter(i => tiedIdx.includes(i)) : aliveIdx;
   // The Goddess of Justice is announced to everyone once the words are dealt (every other role stays secret).
-  const goddessSeat = useSpecials && specialIds.includes('tripLeader') ? seats.find(s => activeSpecial(s) === 'tripLeader') : undefined;
+  const goddessSeat = useSpecials && specialIds.includes('goddess') ? seats.find(s => activeSpecial(s) === 'goddess') : undefined;
   const goddessLine = goddessSeat
     ? `⚖️ ${goddessSeat.name} is the Goddess of Justice. ${goddessSeat.alive ? 'She' : 'She is out, but she still'} decides any tied vote.`
     : null;
   // Undercover rule: a Boomerang's first majority bounces the votes back onto the voters,
   // so at least one player still aboard must be ticked as a voter before we can go on.
   const boomerangNeedsVoters = selected !== null
-    && activeSpecial(seats[selected]) === 'returnTicket' && !seats[selected].ticketUsed
+    && activeSpecial(seats[selected]) === 'boomerang' && !seats[selected].boomerangUsed
     && !voters.some(vi => vi !== selected && seats[vi]?.alive);
   const toggleVoter = (i: number) => setVoters(v => (v.includes(i) ? v.filter(x => x !== i) : [...v, i]));
 
@@ -361,12 +362,12 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     const out = seats[selected];
     // Boomerang (Return Ticket): the first majority against them is not an elimination.
     // The votes bounce back onto the players who cast them, who are voted on instead.
-    if (activeSpecial(out) === 'returnTicket' && !out.ticketUsed) {
+    if (activeSpecial(out) === 'boomerang' && !out.boomerangUsed) {
       const bounced = voters.filter(vi => vi !== selected && seats[vi]?.alive);
       // Like Undercover, the votes bounce back onto the voters, so the voters must be known.
       // (The button is disabled until one is ticked; this is the safety net.)
       if (bounced.length === 0) return;
-      const marked = seats.map((s, i) => (i === selected ? { ...s, ticketUsed: true } : s));
+      const marked = seats.map((s, i) => (i === selected ? { ...s, boomerangUsed: true } : s));
       setSeats(marked);
       setLastOut(selected);
       setSelected(null);
@@ -411,14 +412,14 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
       });
       return;
     }
-    // Votes: anyone who pointed at a sneaky player was right; at an Explorer, wrong.
+    // Votes: anyone who pointed at a sneaky player was right; at an Tourist, wrong.
     setStats(st => {
       const next = { ...st };
       voters.forEach(vi => {
         const who = seats[vi]?.name;
         if (!who || vi === selected) return;
         const cur = { ...(next[who] ?? emptyStats()) };
-        if (out.role === 'explorer') cur.wrongVotes += 1; else cur.correctVotes += 1;
+        if (out.role === 'tourist') cur.wrongVotes += 1; else cur.correctVotes += 1;
         next[who] = cur;
       });
       return next;
@@ -444,8 +445,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
       list.forEach(s => {
         const cur = { ...(next[s.name] ?? emptyStats()) };
         cur.points += pts[s.name] ?? 0;
-        if (result === 'stowaways' && s.role === 'stowaway' && s.alive) cur.survivedAsStowaway += 1;
-        if (result === 'lost-steal' && s.role === 'lost' && s.alive) cur.lostWins += 1;
+        if (result === 'strangers' && s.role === 'stranger' && s.alive) cur.survivedAsStranger += 1;
+        if (result === 'pickpocket-steal' && s.role === 'pickpocket' && s.alive) cur.pickpocketWins += 1;
         next[s.name] = cur;
       });
       return next;
@@ -453,7 +454,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     // The losing side draws a dare, if the group opted in.
     setDare(useDares ? drawDare() : null);
     setPhase('roundEnd');
-    play(result === 'explorers' ? 'win' : 'gold');
+    play(result === 'tourists' ? 'win' : 'gold');
     buzz([40, 60, 40]);
   };
 
@@ -462,10 +463,10 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     // Undercover: Mr. White always gets a last guess when eliminated. That includes a Pickpocket
     // who leaves right after their Lover. The player who was voted out guesses first.
     const queue: number[] = [];
-    if (out.role === 'lost') queue.push(outIdx);
+    if (out.role === 'pickpocket') queue.push(outIdx);
     if (activeSpecial(out) === 'lovers' && out.partner) {
       const pi = list.findIndex(s => s.name === out.partner && s.outStop === out.outStop && (s.outOrder ?? 0) === (out.outOrder ?? 0) + 1);
-      if (pi >= 0 && list[pi].role === 'lost') queue.push(pi);
+      if (pi >= 0 && list[pi].role === 'pickpocket') queue.push(pi);
     }
     if (queue.length === 0) { afterGuess(list, outIdx); return; }
     setGuessAfter(outIdx);
@@ -474,19 +475,19 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setPhase('guess');
   };
 
-  // Everything that can follow someone leaving: a win, a Payback, or the next stop.
+  // Everything that can follow someone leaving: a win, a Revenge, or the next stop.
   const afterGuess = (list: Seat[], outIdx: number) => {
     const w = checkWinner(list);
-    if (w) { finishRound(list, w === 'explorers' ? 'explorers' : 'stowaways'); return; }
+    if (w) { finishRound(list, w === 'tourists' ? 'tourists' : 'strangers'); return; }
     const out = list[outIdx];
-    if (activeSpecial(out) === 'payback' && !out.paybackDone && list.some(s => s.alive)) {
-      setPhase('payback');
+    if (activeSpecial(out) === 'revenger' && !out.revengeDone && list.some(s => s.alive)) {
+      setPhase('revenger');
       return;
     }
     startStop(stopNo + 1, outIdx + 1, list);
   };
 
-  // Lost Soul's last chance: the group judges the spoken guess.
+  // Pickpocket's last chance: the group judges the spoken guess.
   const judgeGuess = (correct: boolean) => {
     if (lastOut === null) return;
     ensure();
@@ -494,7 +495,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
       // She stays "aboard" for scoring purposes: she stole the round.
       const list = seats.map((s, i) => (i === lastOut ? { ...s, alive: true } : s));
       setSeats(list);
-      finishRound(list, 'lost-steal');
+      finishRound(list, 'pickpocket-steal');
       return;
     }
     play('bad');
@@ -509,11 +510,11 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     afterGuess(seats, after);
   };
 
-  // Payback: the player who just left takes one more with them.
-  const confirmPayback = (victim: number) => {
+  // Revenge: the player who just left takes one more with them.
+  const confirmRevenge = (victim: number) => {
     if (lastOut === null) return;
     ensure();
-    const marked = seats.map((s, i) => (i === lastOut ? { ...s, paybackDone: true } : s));
+    const marked = seats.map((s, i) => (i === lastOut ? { ...s, revengeDone: true } : s));
     const updated = eliminate(marked, victim, stopNo);
     setSeats(updated);
     setLastOut(victim);
@@ -599,7 +600,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
 
   const countLine = hideCounts
     ? `${seats.length} players. Roles are secret.`
-    : `${counts.explorers} Tourists, ${counts.stowaways} Stranger${counts.stowaways === 1 ? '' : 's'}${counts.lost ? `, ${counts.lost} Pickpocket${counts.lost === 1 ? '' : 's'}` : ''}`;
+    : `${counts.tourists} Tourists, ${counts.strangers} Stranger${counts.strangers === 1 ? '' : 's'}${counts.pickpockets ? `, ${counts.pickpockets} Pickpocket${counts.pickpockets === 1 ? '' : 's'}` : ''}`;
 
   return (
     <div className={className}>
@@ -662,6 +663,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               <button type="button" onClick={toggleMute} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                 {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />} Sound {muted ? 'off' : 'on'}
               </button>
+              <button type="button" onClick={() => { ensure(); setPhase('rules'); }} className="mt-3 ml-4 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
+                <Question size={14} /> How to play
+              </button>
               </div>
             </div>
           )}
@@ -670,6 +674,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
           {phase === 'online' && (
             <YaaruAvanOnline tripTitle={tripTitle} onExit={() => { setSavedRoom(loadOnlineSession()?.code ?? null); setPhase('idle'); }} />
           )}
+
+          {/* ── Rules ── */}
+          {phase === 'rules' && <YaaruAvanRules onBack={() => setPhase('idle')} />}
 
           {/* ── Setup ── */}
           {phase === 'setup' && (
@@ -719,7 +726,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                     <p className="text-sm font-bold text-white leading-tight">Tourists</p>
                     <p className="text-[11px] text-cream/50">Same word. Always the majority.</p>
                   </div>
-                  <span className="font-display text-xl font-extrabold text-white tabular-nums w-8 text-center">{playerCount >= MIN_PLAYERS ? counts.explorers : '-'}</span>
+                  <span className="font-display text-xl font-extrabold text-white tabular-nums w-8 text-center">{playerCount >= MIN_PLAYERS ? counts.tourists : '-'}</span>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-gold/20 text-[#F0CE7A] flex items-center justify-center"><Ticket size={16} weight="duotone" /></span>
@@ -727,9 +734,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                     <p className="text-sm font-bold text-white leading-tight">Strangers</p>
                     <p className="text-[11px] text-cream/50">A similar but different word.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={playerCount < MIN_PLAYERS || stowaways <= (lost > 0 ? 0 : 1)} onClick={() => setStowaways(s => s - 1)}><Minus size={14} weight="bold" /></button>
-                  <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{stowaways}</span>
-                  <button type="button" className={stepBtn} aria-label="More Strangers" disabled={playerCount < MIN_PLAYERS || !rolesValid(playerCount, stowaways + 1, lost)} onClick={() => setStowaways(s => s + 1)}><Plus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Strangers" disabled={playerCount < MIN_PLAYERS || strangers <= (pickpockets > 0 ? 0 : 1)} onClick={() => setStrangers(s => s - 1)}><Minus size={14} weight="bold" /></button>
+                  <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{strangers}</span>
+                  <button type="button" className={stepBtn} aria-label="More Strangers" disabled={playerCount < MIN_PLAYERS || !rolesValid(playerCount, strangers + 1, pickpockets)} onClick={() => setStrangers(s => s + 1)}><Plus size={14} weight="bold" /></button>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2.5">
                   <span className="w-8 h-8 rounded-lg bg-rose-400/20 text-rose-300 flex items-center justify-center"><Question size={16} weight="duotone" /></span>
@@ -737,9 +744,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                     <p className="text-sm font-bold text-white leading-tight">Pickpocket</p>
                     <p className="text-[11px] text-cream/50">No word at all. Blends in.</p>
                   </div>
-                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={playerCount < MIN_PLAYERS || lost <= (stowaways > 0 ? 0 : 1)} onClick={() => setLost(l => l - 1)}><Minus size={14} weight="bold" /></button>
-                  <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{lost}</span>
-                  <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={playerCount < MIN_PLAYERS || lost >= maxLost(playerCount) || !rolesValid(playerCount, stowaways, lost + 1)} onClick={() => setLost(l => l + 1)}><Plus size={14} weight="bold" /></button>
+                  <button type="button" className={stepBtn} aria-label="Fewer Pickpockets" disabled={playerCount < MIN_PLAYERS || pickpockets <= (strangers > 0 ? 0 : 1)} onClick={() => setPickpockets(l => l - 1)}><Minus size={14} weight="bold" /></button>
+                  <span className="font-display text-xl font-extrabold text-white tabular-nums w-6 text-center">{pickpockets}</span>
+                  <button type="button" className={stepBtn} aria-label="More Pickpockets" disabled={playerCount < MIN_PLAYERS || pickpockets >= maxPickpockets(playerCount) || !rolesValid(playerCount, strangers, pickpockets + 1)} onClick={() => setPickpockets(l => l + 1)}><Plus size={14} weight="bold" /></button>
                 </div>
               </div>
               {playerCount < MIN_PLAYERS && <p className="text-xs text-[#F0CE7A] mb-2">Add at least {MIN_PLAYERS} travellers to pick roles.</p>}
@@ -1038,7 +1045,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
             </div>
           )}
 
-          {/* ── Lost Soul's last chance ── */}
+          {/* ── Pickpocket's last chance ── */}
           {phase === 'guess' && out && (
             <div className="relative text-center pt-6">
               <motion.div
@@ -1080,8 +1087,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
             </div>
           )}
 
-          {/* ── Payback: pick who goes with them ── */}
-          {phase === 'payback' && out && (
+          {/* ── Revenge: pick who goes with them ── */}
+          {phase === 'revenger' && out && (
             <div className="relative">
               <div className="pr-12 mb-3">
                 <p className={eyebrow}>The Revenger</p>
@@ -1090,7 +1097,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {aliveIdx.map(i => (
-                  <button key={i} type="button" onClick={() => confirmPayback(i)}
+                  <button key={i} type="button" onClick={() => confirmRevenge(i)}
                     className="rounded-2xl border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98]">
                     <span className="block font-display text-base font-extrabold leading-tight truncate">{seats[i].name}</span>
                     <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {seats[i].seat}</span>
@@ -1103,33 +1110,33 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
           {/* ── Round end ── */}
           {phase === 'roundEnd' && round && outcome && (
             <div className="relative text-center pt-2">
-              {!reduce && outcome !== 'explorers' && <Confetti />}
-              {!reduce && outcome === 'explorers' && <Confetti />}
+              {!reduce && outcome !== 'tourists' && <Confetti />}
+              {!reduce && outcome === 'tourists' && <Confetti />}
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Round {roundNo} over</span>
               <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
-                {outcome === 'explorers' ? 'Tourists win!' : outcome === 'stowaways' ? 'The Strangers got away!' : 'The Pickpocket stole it!'}
+                {outcome === 'tourists' ? 'Tourists win!' : outcome === 'strangers' ? 'The Strangers got away!' : 'The Pickpocket stole it!'}
               </h2>
               <p className="text-sm text-cream/60 mt-1 mb-3">
-                {outcome === 'explorers' ? 'Every Stranger and Pickpocket was caught.' : outcome === 'stowaways' ? 'Only one Tourist was left.' : 'One lucky guess flipped the whole round.'}
+                {outcome === 'tourists' ? 'Every Stranger and Pickpocket was caught.' : outcome === 'strangers' ? 'Only one Tourist was left.' : 'One lucky guess flipped the whole round.'}
               </p>
 
               <div className="grid grid-cols-2 gap-2 mb-3">
                 <div className={`${glass} py-2.5`}>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Tourists had</p>
-                  <p className="font-display text-lg font-extrabold text-white leading-tight px-2">{round.explorerWord}</p>
+                  <p className="font-display text-lg font-extrabold text-white leading-tight px-2">{round.touristWord}</p>
                 </div>
                 <div className={`${glass} py-2.5`}>
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-cream/50">Strangers had</p>
-                  <p className="font-display text-lg font-extrabold text-[#F0CE7A] leading-tight px-2">{round.stowawayWord}</p>
+                  <p className="font-display text-lg font-extrabold text-[#F0CE7A] leading-tight px-2">{round.strangerWord}</p>
                 </div>
               </div>
-              <p className="text-[11px] text-cream/40 mb-3">{CATEGORY_LABEL[round.pair.category]} · {seats.filter(s => s.role === 'lost').length > 0 ? `${seats.filter(s => s.role === 'lost').map(s => s.name).join(' & ')} ${seats.filter(s => s.role === 'lost').length > 1 ? 'were' : 'was'} the Pickpocket` : 'No Pickpocket this round'}</p>
+              <p className="text-[11px] text-cream/40 mb-3">{CATEGORY_LABEL[round.pair.category]} · {seats.filter(s => s.role === 'pickpocket').length > 0 ? `${seats.filter(s => s.role === 'pickpocket').map(s => s.name).join(' & ')} ${seats.filter(s => s.role === 'pickpocket').length > 1 ? 'were' : 'was'} the Pickpocket` : 'No Pickpocket this round'}</p>
 
               <ul className={`${glass} text-left divide-y divide-white/10 mb-3`}>
                 {[...seats].sort((x, y) => (gained[y.name] ?? 0) - (gained[x.name] ?? 0)).map(s => (
                   <li key={s.name} className="flex items-center gap-2.5 px-3 py-2">
                     <span className={`w-6 h-6 shrink-0 rounded-full bg-gradient-to-br ${ROLE_TONE[s.role]} flex items-center justify-center`} aria-hidden="true">
-                      {s.role === 'explorer' ? <Eye size={13} weight="bold" /> : s.role === 'stowaway' ? <Ticket size={13} weight="bold" /> : <Skull size={13} weight="bold" />}
+                      {s.role === 'tourist' ? <Eye size={13} weight="bold" /> : s.role === 'stranger' ? <Ticket size={13} weight="bold" /> : <Skull size={13} weight="bold" />}
                     </span>
                     <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{s.name}</span>
                     <span className="text-[11px] text-cream/50">{ROLE_LABEL[s.role]}{s.special && describeSpecial(s) ? ` · ${specialLabel(s)}` : ''}</span>
@@ -1140,12 +1147,12 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
 
               {dare && (
                 <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-3 text-left">
-                  <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Gift size={11} weight="fill" /> Trip dare for the {outcome === 'explorers' ? 'Strangers' : 'Tourists'}</p>
+                  <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><Gift size={11} weight="fill" /> Trip dare for the {outcome === 'tourists' ? 'Strangers' : 'Tourists'}</p>
                   <p className="text-sm font-bold text-white mt-0.5">{dare}</p>
                 </div>
               )}
 
-              <p className="text-[11px] text-cream/45 mb-3">Points: Tourists +{POINTS.explorerWin}, a winning Stranger +{POINTS.stowawaySurvive}, a winning Pickpocket +{POINTS.lostSurvive} (lasting to the end or guessing the Tourists' word).{seats.some(s => s.special) ? ' Special-role bonuses are added on top.' : ''}</p>
+              <p className="text-[11px] text-cream/45 mb-3">Points: Tourists +{POINTS.touristWin}, a winning Stranger +{POINTS.strangerSurvive}, a winning Pickpocket +{POINTS.pickpocketSurvive} (lasting to the end or guessing the Tourists' word).{seats.some(s => s.special) ? ' Special-role bonuses are added on top.' : ''}</p>
 
               <button type="button" onClick={nextRound} className={`${primaryBtn} mb-2.5`}><Play size={18} weight="fill" /> Play next round</button>
               <button type="button" onClick={endSession} className={ghostBtn}><Trophy size={16} weight="fill" /> End game and see awards</button>

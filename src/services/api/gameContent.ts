@@ -9,7 +9,7 @@ import { supabase } from '../supabase';
 // When a key has no row, or the row can't be read, every game simply keeps the
 // content that ships with the app, so a missing or broken row never stops a game.
 
-export type GameContentKey = 'truth-or-dare' | 'charades-tamil' | 'stowaway' | 'twin-prompts';
+export type GameContentKey = 'truth-or-dare' | 'charades-tamil' | 'yaaru-avan' | 'twin-prompts';
 
 const PREFIX = 'game:';
 const dbKey = (key: GameContentKey) => `${PREFIX}${key}`;

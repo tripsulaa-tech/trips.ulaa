@@ -5,51 +5,51 @@
 // (points, vote rules, final guesses) is built on top of it in later phases.
 
 export type SpecialId =
-  | 'clown' | 'rivals'                           // Batch 1
-  | 'returnTicket' | 'tripLeader' | 'backseatRider' // Batch 2
-  | 'payback' | 'luckyDip' | 'lovers';           // Batch 3
+  | 'joyFool' | 'duelists'                           // Batch 1
+  | 'boomerang' | 'goddess' | 'ghost' // Batch 2
+  | 'revenger' | 'falafelVendor' | 'lovers';           // Batch 3
 
-/** Specials that sit on one player. Rivals (the Duelists) and Lovers need two. */
-export type SoloSpecialId = Exclude<SpecialId, 'rivals' | 'lovers'>;
+/** Specials that sit on one player. The Duelists and Lovers need two. */
+export type SoloSpecialId = Exclude<SpecialId, 'duelists' | 'lovers'>;
 
 export interface SpecialDef {
   id: SpecialId;
   name: string;
   emoji: string;
   batch: 1 | 2 | 3;
-  /** Rivals and Lovers are dealt to two players at once. */
+  /** Duelists and Lovers are dealt to two players at once. */
   pair: boolean;
 }
 
 export const SPECIALS: readonly SpecialDef[] = [
-  { id: 'clown', name: 'The Joy Fool', emoji: '🤡', batch: 1, pair: false },
-  { id: 'returnTicket', name: 'The Boomerang', emoji: '🪃', batch: 2, pair: false },
-  { id: 'tripLeader', name: 'Goddess of Justice', emoji: '⚖️', batch: 2, pair: false },
-  { id: 'backseatRider', name: 'The Ghost', emoji: '👻', batch: 2, pair: false },
+  { id: 'joyFool', name: 'The Joy Fool', emoji: '🤡', batch: 1, pair: false },
+  { id: 'boomerang', name: 'The Boomerang', emoji: '🪃', batch: 2, pair: false },
+  { id: 'goddess', name: 'Goddess of Justice', emoji: '⚖️', batch: 2, pair: false },
+  { id: 'ghost', name: 'The Ghost', emoji: '👻', batch: 2, pair: false },
   { id: 'lovers', name: 'The Lovers', emoji: '💕', batch: 3, pair: true },
-  { id: 'luckyDip', name: 'The Falafel Vendor', emoji: '🧆', batch: 3, pair: false },
-  { id: 'payback', name: 'The Revenger', emoji: '🦸', batch: 3, pair: false },
-  { id: 'rivals', name: 'The Duelists', emoji: '🤠', batch: 1, pair: true },
+  { id: 'falafelVendor', name: 'The Falafel Vendor', emoji: '🧆', batch: 3, pair: false },
+  { id: 'revenger', name: 'The Revenger', emoji: '🦸', batch: 3, pair: false },
+  { id: 'duelists', name: 'The Duelists', emoji: '🤠', batch: 1, pair: true },
 ];
 
 /** Smallest group each special can appear in. Anything not listed has no minimum. */
 export const MIN_PLAYERS: Partial<Record<SpecialId, number>> = {
-  luckyDip: 4,
-  payback: 5,
-  rivals: 5,
+  falafelVendor: 4,
+  revenger: 5,
+  duelists: 5,
   lovers: 5,
 };
 
 /** One-line "what is it for" for each special, for the host's picker (not per player). */
 export const SPECIAL_BLURB: Record<SpecialId, string> = {
-  clown: 'The Joy Fool earns 4 bonus points if they are the first player voted out of the game.',
-  returnTicket: 'The first time the Boomerang receives the majority of votes, they are not eliminated. Instead, all votes against the Boomerang are redirected back to the players who cast them!',
-  tripLeader: 'If a vote ends in a tie, the Goddess of Justice decides which player will be eliminated. She can make this decision even if she has already been eliminated. Everyone is told who she is once the words are dealt.',
-  backseatRider: 'Even after being eliminated, the Ghost retains the power to vote during future voting rounds.',
+  joyFool: 'The Joy Fool earns 4 bonus points if they are the first player voted out of the game.',
+  boomerang: 'The first time the Boomerang receives the majority of votes, they are not eliminated. Instead, all votes against the Boomerang are redirected back to the players who cast them!',
+  goddess: 'If a vote ends in a tie, the Goddess of Justice decides which player will be eliminated. She can make this decision even if she has already been eliminated. Everyone is told who she is once the words are dealt.',
+  ghost: 'Even after being eliminated, the Ghost retains the power to vote during future voting rounds.',
   lovers: 'Two players are secretly in love. If one lover is eliminated, the other is automatically eliminated too. This role is available when playing with 5 or more players.',
-  luckyDip: 'At the start of each game, the Falafel Vendor receives a random special ability. Use it wisely and discover what surprises await! Available with 4 or more players.',
-  payback: 'When the Revenger is eliminated, she can immediately eliminate one other player of her choice. Available with 5 or more players.',
-  rivals: 'Two players are secretly paired in a duel. When one duelist is eliminated, they lose 2 points, while the surviving duelist earns 2 bonus points. Available with 5 or more players.',
+  falafelVendor: 'At the start of each game, the Falafel Vendor receives a random special ability. Use it wisely and discover what surprises await! Available with 4 or more players.',
+  revenger: 'When the Revenger is eliminated, she can immediately eliminate one other player of her choice. Available with 5 or more players.',
+  duelists: 'Two players are secretly paired in a duel. When one duelist is eliminated, they lose 2 points, while the surviving duelist earns 2 bonus points. Available with 5 or more players.',
 };
 
 const DEF_BY_ID = new Map(SPECIALS.map(d => [d.id, d]));
@@ -61,27 +61,27 @@ export const maxSpecials = (players: number): number => Math.max(0, Math.floor(p
 
 export interface SpecialAssignment {
   special: SpecialId;
-  /** Lucky Dip only: the ability it turned into (Batch 1 or 2, never a pair). */
+  /** Falafel Vendor only: the ability it turned into (Batch 1 or 2, never a pair). */
   dipAs?: SoloSpecialId;
-  /** Rivals and Lovers only: the other player in the pair. */
+  /** Duelists and Lovers only: the other player in the pair. */
   partner?: string;
 }
 
 /** Anything carrying the special fields (a SpecialAssignment, or a game seat). */
 export interface SpecialLike { special?: SpecialId; dipAs?: SoloSpecialId; partner?: string }
 
-/** The ability that actually applies: a Lucky Dip's drawn ability, else the special itself. */
+/** The ability that actually applies: a Falafel Vendor's drawn ability, else the special itself. */
 export const activeSpecial = (a: SpecialLike): SpecialId | undefined => a.dipAs ?? a.special;
 
-/** Display name for an ability id; `dip` marks one that came from a Lucky Dip. */
+/** Display name for an ability id; `dip` marks one that came from a Falafel Vendor. */
 export const specialDisplayName = (id: SpecialId, dip = false): string =>
-  (dip ? `${specialName('luckyDip')}: ${specialName(id)}` : specialName(id));
+  (dip ? `${specialName('falafelVendor')}: ${specialName(id)}` : specialName(id));
 
 /** Display name of the ability that applies, or null when there is no special. */
 export const specialLabel = (a: SpecialLike): string | null => {
   const id = activeSpecial(a);
   if (!id) return null;
-  return a.dipAs ? `${specialName('luckyDip')}: ${specialName(id)}` : specialName(id);
+  return a.dipAs ? `${specialName('falafelVendor')}: ${specialName(id)}` : specialName(id);
 };
 
 /** Every special is switched on for pass-and-play. */
@@ -104,8 +104,8 @@ function shuffled<T>(arr: readonly T[], rng: () => number): T[] {
  * - Specials with a minimum group size (MIN_PLAYERS) are skipped in smaller groups.
  * - One special per player, so pairs can never share a player.
  * - Specials land on any player, whatever their core role.
- * - Lucky Dip draws any solo ability that is enabled and not
- *   already dealt this round. If none is left, the Lucky Dip is dropped.
+ * - Falafel Vendor draws any solo ability that is enabled and not
+ *   already dealt this round. If none is left, the Falafel Vendor is dropped.
  * Returns only the players who got one.
  */
 export function assignSpecials(
@@ -145,9 +145,9 @@ export function assignSpecials(
 
   const dealt = new Set<SpecialId>(chosen.map(d => d.id));
   for (const [name, a] of out) {
-    if (a.special !== 'luckyDip') continue;
+    if (a.special !== 'falafelVendor') continue;
     const pool = SPECIALS.filter(d =>
-      !d.pair && d.id !== 'luckyDip' && enabled.includes(d.id) && !dealt.has(d.id));
+      !d.pair && d.id !== 'falafelVendor' && enabled.includes(d.id) && !dealt.has(d.id));
     if (pool.length === 0) { out.delete(name); continue; }
     const pick = pool[Math.floor(rng() * pool.length)].id as SoloSpecialId;
     dealt.add(pick);
@@ -159,7 +159,7 @@ export function assignSpecials(
 // ── What the specials do ──
 // Tune the numbers here; the game and the tests both read these.
 
-/** The Clown (Joy Fool) scores this if they are the first player voted out. */
+/** The Joy Fool scores this if they are the first player voted out. */
 export const CLOWN_POINTS = 4;
 /** Duelists: the first one voted out loses this, the other gains it. */
 export const RIVAL_POINTS = 2;
@@ -169,13 +169,13 @@ export function describeSpecial(a: SpecialLike): string | null {
   const id = activeSpecial(a);
   if (!id) return null;
   const base = SPECIAL_BLURB[id].replace(/\s*(This role is available|Available) (when playing )?with \d+ or more players\.$/, '');
-  if ((id === 'rivals' || id === 'lovers') && !a.partner) return null;
+  if ((id === 'duelists' || id === 'lovers') && !a.partner) return null;
   return base;
 }
 
 /** Specials announced to everyone once the words are dealt: only the Goddess of Justice.
  *  Every other role stays secret. (A Falafel Vendor who draws her is announced too.) */
-export const PUBLIC_SPECIALS: readonly SpecialId[] = ['tripLeader'];
+export const PUBLIC_SPECIALS: readonly SpecialId[] = ['goddess'];
 
 /** The bits of a seat the bonus rules need. */
 export interface BonusSeat {
@@ -197,8 +197,8 @@ export function specialBonus(seats: readonly BonusSeat[]): Record<string, number
     out[s.name] = 0;
     if (!s.special) continue;
     const sp = s.dipAs ?? s.special;
-    if (sp === 'clown' && s.outOrder === 1) out[s.name] += CLOWN_POINTS;
-    if (sp === 'rivals' && s.partner) {
+    if (sp === 'joyFool' && s.outOrder === 1) out[s.name] += CLOWN_POINTS;
+    if (sp === 'duelists' && s.partner) {
       // Duel: the first one voted out loses points, the other wins them.
       const mine = s.outOrder ?? Infinity;
       const theirs = byName.get(s.partner)?.outOrder ?? Infinity;

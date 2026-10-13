@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useToast } from '../../components/ui/useToast';
-import { getStowawayOnlineOpen, setStowawayOnlineOpen } from '../../services/api/yaaruAvanOnlineSwitch';
+import { getYaaruAvanOnlineOpen, setYaaruAvanOnlineOpen } from '../../services/api/yaaruAvanOnlineSwitch';
 import { smallBtn, primaryBtn } from './GameCard';
 
 // Admin -> Games -> Yaaru Avan?: one switch for online play. Closed (the
@@ -16,7 +16,7 @@ export default function YaaruAvanOnlineSwitch() {
 
   useEffect(() => {
     let live = true;
-    getStowawayOnlineOpen()
+    getYaaruAvanOnlineOpen()
       .then(v => { if (live) setOpen(v); })
       .catch(err => { console.error(err); toast.error(`Couldn't load the online switch. Has ${MIGRATION} been run in Supabase?`); });
     return () => { live = false; };
@@ -30,7 +30,7 @@ export default function YaaruAvanOnlineSwitch() {
     if (!next && !window.confirm('Close online play? Every room that is open right now will end.')) return;
     setBusy(true);
     try {
-      await setStowawayOnlineOpen(next);
+      await setYaaruAvanOnlineOpen(next);
       setOpen(next);
       toast.success(next ? 'Online play is open.' : 'Online play is closed.');
     } catch (err) {

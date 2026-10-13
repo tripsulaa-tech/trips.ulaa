@@ -7,15 +7,15 @@ import GameCard, { EmptyGame, primaryBtn } from './GameCard';
 import type { TripRoster } from './useTripRoster';
 
 // A game under Admin -> Games -> Play that is dealt the ticked travellers
-// (Truth or Dare, Stowaway). "Make share link" saves the names (first names
+// (Truth or Dare, Yaaru Avan). "Make share link" saves the names (first names
 // only) under a short code and the link opens the game with them filled in.
 // Changing the ticks later keeps the same code via "Update link".
 interface RosterGameCardProps {
   roster: TripRoster;
-  /** Used for the saved link's key, e.g. "stowaway". */
+  /** Used for the saved link's key, e.g. "yaaru-avan". */
   id: string;
   title: string;
-  /** Public path of the game page, e.g. "/play/stowaway/game". */
+  /** Public path of the game page, e.g. "/play/yaaru-avan/game". */
   path: string;
   minPlayers: number;
   maxPlayers: number;
@@ -24,7 +24,7 @@ interface RosterGameCardProps {
   create: (names: string[], tripTitle: string) => Promise<string>;
   update: (code: string, names: string[], tripTitle: string) => Promise<boolean>;
   migrationFile: string;
-  /** Extra content under the card's share row (e.g. Stowaway's online switch). */
+  /** Extra content under the card's share row (e.g. Yaaru Avan's online switch). */
   extra?: ReactNode;
 }
 

@@ -2,7 +2,7 @@
 //
 // The vote/elimination rules live inside YaaruAvanGame.tsx (React state), so they cannot be
 // imported. `Flow` below is a line-for-line port of the component's transitions
-// (eliminate, confirmOffboard, afterReveal, afterGuess, judgeGuess, confirmPayback, finishRound).
+// (eliminate, confirmOffboard, afterReveal, afterGuess, judgeGuess, confirmRevenge, finishRound).
 // If you change those functions in the component, change this port too.
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -11,7 +11,7 @@ import type { Outcome, Role, Seat } from './yaaruAvanEngine';
 import { CLOWN_POINTS, RIVAL_POINTS, SPECIALS, activeSpecial, assignSpecials, specialBonus } from './yaaruAvanSpecials';
 import type { SoloSpecialId, SpecialId } from './yaaruAvanSpecials';
 
-type Phase = 'vote' | 'saved' | 'guess' | 'payback' | 'roundEnd';
+type Phase = 'vote' | 'saved' | 'guess' | 'revenger' | 'roundEnd';
 
 class Flow {
   seats: Seat[];
@@ -31,7 +31,7 @@ class Flow {
   idx = (name: string) => this.seats.findIndex(s => s.name === name);
   get aliveIdx() { return this.seats.map((s, i) => (s.alive ? i : -1)).filter(i => i >= 0); }
   get voterIdx() {
-    return this.seats.map((s, i) => (s.alive || (s.outOrder !== undefined && activeSpecial(s) === 'backseatRider') ? i : -1)).filter(i => i >= 0);
+    return this.seats.map((s, i) => (s.alive || (s.outOrder !== undefined && activeSpecial(s) === 'ghost') ? i : -1)).filter(i => i >= 0);
   }
   get candidateIdx() {
     return this.bounce ? this.aliveIdx.filter(i => this.bounce!.includes(i))
@@ -56,11 +56,11 @@ class Flow {
     expect(this.candidateIdx).toContain(selected);
     const voters = voterNames.map(this.idx);
     const out = this.seats[selected];
-    if (activeSpecial(out) === 'returnTicket' && !out.ticketUsed) {
+    if (activeSpecial(out) === 'boomerang' && !out.boomerangUsed) {
       const bounced = voters.filter(vi => vi !== selected && this.seats[vi]?.alive);
       // Undercover: the votes bounce onto the voters, so the voters must be known (button disabled otherwise).
       if (bounced.length === 0) throw new Error('boomerang needs voters');
-      const marked = this.seats.map((s, i) => (i === selected ? { ...s, ticketUsed: true } : s));
+      const marked = this.seats.map((s, i) => (i === selected ? { ...s, boomerangUsed: true } : s));
       this.seats = marked;
       this.log.push(`${name} bounced`);
       if (bounced.length === 1) {
@@ -77,7 +77,7 @@ class Flow {
       // Several voters: the votes move onto them, so they are tied. The Goddess picks among them;
       // with no Goddess they describe once more and the others re-vote (tiedIdx), as for any tie.
       const tied = [...bounced].sort((a, b) => a - b);
-      if (this.seats.some(x => activeSpecial(x) === 'tripLeader')) { this.bounce = tied; this.tiedIdx = null; }
+      if (this.seats.some(x => activeSpecial(x) === 'goddess')) { this.bounce = tied; this.tiedIdx = null; }
       else { this.bounce = null; this.tiedIdx = tied; }
       this.lastOut = selected;
       this.phase = 'vote'; // goVote() / the tie-break describe round after the reveal delay
@@ -97,10 +97,10 @@ class Flow {
     const out = list[outIdx];
     // Undercover: Mr. White always gets a last guess when eliminated, including as a Lover's partner.
     const queue: number[] = [];
-    if (out.role === 'lost') queue.push(outIdx);
+    if (out.role === 'pickpocket') queue.push(outIdx);
     if (activeSpecial(out) === 'lovers' && out.partner) {
       const pi = list.findIndex(s => s.name === out.partner && s.outStop === out.outStop && (s.outOrder ?? 0) === (out.outOrder ?? 0) + 1);
-      if (pi >= 0 && list[pi].role === 'lost') queue.push(pi);
+      if (pi >= 0 && list[pi].role === 'pickpocket') queue.push(pi);
     }
     if (queue.length === 0) { this.afterGuess(list, outIdx); return; }
     this.guessAfter = outIdx;
@@ -111,9 +111,9 @@ class Flow {
 
   private afterGuess(list: Seat[], outIdx: number) {
     const w = checkWinner(list);
-    if (w) { this.finish(list, w === 'explorers' ? 'explorers' : 'stowaways'); return; }
+    if (w) { this.finish(list, w === 'tourists' ? 'tourists' : 'strangers'); return; }
     const out = list[outIdx];
-    if (activeSpecial(out) === 'payback' && !out.paybackDone && list.some(s => s.alive)) { this.phase = 'payback'; return; }
+    if (activeSpecial(out) === 'revenger' && !out.revengeDone && list.some(s => s.alive)) { this.phase = 'revenger'; return; }
     this.stopNo += 1;
     this.phase = 'vote';
   }
@@ -123,7 +123,7 @@ class Flow {
     if (correct) {
       const list = this.seats.map((s, i) => (i === this.lastOut ? { ...s, alive: true } : s));
       this.seats = list;
-      this.finish(list, 'lost-steal');
+      this.finish(list, 'pickpocket-steal');
       return;
     }
     if (this.guessQueue.length > 0) {
@@ -136,11 +136,11 @@ class Flow {
     this.afterGuess(this.seats, after);
   }
 
-  payback(victimName: string) {
-    expect(this.phase).toBe('payback');
+  revenge(victimName: string) {
+    expect(this.phase).toBe('revenger');
     const victim = this.idx(victimName);
     expect(this.aliveIdx).toContain(victim);
-    const marked = this.seats.map((s, i) => (i === this.lastOut ? { ...s, paybackDone: true } : s));
+    const marked = this.seats.map((s, i) => (i === this.lastOut ? { ...s, revengeDone: true } : s));
     const updated = this.eliminate(marked, victim, this.stopNo);
     this.seats = updated;
     this.lastOut = victim;
@@ -161,22 +161,22 @@ class Flow {
 
 // ── helpers ──
 const seat = (name: string, role: Role, extra: Partial<Seat> = {}): Seat => ({
-  name, role, word: role === 'lost' ? null : 'w', seat: '1A', alive: true, ...extra,
+  name, role, word: role === 'pickpocket' ? null : 'w', seat: '1A', alive: true, ...extra,
 });
 /** n players: T1..T? tourists, then strangers S1.., pickpockets L1.. */
 function table(tourists: number, strangers: number, pickpockets = 0, specials: Record<string, Partial<Seat>> = {}) {
   const seats: Seat[] = [];
-  for (let i = 1; i <= tourists; i++) seats.push(seat(`T${i}`, 'explorer', specials[`T${i}`]));
-  for (let i = 1; i <= strangers; i++) seats.push(seat(`S${i}`, 'stowaway', specials[`S${i}`]));
-  for (let i = 1; i <= pickpockets; i++) seats.push(seat(`L${i}`, 'lost', specials[`L${i}`]));
+  for (let i = 1; i <= tourists; i++) seats.push(seat(`T${i}`, 'tourist', specials[`T${i}`]));
+  for (let i = 1; i <= strangers; i++) seats.push(seat(`S${i}`, 'stranger', specials[`S${i}`]));
+  for (let i = 1; i <= pickpockets; i++) seats.push(seat(`L${i}`, 'pickpocket', specials[`L${i}`]));
   return new Flow(seats);
 }
 
 // ═════════════════════════════════════════════════════════════
-describe('Joy Fool (clown)', () => {
+describe('Joy Fool (joyFool)', () => {
   it('earns +4 when voted out first, whatever their core role', () => {
     for (const who of ['T1', 'S1', 'L1']) {
-      const f = table(4, 1, 1, { [who]: { special: 'clown' } });
+      const f = table(4, 1, 1, { [who]: { special: 'joyFool' } });
       f.vote(who);
       if ((f.phase as Phase) === 'guess') f.judgeGuess(false);
       // finish the round: kick the remaining sneaky players
@@ -190,28 +190,28 @@ describe('Joy Fool (clown)', () => {
   });
 
   it('earns nothing when voted out second', () => {
-    const f = table(4, 1, 0, { T1: { special: 'clown' } });
+    const f = table(4, 1, 0, { T1: { special: 'joyFool' } });
     f.vote('T2');
     f.vote('T1');
     expect(specialBonus(f.seats).T1).toBe(0);
   });
 
-  it('earns nothing if never voted out, and a Falafel Vendor who drew clown behaves the same', () => {
-    const f = table(4, 1, 0, { T1: { special: 'luckyDip', dipAs: 'clown' } });
+  it('earns nothing if never voted out, and a Falafel Vendor who drew joyFool behaves the same', () => {
+    const f = table(4, 1, 0, { T1: { special: 'falafelVendor', dipAs: 'joyFool' } });
     f.vote('T1');
     expect(specialBonus(f.seats).T1).toBe(CLOWN_POINTS);
   });
 
   it('is spared a bonus when a Lover partner dies first (order 1 belongs to the lover)', () => {
-    const f = table(5, 1, 0, { T1: { special: 'lovers', partner: 'T2' }, T2: { special: 'lovers', partner: 'T1' }, T3: { special: 'clown' } });
+    const f = table(5, 1, 0, { T1: { special: 'lovers', partner: 'T2' }, T2: { special: 'lovers', partner: 'T1' }, T3: { special: 'joyFool' } });
     f.vote('T1');                       // T1 order 1, T2 order 2
     f.vote('T3');
     expect(specialBonus(f.seats).T3).toBe(0);
   });
 });
 
-describe('Duelists (rivals)', () => {
-  const duel = { T1: { special: 'rivals' as const, partner: 'T2' }, T2: { special: 'rivals' as const, partner: 'T1' } };
+describe('Duelists (duelists)', () => {
+  const duel = { T1: { special: 'duelists' as const, partner: 'T2' }, T2: { special: 'duelists' as const, partner: 'T1' } };
 
   it('first duelist out loses 2, the survivor gains 2', () => {
     const f = table(5, 1, 0, duel);
@@ -239,38 +239,38 @@ describe('Duelists (rivals)', () => {
   });
 
   it('duelist killed by a Revenger counts as out', () => {
-    const f = table(6, 1, 0, { ...duel, T3: { special: 'payback' } });
+    const f = table(6, 1, 0, { ...duel, T3: { special: 'revenger' } });
     f.vote('T3');
-    f.payback('T2');
+    f.revenge('T2');
     const b = specialBonus(f.seats);
     expect(b.T2).toBe(-2);
     expect(b.T1).toBe(2);
   });
 });
 
-describe('Boomerang (returnTicket)', () => {
+describe('Boomerang (boomerang)', () => {
   it('first majority: stays aboard, ticket used, votes bounce to the voters', () => {
-    const f = table(5, 1, 0, { T1: { special: 'returnTicket' } });
+    const f = table(5, 1, 0, { T1: { special: 'boomerang' } });
     expect(f.vote('T1', ['T2', 'T3', 'S1'])).toBe('bounced');
     expect(f.get('T1').alive).toBe(true);
-    expect(f.get('T1').ticketUsed).toBe(true);
+    expect(f.get('T1').boomerangUsed).toBe(true);
     expect(f.candidateIdx.map(i => f.seats[i].name).sort()).toEqual(['S1', 'T2', 'T3']);
     expect(f.stopNo).toBe(1);
   });
 
   it('several voters are tied: no Goddess means a tie-break re-vote, with a Goddess she picks', () => {
-    const f = table(6, 1, 0, { T1: { special: 'returnTicket' } });
+    const f = table(6, 1, 0, { T1: { special: 'boomerang' } });
     f.vote('T1', ['T2', 'T3']);
     expect(f.tiedIdx!.map(i => f.seats[i].name)).toEqual(['T2', 'T3']);
     expect(f.bounce).toBeNull();
-    const g = table(6, 1, 0, { T1: { special: 'returnTicket' }, T4: { special: 'tripLeader' } });
+    const g = table(6, 1, 0, { T1: { special: 'boomerang' }, T4: { special: 'goddess' } });
     g.vote('T1', ['T2', 'T3']);
     expect(g.bounce!.map(i => g.seats[i].name)).toEqual(['T2', 'T3']);
     expect(g.tiedIdx).toBeNull();
   });
 
   it('the bounced vote eliminates a bounced player, then the bounce clears', () => {
-    const f = table(5, 1, 0, { T1: { special: 'returnTicket' } });
+    const f = table(5, 1, 0, { T1: { special: 'boomerang' } });
     f.vote('T1', ['T2', 'T3']);
     f.vote('T2');
     expect(f.get('T2').alive).toBe(false);
@@ -279,7 +279,7 @@ describe('Boomerang (returnTicket)', () => {
   });
 
   it('second majority against the Boomerang eliminates them for real', () => {
-    const f = table(6, 1, 0, { T1: { special: 'returnTicket' } });
+    const f = table(6, 1, 0, { T1: { special: 'boomerang' } });
     f.vote('T1', ['T2', 'T3']);
     f.vote('T2');
     expect(f.vote('T1', ['T3', 'T4'])).toBe('out');
@@ -287,27 +287,27 @@ describe('Boomerang (returnTicket)', () => {
   });
 
   it('a Boomerang saved at the first stop is not saved again at a later stop', () => {
-    const f = table(7, 2, 0, { T1: { special: 'returnTicket' } });
+    const f = table(7, 2, 0, { T1: { special: 'boomerang' } });
     expect(f.vote('T1', ['T2'])).toBe('bounced-out');   // single voter: T2 goes straight off
     expect(f.get('T2').alive).toBe(false);
     f.vote('S1');               // someone else out
     expect(f.vote('T1', ['T3'])).toBe('out');
   });
 
-  it('works for a Falafel Vendor who drew returnTicket', () => {
-    const f = table(5, 1, 0, { T1: { special: 'luckyDip', dipAs: 'returnTicket' } });
+  it('works for a Falafel Vendor who drew boomerang', () => {
+    const f = table(5, 1, 0, { T1: { special: 'falafelVendor', dipAs: 'boomerang' } });
     expect(f.vote('T1', ['T2', 'T3'])).toBe('bounced');
   });
 
   it('a dead Ghost who voted against the Boomerang is not bounced (not alive)', () => {
-    const f = table(6, 1, 0, { T1: { special: 'returnTicket' }, T2: { special: 'backseatRider' } });
+    const f = table(6, 1, 0, { T1: { special: 'boomerang' }, T2: { special: 'ghost' } });
     f.vote('T2');
     f.vote('T1', ['T2', 'T3', 'T4']);
     expect(f.tiedIdx!.map(i => f.seats[i].name).sort()).toEqual(['T3', 'T4']);
   });
 
   it('Ghost + one living voter: only the living voter is bounced onto, and goes straight off', () => {
-    const f = table(6, 1, 0, { T1: { special: 'returnTicket' }, T2: { special: 'backseatRider' } });
+    const f = table(6, 1, 0, { T1: { special: 'boomerang' }, T2: { special: 'ghost' } });
     f.vote('T2');
     expect(f.vote('T1', ['T2', 'T3'])).toBe('bounced-out');
     expect(f.get('T3').alive).toBe(false);
@@ -315,88 +315,88 @@ describe('Boomerang (returnTicket)', () => {
   });
 
   it('the Boomerang cannot be confirmed without ticking who voted (Undercover: votes bounce onto the voters)', () => {
-    const f = table(5, 1, 0, { T1: { special: 'returnTicket' } });
+    const f = table(5, 1, 0, { T1: { special: 'boomerang' } });
     expect(() => f.vote('T1', [])).toThrow('boomerang needs voters');
-    expect(f.get('T1').ticketUsed).toBeUndefined();   // ticket not wasted
+    expect(f.get('T1').boomerangUsed).toBeUndefined();   // ticket not wasted
     expect(f.get('T1').alive).toBe(true);
   });
 
   it('a Boomerang whose only voter is a dead Ghost cannot bounce, so it is not confirmable either', () => {
-    const f = table(6, 1, 0, { T1: { special: 'returnTicket' }, T2: { special: 'backseatRider' } });
+    const f = table(6, 1, 0, { T1: { special: 'boomerang' }, T2: { special: 'ghost' } });
     f.vote('T2');
     expect(() => f.vote('T1', ['T2'])).toThrow('boomerang needs voters');
   });
 
   it('a single bounced voter who is a Pickpocket still gets the last-chance guess', () => {
-    const f = table(5, 1, 1, { T1: { special: 'returnTicket' } });
+    const f = table(5, 1, 1, { T1: { special: 'boomerang' } });
     expect(f.vote('T1', ['L1'])).toBe('bounced-out');
     expect(f.phase).toBe('guess');
   });
 
   it('a single bounced voter can end the game', () => {
-    const f = table(4, 1, 0, { T1: { special: 'returnTicket' } });
+    const f = table(4, 1, 0, { T1: { special: 'boomerang' } });
     f.vote('T1', ['S1']);
-    expect(f.outcome).toBe('explorers');
+    expect(f.outcome).toBe('tourists');
   });
 
   it('bouncing onto a Pickpocket leads to her last-chance guess', () => {
-    const f = table(5, 1, 1, { T1: { special: 'returnTicket' } });
+    const f = table(5, 1, 1, { T1: { special: 'boomerang' } });
     f.vote('T1', ['L1', 'T2']);
     f.vote('L1');
     expect(f.phase).toBe('guess');
   });
 });
 
-describe('Goddess of Justice (tripLeader)', () => {
+describe('Goddess of Justice (goddess)', () => {
   it('is findable even when eliminated, so she can still decide ties', () => {
-    const f = table(6, 1, 0, { T1: { special: 'tripLeader' } });
+    const f = table(6, 1, 0, { T1: { special: 'goddess' } });
     f.vote('T1');
-    const goddess = f.seats.find(s => activeSpecial(s) === 'tripLeader');
+    const goddess = f.seats.find(s => activeSpecial(s) === 'goddess');
     expect(goddess?.name).toBe('T1');
     expect(goddess?.alive).toBe(false);
   });
 
-  it('a Falafel Vendor who drew tripLeader is the Goddess too', () => {
-    const f = table(5, 1, 0, { T2: { special: 'luckyDip', dipAs: 'tripLeader' } });
-    expect(f.seats.find(s => activeSpecial(s) === 'tripLeader')?.name).toBe('T2');
+  it('a Falafel Vendor who drew goddess is the Goddess too', () => {
+    const f = table(5, 1, 0, { T2: { special: 'falafelVendor', dipAs: 'goddess' } });
+    expect(f.seats.find(s => activeSpecial(s) === 'goddess')?.name).toBe('T2');
   });
 
   it('gives no points', () => {
-    const f = table(5, 1, 0, { T1: { special: 'tripLeader' } });
+    const f = table(5, 1, 0, { T1: { special: 'goddess' } });
     f.vote('T1');
     expect(specialBonus(f.seats).T1).toBe(0);
   });
 });
 
-describe('Ghost (backseatRider)', () => {
+describe('Ghost (ghost)', () => {
   it('keeps voting after being eliminated, but cannot be voted for', () => {
-    const f = table(6, 1, 0, { T1: { special: 'backseatRider' } });
+    const f = table(6, 1, 0, { T1: { special: 'ghost' } });
     f.vote('T1');
     expect(f.voterIdx).toContain(f.idx('T1'));
     expect(f.candidateIdx).not.toContain(f.idx('T1'));
   });
 
   it('other eliminated players do not vote', () => {
-    const f = table(6, 1, 0, { T1: { special: 'backseatRider' } });
+    const f = table(6, 1, 0, { T1: { special: 'ghost' } });
     f.vote('T2');
     expect(f.voterIdx).not.toContain(f.idx('T2'));
   });
 
   it('does not count towards the win check', () => {
-    const f = table(3, 1, 0, { T1: { special: 'backseatRider' } });
+    const f = table(3, 1, 0, { T1: { special: 'ghost' } });
     f.vote('T1');                    // 2 tourists + 1 stranger alive
     f.vote('T2');                    // 1 tourist left -> sneaky win
-    expect(f.outcome).toBe('stowaways');
+    expect(f.outcome).toBe('strangers');
   });
 
   it('a Falafel Vendor who drew Ghost still votes after leaving', () => {
-    const f = table(6, 1, 0, { T1: { special: 'luckyDip', dipAs: 'backseatRider' } });
+    const f = table(6, 1, 0, { T1: { special: 'falafelVendor', dipAs: 'ghost' } });
     f.vote('T1');
     expect(f.voterIdx).toContain(f.idx('T1'));
   });
 
   it('a Ghost who is a Pickpocket still gets her guess', () => {
-    const f = table(5, 1, 1, { L1: { special: 'backseatRider' } });
+    const f = table(5, 1, 1, { L1: { special: 'ghost' } });
     f.vote('L1');
     expect(f.phase).toBe('guess');
     f.judgeGuess(false);
@@ -424,14 +424,14 @@ describe('Lovers', () => {
   it('can end the game: both lovers were the last Tourists but one', () => {
     const f = table(3, 1, 0, love('T1', 'T2'));
     f.vote('T1');          // T1 + T2 gone, 1 tourist left
-    expect(f.outcome).toBe('stowaways');
+    expect(f.outcome).toBe('strangers');
   });
 
   it('Stranger + Tourist as Lovers: voting out the Stranger takes the Tourist too', () => {
     const f = table(4, 1, 0, love('S1', 'T1'));
     f.vote('S1');
     expect(f.get('T1').alive).toBe(false);
-    expect(f.outcome).toBe('explorers');   // no sneaky left
+    expect(f.outcome).toBe('tourists');   // no sneaky left
   });
 
   it('a Pickpocket who leaves as the Lover partner still gets her last-chance guess (Undercover: Mr. White always guesses)', () => {
@@ -446,7 +446,7 @@ describe('Lovers', () => {
     const f = table(5, 1, 1, love('T1', 'L1'));
     f.vote('T1');
     f.judgeGuess(true);
-    expect(f.outcome).toBe('lost-steal');
+    expect(f.outcome).toBe('pickpocket-steal');
     expect(f.get('L1').alive).toBe(true);
     expect(f.gained.L1).toBe(6);
   });
@@ -465,7 +465,7 @@ describe('Lovers', () => {
     expect(f.phase).toBe('vote');
     f.vote('L1');
     f.judgeGuess(false);
-    expect(f.outcome).toBe('explorers');
+    expect(f.outcome).toBe('tourists');
   });
 
   it('two Pickpocket Lovers (10+ players): the voted one guesses first, then her partner', () => {
@@ -485,7 +485,7 @@ describe('Lovers', () => {
     f.vote('L1');
     f.judgeGuess(false);
     f.judgeGuess(true);
-    expect(f.outcome).toBe('lost-steal');
+    expect(f.outcome).toBe('pickpocket-steal');
     expect(f.get('L2').alive).toBe(true);
   });
 
@@ -496,20 +496,20 @@ describe('Lovers', () => {
   });
 
   it('a Revenger who picks a Lover takes the partner; a Pickpocket partner then guesses', () => {
-    const f = table(7, 1, 1, { ...love('T1', 'L1'), T3: { special: 'payback' } });
+    const f = table(7, 1, 1, { ...love('T1', 'L1'), T3: { special: 'revenger' } });
     f.vote('T3');
-    f.payback('T1');
+    f.revenge('T1');
     expect(f.get('L1').alive).toBe(false);
     expect(f.phase).toBe('guess');
     expect(f.seats[f.lastOut!].name).toBe('L1');
   });
 
   it('the Revenger check still follows the player who was voted out, not the guesser', () => {
-    // Pickpocket Revenger voted out: guess first, then payback, with her as the one who takes revenge.
-    const f = table(6, 1, 1, { L1: { special: 'payback' } });
+    // Pickpocket Revenger voted out: guess first, then revenge, with her as the one who takes revenge.
+    const f = table(6, 1, 1, { L1: { special: 'revenger' } });
     f.vote('L1');
     f.judgeGuess(false);
-    expect(f.phase).toBe('payback');
+    expect(f.phase).toBe('revenger');
     expect(f.seats[f.lastOut!].name).toBe('L1');
   });
 
@@ -521,9 +521,9 @@ describe('Lovers', () => {
   });
 
   it('Revenger pointing at a Lover takes the partner too', () => {
-    const f = table(7, 1, 0, { ...love('T1', 'T2'), T3: { special: 'payback' } });
+    const f = table(7, 1, 0, { ...love('T1', 'T2'), T3: { special: 'revenger' } });
     f.vote('T3');
-    f.payback('T1');
+    f.revenge('T1');
     expect(f.get('T1').alive).toBe(false);
     expect(f.get('T2').alive).toBe(false);
   });
@@ -536,26 +536,26 @@ describe('Lovers', () => {
   });
 
   it('Boomerang spared once; Lovers in the bounce still go together', () => {
-    const f = table(7, 1, 0, { ...love('T1', 'T2'), T3: { special: 'returnTicket' } });
+    const f = table(7, 1, 0, { ...love('T1', 'T2'), T3: { special: 'boomerang' } });
     f.vote('T3', ['T1', 'T4']);
     f.vote('T1');
     expect(f.get('T2').alive).toBe(false);
   });
 });
 
-describe('Falafel Vendor (luckyDip)', () => {
+describe('Falafel Vendor (falafelVendor)', () => {
   it('needs 4+ players; with 4, gets one of the solo abilities', () => {
     for (let i = 0; i < 100; i++) {
       // 3 players: Falafel Vendor is gated out, so only the Joy Fool can be dealt.
-      for (const a of assignSpecials(['a', 'b', 'c'], ['luckyDip', 'clown'], Infinity).values()) expect(a.special).toBe('clown');
+      for (const a of assignSpecials(['a', 'b', 'c'], ['falafelVendor', 'joyFool'], Infinity).values()) expect(a.special).toBe('joyFool');
     }
-    expect(assignSpecials(['a', 'b', 'c'], ['luckyDip'], Infinity).size).toBe(0);
+    expect(assignSpecials(['a', 'b', 'c'], ['falafelVendor'], Infinity).size).toBe(0);
     let hits = 0;
     for (let i = 0; i < 300; i++) {
-      // 4 players -> 1 slot, so 'luckyDip' + 'clown' can only deal one of them
-      const out = assignSpecials(['a', 'b', 'c', 'd'], ['luckyDip', 'clown', 'returnTicket'], Infinity);
+      // 4 players -> 1 slot, so 'falafelVendor' + 'joyFool' can only deal one of them
+      const out = assignSpecials(['a', 'b', 'c', 'd'], ['falafelVendor', 'joyFool', 'boomerang'], Infinity);
       expect(out.size).toBeLessThanOrEqual(1);
-      for (const a of out.values()) if (a.special === 'luckyDip') { hits++; expect(['clown', 'returnTicket']).toContain(a.dipAs); }
+      for (const a of out.values()) if (a.special === 'falafelVendor') { hits++; expect(['joyFool', 'boomerang']).toContain(a.dipAs); }
     }
     expect(hits).toBeGreaterThan(0);
   });
@@ -564,10 +564,10 @@ describe('Falafel Vendor (luckyDip)', () => {
     for (let i = 0; i < 500; i++) {
       const out = assignSpecials(['a', 'b', 'c', 'd'], SPECIALS.map(s => s.id), Infinity);
       for (const a of out.values()) {
-        expect(a.dipAs).not.toBe('payback');
-        expect(a.dipAs).not.toBe('rivals');
+        expect(a.dipAs).not.toBe('revenger');
+        expect(a.dipAs).not.toBe('duelists');
         expect(a.dipAs).not.toBe('lovers');
-        expect(a.special).not.toBe('payback');
+        expect(a.special).not.toBe('revenger');
       }
     }
   });
@@ -575,92 +575,92 @@ describe('Falafel Vendor (luckyDip)', () => {
   it('the drawn ability is a different role from every other role dealt', () => {
     for (let i = 0; i < 500; i++) {
       const out = assignSpecials(Array.from({ length: 12 }, (_, k) => `P${k}`), SPECIALS.map(s => s.id), Infinity);
-      const eff = [...out.values()].filter(a => a.special !== 'rivals' && a.special !== 'lovers').map(a => activeSpecial(a));
+      const eff = [...out.values()].filter(a => a.special !== 'duelists' && a.special !== 'lovers').map(a => activeSpecial(a));
       expect(new Set(eff).size).toBe(eff.length);
     }
   });
 
   it('a Vendor who drew Revenger can take someone with her', () => {
-    const f = table(6, 1, 0, { T1: { special: 'luckyDip', dipAs: 'payback' } });
+    const f = table(6, 1, 0, { T1: { special: 'falafelVendor', dipAs: 'revenger' } });
     f.vote('T1');
-    expect(f.phase).toBe('payback');
+    expect(f.phase).toBe('revenger');
   });
 });
 
-describe('Revenger (payback)', () => {
+describe('Revenger (revenge)', () => {
   it('after being voted out she picks one more player to go', () => {
-    const f = table(7, 2, 0, { T1: { special: 'payback' } });
+    const f = table(7, 2, 0, { T1: { special: 'revenger' } });
     f.vote('T1');
-    expect(f.phase).toBe('payback');
-    f.payback('S1');
+    expect(f.phase).toBe('revenger');
+    f.revenge('S1');
     expect(f.get('S1').alive).toBe(false);
     expect(f.phase).toBe('vote');
   });
 
-  it('only once: the victim cannot trigger another payback', () => {
-    const f = table(7, 2, 0, { T1: { special: 'payback' } });
+  it('only once: the victim cannot trigger another revenge', () => {
+    const f = table(7, 2, 0, { T1: { special: 'revenger' } });
     f.vote('T1');
-    f.payback('T2');
-    expect(f.get('T1').paybackDone).toBe(true);
+    f.revenge('T2');
+    expect(f.get('T1').revengeDone).toBe(true);
     expect(f.phase).toBe('vote');
   });
 
   it('is skipped when her elimination already ends the game', () => {
-    const f = table(3, 1, 0, { S1: { special: 'payback' } });
+    const f = table(3, 1, 0, { S1: { special: 'revenger' } });
     f.vote('S1');
-    expect(f.outcome).toBe('explorers');
+    expect(f.outcome).toBe('tourists');
   });
 
   it('her victim can end the game', () => {
-    const f = table(3, 1, 0, { T1: { special: 'payback' } });
+    const f = table(3, 1, 0, { T1: { special: 'revenger' } });
     f.vote('T1');              // 2 tourists, 1 stranger alive: continue
-    expect(f.phase).toBe('payback');
-    f.payback('T2');           // 1 tourist left
-    expect(f.outcome).toBe('stowaways');
+    expect(f.phase).toBe('revenger');
+    f.revenge('T2');           // 1 tourist left
+    expect(f.outcome).toBe('strangers');
   });
 
   it('her victim can be the last Stranger -> Tourists win', () => {
-    const f = table(4, 1, 0, { T1: { special: 'payback' } });
+    const f = table(4, 1, 0, { T1: { special: 'revenger' } });
     f.vote('T1');
-    f.payback('S1');
-    expect(f.outcome).toBe('explorers');
+    f.revenge('S1');
+    expect(f.outcome).toBe('tourists');
   });
 
   it('a Pickpocket victim still gets her last-chance guess', () => {
-    const f = table(6, 1, 1, { T1: { special: 'payback' } });
+    const f = table(6, 1, 1, { T1: { special: 'revenger' } });
     f.vote('T1');
-    f.payback('L1');
+    f.revenge('L1');
     expect(f.phase).toBe('guess');
     f.judgeGuess(true);
-    expect(f.outcome).toBe('lost-steal');
+    expect(f.outcome).toBe('pickpocket-steal');
   });
 
-  it('a Pickpocket Revenger: guess first, then (if wrong) payback', () => {
-    const f = table(6, 1, 1, { L1: { special: 'payback' } });
+  it('a Pickpocket Revenger: guess first, then (if wrong) revenge', () => {
+    const f = table(6, 1, 1, { L1: { special: 'revenger' } });
     f.vote('L1');
     expect(f.phase).toBe('guess');
     f.judgeGuess(false);
-    expect(f.phase).toBe('payback');
+    expect(f.phase).toBe('revenger');
   });
 
-  it('a Pickpocket Revenger who guesses right steals the round, no payback', () => {
-    const f = table(6, 1, 1, { L1: { special: 'payback' } });
+  it('a Pickpocket Revenger who guesses right steals the round, no revenge', () => {
+    const f = table(6, 1, 1, { L1: { special: 'revenger' } });
     f.vote('L1');
     f.judgeGuess(true);
-    expect(f.outcome).toBe('lost-steal');
+    expect(f.outcome).toBe('pickpocket-steal');
   });
 
   it('gives no points', () => {
-    const f = table(7, 2, 0, { T1: { special: 'payback' } });
+    const f = table(7, 2, 0, { T1: { special: 'revenger' } });
     f.vote('T1');
     expect(specialBonus(f.seats).T1).toBe(0);
   });
 
-  it('Revenger takes a Boomerang: the ticket does not protect them from payback', () => {
-    const f = table(7, 2, 0, { T1: { special: 'payback' }, T2: { special: 'returnTicket' } });
+  it('Revenger takes a Boomerang: the ticket does not protect them from revenge', () => {
+    const f = table(7, 2, 0, { T1: { special: 'revenger' }, T2: { special: 'boomerang' } });
     f.vote('T1');
-    f.payback('T2');
-    expect(f.get('T2').alive).toBe(false);   // payback is not a vote, no bounce
+    f.revenge('T2');
+    expect(f.get('T2').alive).toBe(false);   // revenge is not a vote, no bounce
   });
 });
 
@@ -670,7 +670,7 @@ describe('dealing: counts and limits', () => {
     for (let n = 3; n <= 20; n++) {
       for (let i = 0; i < 200; i++) {
         const out = assignSpecials(Array.from({ length: n }, (_, k) => `P${k}`), SPECIALS.map(s => s.id));
-        const pairs = [...out.values()].filter(a => a.special === 'rivals' || a.special === 'lovers').length / 2;
+        const pairs = [...out.values()].filter(a => a.special === 'duelists' || a.special === 'lovers').length / 2;
         expect(out.size - pairs).toBeLessThanOrEqual(Math.floor(n / 3));
       }
     }
@@ -691,14 +691,14 @@ describe('dealing: counts and limits', () => {
     for (let i = 0; i < 300; i++) {
       const out = assignSpecials(['a', 'b', 'c'], SPECIALS.map(s => s.id));
       expect(out.size).toBeLessThanOrEqual(1);
-      for (const a of out.values()) expect(['clown', 'returnTicket', 'tripLeader', 'backseatRider']).toContain(a.special);
+      for (const a of out.values()) expect(['joyFool', 'boomerang', 'goddess', 'ghost']).toContain(a.special);
     }
   });
 
   it('only host-ticked specials are dealt', () => {
     for (let i = 0; i < 300; i++) {
-      for (const a of assignSpecials(Array.from({ length: 9 }, (_, k) => `P${k}`), ['clown', 'lovers']).values()) {
-        expect(['clown', 'lovers']).toContain(a.special);
+      for (const a of assignSpecials(Array.from({ length: 9 }, (_, k) => `P${k}`), ['joyFool', 'lovers']).values()) {
+        expect(['joyFool', 'lovers']).toContain(a.special);
       }
     }
   });
@@ -728,12 +728,12 @@ describe('fuzz: random full games with all specials', () => {
       vi.spyOn(Math, 'random').mockImplementation(r);
       const n = 3 + Math.floor(r() * 18);                          // 3..20
       const sneaky = Math.max(1, Math.min(Math.floor((n - 1) / 2), 1 + Math.floor(r() * 3)));
-      const lost = n >= 5 && r() < 0.5 ? 1 : 0;
-      const stowaways = Math.min(sneaky, Math.max(0, Math.floor((n - 1) / 2) - lost));
-      const s = Math.max(stowaways, lost ? 0 : 1);
+      const pickpockets = n >= 5 && r() < 0.5 ? 1 : 0;
+      const strangers = Math.min(sneaky, Math.max(0, Math.floor((n - 1) / 2) - pickpockets));
+      const s = Math.max(strangers, pickpockets ? 0 : 1);
       const names = Array.from({ length: n }, (_, k) => `P${k + 1}`);
-      const counts = countsFor(n, s, lost);
-      if (counts.explorers <= s + lost) continue;                  // invalid split, skip
+      const counts = countsFor(n, s, pickpockets);
+      if (counts.tourists <= s + pickpockets) continue;                  // invalid split, skip
       const setup = dealRound(names, counts, { id: 'x', category: 'places', level: 'easy', a: 'A', b: 'B' } as never,
         { enabled: SPECIALS.map(d => d.id) });
       const f = new Flow(setup.seats);
@@ -749,7 +749,7 @@ describe('fuzz: random full games with all specials', () => {
           const pick = cands[Math.floor(r() * cands.length)];
           const voterPool = f.voterIdx.filter(i => i !== pick);
           let voters = voterPool.filter(() => r() < 0.7).map(i => f.seats[i].name);
-          const needs = activeSpecial(f.seats[pick]) === 'returnTicket' && !f.seats[pick].ticketUsed;
+          const needs = activeSpecial(f.seats[pick]) === 'boomerang' && !f.seats[pick].boomerangUsed;
           if (needs && !voters.some(v => f.get(v).alive)) {
             const alive = voterPool.filter(i => f.seats[i].alive);
             voters = [...voters, f.seats[alive[Math.floor(r() * alive.length)]].name];
@@ -758,9 +758,9 @@ describe('fuzz: random full games with all specials', () => {
         } else if (f.phase === 'guess') {
           guessed.add(f.seats[f.lastOut!].name);
           f.judgeGuess(r() < 0.25);
-        } else if (f.phase === 'payback') {
+        } else if (f.phase === 'revenger') {
           const cands = f.aliveIdx;
-          f.payback(f.seats[cands[Math.floor(r() * cands.length)]].name);
+          f.revenge(f.seats[cands[Math.floor(r() * cands.length)]].name);
         } else {
           throw new Error(`unexpected phase ${f.phase}`);
         }
@@ -781,9 +781,9 @@ describe('fuzz: random full games with all specials', () => {
       // ── final invariants ──
       // Undercover: every Pickpocket who was eliminated got her guess, unless the round ended before
       // her turn (a steal by an earlier guess, or the game being over is checked only after guesses).
-      if (f.outcome !== 'lost-steal') {
+      if (f.outcome !== 'pickpocket-steal') {
         for (const x of f.seats) {
-          if (x.role === 'lost' && x.outOrder !== undefined) expect(guessed.has(x.name)).toBe(true);
+          if (x.role === 'pickpocket' && x.outOrder !== undefined) expect(guessed.has(x.name)).toBe(true);
         }
       }
       outcomes[f.outcome!] = (outcomes[f.outcome!] ?? 0) + 1;
@@ -795,26 +795,26 @@ describe('fuzz: random full games with all specials', () => {
         void name;
       }
       const bonus = specialBonus(f.seats);
-      const duelists = f.seats.filter(x => activeSpecial(x) === 'rivals');
+      const duelists = f.seats.filter(x => activeSpecial(x) === 'duelists');
       if (duelists.length === 2) {
         const sum = bonus[duelists[0].name] + bonus[duelists[1].name];
         expect(sum).toBe(0);                                                       // a duel is zero-sum
       }
-      expect(f.seats.filter(x => activeSpecial(x) === 'clown' && x.outOrder === 1).length)
+      expect(f.seats.filter(x => activeSpecial(x) === 'joyFool' && x.outOrder === 1).length)
         .toBeLessThanOrEqual(1);
-      const solo = f.seats.filter(x => x.special && x.special !== 'rivals' && x.special !== 'lovers').map(x => activeSpecial(x));
+      const solo = f.seats.filter(x => x.special && x.special !== 'duelists' && x.special !== 'lovers').map(x => activeSpecial(x));
       expect(new Set(solo).size).toBe(solo.length);
       vi.restoreAllMocks();
     }
     expect(games).toBeGreaterThan(2500);
     // Every role and every outcome was exercised.
-    expect(Object.keys(outcomes).sort()).toEqual(['explorers', 'lost-steal', 'stowaways']);
-    for (const id of ['clown', 'rivals', 'returnTicket', 'tripLeader', 'backseatRider', 'payback', 'lovers']) {
+    expect(Object.keys(outcomes).sort()).toEqual(['pickpocket-steal', 'strangers', 'tourists']);
+    for (const id of ['joyFool', 'duelists', 'boomerang', 'goddess', 'ghost', 'revenger', 'lovers']) {
       expect(roleHits[id] ?? 0).toBeGreaterThan(0);
     }
     console.log('fuzz games', games, 'outcomes', outcomes, 'role seats', roleHits);
   }, 60000);
 
   // keep type imports used
-  it('types', () => { const x: SoloSpecialId = 'clown'; expect(x).toBe('clown'); });
+  it('types', () => { const x: SoloSpecialId = 'joyFool'; expect(x).toBe('joyFool'); });
 });

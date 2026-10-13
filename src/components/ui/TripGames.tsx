@@ -3,7 +3,7 @@ import TravelMatchGame from './TravelMatchGame';
 
 // The mini-games, shown on the Games page (`page` layout; `card` is a compact
 // two-up variant kept for reuse).
-// Truth or Dare, Stowaway, Find My Twin and Dumb Charades are admin-hosted now
+// Truth or Dare, Yaaru Avan, Find My Twin and Dumb Charades are admin-hosted now
 // (Admin -> Games), so they are not listed here.
 interface TripGamesProps {
   tripId: string;

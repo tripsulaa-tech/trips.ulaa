@@ -4,13 +4,13 @@ import { MIN_PLAYERS, SPECIALS, SPECIAL_BLURB, maxSpecials } from './yaaruAvanSp
 import type { SpecialId } from './yaaruAvanSpecials';
 
 const SPECIAL_TONE: Record<SpecialId, string> = {
-  clown: 'from-amber-300 to-orange-400',
-  rivals: 'from-rose-300 to-red-400',
-  returnTicket: 'from-emerald-300 to-teal-400',
-  tripLeader: 'from-[#F0CE7A] to-gold',
-  backseatRider: 'from-sky-300 to-blue-400',
-  payback: 'from-fuchsia-300 to-pink-400',
-  luckyDip: 'from-yellow-200 to-amber-300',
+  joyFool: 'from-amber-300 to-orange-400',
+  duelists: 'from-rose-300 to-red-400',
+  boomerang: 'from-emerald-300 to-teal-400',
+  goddess: 'from-[#F0CE7A] to-gold',
+  ghost: 'from-sky-300 to-blue-400',
+  revenger: 'from-fuchsia-300 to-pink-400',
+  falafelVendor: 'from-yellow-200 to-amber-300',
   lovers: 'from-pink-300 to-rose-400',
 };
 

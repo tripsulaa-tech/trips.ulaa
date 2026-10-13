@@ -1,6 +1,6 @@
 import type { Enquiry, UpcomingTrip } from '../../types/types-index';
 
-// Helpers shared by the admin-hosted games (Truth or Dare, Stowaway): which
+// Helpers shared by the admin-hosted games (Truth or Dare, Yaaru Avan): which
 // trips can be played on, and how travellers become on-screen player names.
 
 export const todayLocal = (): string => {
