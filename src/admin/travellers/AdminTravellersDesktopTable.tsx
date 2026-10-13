@@ -22,6 +22,10 @@ interface AdminTravellersDesktopTableProps {
   onEdit: (contact: TravellerContact) => void;
   onMerge: (contact: TravellerContact) => void;
   onDelete: (contact: TravellerContact) => void;
+  // Opens the traveller profile panel (click on the row or the name).
+  onOpenProfile: (contact: TravellerContact) => void;
+  // Contact whose profile is currently open — its row stays highlighted.
+  selectedKey?: string | null;
   deletingKey: string | null;
   // Keys of contacts whose phone number is also used by a different traveller.
   sharedPhoneKeys?: Set<string>;
@@ -37,7 +41,7 @@ interface AdminTravellersDesktopTableProps {
  *  the mobile card. */
 export default function AdminTravellersDesktopTable({
   pageItems, rangeStart, rangeEnd, total, searchQuery, setSearchQuery,
-  safePage, totalPages, setPage, onEdit, onMerge, onDelete, deletingKey, sharedPhoneKeys,
+  safePage, totalPages, setPage, onEdit, onMerge, onDelete, onOpenProfile, selectedKey, deletingKey, sharedPhoneKeys,
 }: AdminTravellersDesktopTableProps) {
   // Which contacts have their "+N more" trips opened out (by contact key).
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
@@ -80,7 +84,15 @@ export default function AdminTravellersDesktopTable({
               const extraTrips = contact.trips.slice(1);
               const isExpanded = expandedKeys.has(contact.key);
               return (
-                <tr key={contact.key} className="hover:bg-background/50">
+                <tr
+                  key={contact.key}
+                  // The whole row opens the profile, but anything interactive
+                  // inside it (WhatsApp/email links, +N more, Edit/Merge/
+                  // Delete) keeps doing its own thing.
+                  onClick={e => { if (!(e.target as HTMLElement).closest('a,button')) onOpenProfile(contact); }}
+                  aria-selected={selectedKey === contact.key}
+                  className={`cursor-pointer transition-colors ${selectedKey === contact.key ? 'bg-primary/5' : 'hover:bg-background/50'}`}
+                >
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-xs flex-shrink-0">
@@ -88,7 +100,14 @@ export default function AdminTravellersDesktopTable({
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="font-medium text-dark truncate max-w-[160px]">{contact.fullName}</p>
+                          <button
+                            type="button"
+                            onClick={() => onOpenProfile(contact)}
+                            title={`Open ${contact.fullName}'s profile`}
+                            className="font-medium text-dark truncate max-w-[160px] text-left hover:text-primary hover:underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary rounded-sm"
+                          >
+                            {contact.fullName}
+                          </button>
                           {contact.joinedTripCount > 1 && (
                             <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
                               <Repeat size={9} aria-hidden="true" /> {contact.joinedTripCount} trips

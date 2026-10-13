@@ -25,6 +25,7 @@ import type { TravellerContact } from './travellerContacts';
 // no per-row serial number.
 export default function AdminTravellerCard({
   contact,
+  onOpenProfile,
   onEdit,
   onMerge,
   onDelete,
@@ -32,6 +33,8 @@ export default function AdminTravellerCard({
   sharedPhone = false,
 }: {
   contact: TravellerContact;
+  // Opens the traveller profile (tap the avatar/name).
+  onOpenProfile: () => void;
   onEdit: () => void;
   onMerge: () => void;
   onDelete: () => void;
@@ -47,12 +50,23 @@ export default function AdminTravellerCard({
     <div className="bg-white rounded-lg shadow-card p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-sm flex-shrink-0">
+          <button
+            type="button"
+            onClick={onOpenProfile}
+            aria-label={`Open ${contact.fullName}'s profile`}
+            className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-sm flex-shrink-0"
+          >
             {getInitials(contact.fullName, '?')}
-          </div>
+          </button>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <p className="text-sm font-medium text-dark truncate">{contact.fullName}</p>
+              <button
+                type="button"
+                onClick={onOpenProfile}
+                className="text-sm font-medium text-dark truncate text-left hover:text-primary hover:underline underline-offset-2"
+              >
+                {contact.fullName}
+              </button>
               {contact.joinedTripCount > 1 && (
                 <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
                   <Repeat size={9} aria-hidden="true" /> {contact.joinedTripCount} trips

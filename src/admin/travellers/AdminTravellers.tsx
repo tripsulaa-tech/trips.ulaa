@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AddressBook, Repeat, Briefcase, XCircle } from '@phosphor-icons/react';
 import AdminLayout from '../AdminLayout';
 import { KpiCards, KpiCarousel } from '../../components/ui/KpiCards';
@@ -9,6 +10,8 @@ import AdminTravellersDesktopTable from './AdminTravellersDesktopTable';
 import AdminEditTravellerModal from './AdminEditTravellerModal';
 import AdminMergeTravellerModal from './AdminMergeTravellerModal';
 import AdminSharedPhoneAlert from './AdminSharedPhoneAlert';
+import AdminTravellerProfilePanel from './AdminTravellerProfilePanel';
+import { useTravellerWaitlist } from './useTravellerWaitlist';
 
 // Shared by both the mobile filter card and the desktop bar above the
 // table — same button, just two different places to sit depending on
@@ -59,6 +62,18 @@ export default function AdminTravellers() {
   } = useTravellers();
 
   const { pageItems, totalPages, safePage, rangeStart, rangeEnd } = paginate(contacts, page, pageSize);
+
+  // Traveller profile panel. Only the key is stored and the contact is looked
+  // up fresh from allContacts each render, so an edit/merge that reloads the
+  // data updates the open profile in place — and a deleted or merged-away
+  // contact simply stops resolving, which closes the panel.
+  const [profileKey, setProfileKey] = useState<string | null>(null);
+  const profileContact = profileKey ? allContacts.find(c => c.key === profileKey) ?? null : null;
+  // Prev/next walk the current filtered list (across pages), not just the
+  // visible page, so reviewing travellers one by one doesn't stop at a page edge.
+  const profileIndex = profileContact ? contacts.findIndex(c => c.key === profileContact.key) : -1;
+  const openAt = (i: number) => { if (contacts[i]) setProfileKey(contacts[i].key); };
+  const waitlist = useTravellerWaitlist(!!profileContact);
 
   const KPI_CARDS = [
     { label: 'Contacts', value: kpis.total, sub: 'Everyone we have a phone number for', icon: AddressBook },
@@ -146,6 +161,7 @@ export default function AdminTravellers() {
                 <AdminTravellerCard
                   key={contact.key}
                   contact={contact}
+                  onOpenProfile={() => setProfileKey(contact.key)}
                   onEdit={() => setEditTarget(contact)}
                   onMerge={() => openMerge(contact)}
                   onDelete={() => handleDelete(contact)}
@@ -169,6 +185,8 @@ export default function AdminTravellers() {
               onEdit={setEditTarget}
               onMerge={c => openMerge(c)}
               onDelete={handleDelete}
+              onOpenProfile={c => setProfileKey(c.key)}
+              selectedKey={profileContact?.key ?? null}
               deletingKey={deletingKey}
               sharedPhoneKeys={sharedPhoneKeys}
             />
@@ -181,6 +199,18 @@ export default function AdminTravellers() {
           </div>
         )}
       </div>
+
+      <AdminTravellerProfilePanel
+        contact={profileContact}
+        position={profileIndex + 1}
+        total={contacts.length}
+        onPrev={profileIndex > 0 ? () => openAt(profileIndex - 1) : undefined}
+        onNext={profileIndex >= 0 && profileIndex < contacts.length - 1 ? () => openAt(profileIndex + 1) : undefined}
+        onClose={() => setProfileKey(null)}
+        onEdit={setEditTarget}
+        waitlist={waitlist.state}
+        onRetryWaitlist={waitlist.retry}
+      />
 
       <AdminEditTravellerModal
         key={editTarget?.key ?? 'none'}
