@@ -37,6 +37,7 @@ type PersistedTravellersFilters = {
 export function useTravellers() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [persisted] = useState(() => loadPersisted<PersistedTravellersFilters>(FILTERS_STORAGE_KEY));
   const [searchQuery, setSearchQuery] = useState(persisted.searchQuery ?? '');
   const [repeatOnly, setRepeatOnly] = useState(persisted.repeatOnly ?? false);
@@ -66,8 +67,17 @@ export function useTravellers() {
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   const load = () => {
-    getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
+    getEnquiries()
+      .then(data => { setEnquiries(data); setLoadError(false); })
+      .catch(err => {
+        console.error(err);
+        setLoadError(true);
+        toast.error("Couldn't load the travellers. Please try again.");
+      })
+      .finally(() => setLoading(false));
   };
+
+  const retryLoad = () => { setLoading(true); load(); };
 
   useEffect(() => {
     load();
@@ -173,6 +183,10 @@ export function useTravellers() {
       return;
     }
     setSavingEdit(true);
+    // Only touch food_preference when the admin actually changed it — a
+    // contact can span several rows with different food values, and an
+    // unrelated edit (say, fixing the city) must not flatten them all.
+    const foodChanged = (form.food_preference || null) !== (editTarget.foodPreference ?? null);
     try {
       await Promise.all(editTarget.rows.map(row => updateEnquiryDetails(row.id, row, {
         full_name: form.full_name,
@@ -180,15 +194,20 @@ export function useTravellers() {
         emergency_contact: form.second_phone.trim() || null,
         email: form.email,
         city: form.city || null,
+        ...(foodChanged ? { food_preference: form.food_preference || null } : {}),
       })));
       setEditTarget(null);
       load();
     } catch (err) {
       console.error(err);
+      // Show the real reason (the database's own message) instead of a
+      // bare "Failed" — otherwise the only clue is hidden in the console.
       await alert(
         err instanceof Error && err.message === 'DUPLICATE_ENQUIRY'
           ? 'Another enquiry already uses this phone number for one of this traveller\u2019s trips.'
-          : 'Failed to save traveller details.'
+          : err instanceof Error && err.message
+            ? `Failed to save traveller details: ${err.message}`
+            : 'Failed to save traveller details.'
       );
     } finally {
       setSavingEdit(false);
@@ -295,6 +314,8 @@ export function useTravellers() {
 
   return {
     loading,
+    loadError,
+    retryLoad,
     contacts,
     editTarget, setEditTarget,
     savingEdit,

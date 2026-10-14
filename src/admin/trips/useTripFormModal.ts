@@ -493,11 +493,23 @@ export function useTripFormModal(load: () => void) {
       } else {
         await createUpcomingTrip(data);
       }
-      // All uploads are now committed to the DB — nothing to clean up on close.
-      initialModalUrlsRef.current = new Set();
-      setModalOpen(false);
       // Photos that were uploaded and then replaced before saving are deleted now.
       settleDraft(TRIP_DRAFT_KEY, collectTripFormUrls(form));
+      if (editingTrip) {
+        // Saving an existing trip keeps the pop-up open on it, so the admin can carry on
+        // editing or switch to another trip from the dropdown. What was just saved becomes the
+        // new starting point: nothing counts as unsaved, and its photos are no longer "new".
+        const newSlug = slugify(form.title);
+        const linkRenamed = updateLink && !linkProblem && !!newSlug && newSlug !== editingTrip.slug;
+        initialModalUrlsRef.current = collectTripFormUrls(form);
+        setBaseline(form);
+        setEditingTrip({ ...editingTrip, ...data, slug: linkRenamed ? newSlug : editingTrip.slug } as UpcomingTrip);
+        toast.success('Trip saved.');
+      } else {
+        // All uploads are now committed to the DB — nothing to clean up on close.
+        initialModalUrlsRef.current = new Set();
+        setModalOpen(false);
+      }
       load();
       if (linkProblem) {
         await alert({

@@ -25,6 +25,7 @@ import AdminWaitlistDesktopTable from './waitlist/AdminWaitlistDesktopTable';
 import AdminWaitlistMobileCards from './waitlist/AdminWaitlistMobileCards';
 import { hasSeatOpen } from './waitlist/waitlistShared';
 import { useToast } from '../components/ui/useToast';
+import LoadErrorState from '../components/ui/LoadErrorState';
 
 /** The Waitlist admin page — everyone who signed up to be notified when a
  *  sold-out trip frees a seat.
@@ -39,7 +40,7 @@ import { useToast } from '../components/ui/useToast';
  *  AdminWaitlist.tsx for maintainability; see that file's git history for
  *  the original single-component version. */
 export default function AdminWaitlist() {
-  const { entries, setEntries, seatsAvailable, allTrips, completedTrips, cancelledEnquiryIds, enquiriesForGroups, loading, load } = useWaitlistData();
+  const { entries, setEntries, seatsAvailable, allTrips, completedTrips, cancelledEnquiryIds, enquiriesForGroups, loading, loadError, load, retry: retryLoad } = useWaitlistData();
   const { groupLabel } = useWaitlistGroups(entries, enquiriesForGroups);
   const filters = useWaitlistFilters(entries, completedTrips, seatsAvailable, groupLabel);
   const { updating, queueRank, handleStatusChange, handleDelete, handleConvert } = useWaitlistActions(entries, setEntries, seatsAvailable, load);
@@ -119,6 +120,8 @@ export default function AdminWaitlist() {
           <div className="text-center py-16">
             <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
           </div>
+        ) : loadError && entries.length === 0 ? (
+          <LoadErrorState what="the waitlist" onRetry={retryLoad} />
         ) : filters.filtered.length === 0 ? (
           <div className="text-center py-16 bg-white rounded-lg shadow-card">
             <p className="font-display text-xl text-dark-muted">No waitlist signups found.</p>

@@ -62,10 +62,11 @@ import AdminEnquiriesMobileCards from './AdminEnquiriesMobileCards';
 import AdminEnquiriesFab from './AdminEnquiriesFab';
 import AdminEnquiryPaymentModal from './AdminEnquiryPaymentModal';
 import { useToast } from '../../components/ui/useToast';
+import LoadErrorState from '../../components/ui/LoadErrorState';
 
 export default function AdminEnquiries() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { enquiries, trips, completedTrips, loading, load, setTrips } = useEnquiryData();
+  const { enquiries, trips, completedTrips, loading, loadError, load, retry: retryLoad, setTrips } = useEnquiryData();
   // Scroll restoration for this page (restoring where the admin was after
   // e.g. expanding a card, tapping "View Full CRM", then coming back) is
   // now centralized in AdminLayout — see the scrollRestorationReady={!loading}
@@ -210,7 +211,8 @@ export default function AdminEnquiries() {
     load();
   });
 
-  const loadWaitlistCounts = () => fetchWaitlistCounts(setWaitlistEntriesForGroups, setWaitlistWaitingCounts);
+  const loadWaitlistCounts = () => fetchWaitlistCounts(setWaitlistEntriesForGroups, setWaitlistWaitingCounts, () =>
+    toast.error("Couldn't check who is on the waitlist, so waitlist warnings may be missing. Please refresh."));
 
   useEffect(() => {
     loadWaitlistCounts();
@@ -949,6 +951,8 @@ export default function AdminEnquiries() {
 
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading enquiries...</div>
+        ) : loadError && enquiries.length === 0 ? (
+          <LoadErrorState what="the enquiries" onRetry={retryLoad} />
         ) : filtered.length === 0 ? (
           <div className="bg-white rounded-lg shadow-card p-4 sm:p-6">
             {/* Search stays visible (the table's own search bar goes with the table), so a no-match

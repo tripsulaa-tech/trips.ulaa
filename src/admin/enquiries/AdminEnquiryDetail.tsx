@@ -24,6 +24,7 @@ import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import { useConfirm } from '../../components/ui/useConfirm';
 import { useAlert } from '../../components/ui/useAlert';
 import { useToast } from '../../components/ui/useToast';
+import LoadErrorState from '../../components/ui/LoadErrorState';
 import {
   getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin, getActivityLog,
   recordPayment, generatePendingInvoice, addAddonCharge,
@@ -72,6 +73,7 @@ export default function AdminEnquiryDetail() {
   const [enquiry, setEnquiry] = useState<Enquiry | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [paymentsLoading, setPaymentsLoading] = useState(false);
@@ -131,14 +133,24 @@ export default function AdminEnquiryDetail() {
         const found = list.find(e => e.id === id) || null;
         setEnquiry(found);
         setNotFound(!found);
+        setLoadError(false);
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        setLoadError(true);
+        toast.error("Couldn't load this enquiry. Please try again.");
+      })
       .finally(() => setLoading(false));
   };
 
+  const retryLoad = () => { setLoadError(false); setLoading(true); load(); };
+
   useEffect(() => {
     load();
-    getAllUpcomingTripsAdmin().then(setTrips).catch(console.error);
+    getAllUpcomingTripsAdmin().then(setTrips).catch(err => {
+      console.error(err);
+      toast.error("Couldn't load the trips list, so trip names may be missing. Please refresh.");
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
@@ -152,7 +164,10 @@ export default function AdminEnquiryDetail() {
     setPaymentsLoading(true);
     getPaymentsForEnquiry(enquiry.id)
       .then(rows => { if (!cancelled) setPayments(rows); })
-      .catch(err => console.error(err))
+      .catch(err => {
+        console.error(err);
+        if (!cancelled) toast.error("Couldn't load the payments for this enquiry. Please refresh.");
+      })
       .finally(() => { if (!cancelled) setPaymentsLoading(false); });
     return () => { cancelled = true; };
   }, [enquiry?.id]); // eslint-disable-line react-hooks/exhaustive-deps -- only enquiry.id is read; re-fetching on every enquiry reference change (e.g. every load() call) would refetch unnecessarily
@@ -172,7 +187,10 @@ export default function AdminEnquiryDetail() {
     setActivityLogLoading(true);
     getActivityLog(enquiry.id)
       .then(rows => { if (!cancelled) setActivityLog(rows); })
-      .catch(err => console.error(err))
+      .catch(err => {
+        console.error(err);
+        if (!cancelled) toast.error("Couldn't load the activity timeline. Please refresh.");
+      })
       .finally(() => { if (!cancelled) setActivityLogLoading(false); });
     return () => { cancelled = true; };
   }, [enquiry?.id, enquiry?.updated_at]); // eslint-disable-line react-hooks/exhaustive-deps -- only enquiry.id/updated_at are read; re-fetching on every enquiry reference change would refetch unnecessarily
@@ -528,7 +546,10 @@ export default function AdminEnquiryDetail() {
 
       setEnquiry(updated);
       setPaymentOpen(false);
-      getPaymentsForEnquiry(enquiry.id).then(setPayments).catch(console.error);
+      getPaymentsForEnquiry(enquiry.id).then(setPayments).catch(err => {
+        console.error(err);
+        toast.error('Payment saved, but the payment list could not be refreshed. Please reload the page.');
+      });
     } catch (err) {
       console.error(err);
       alert(err instanceof Error ? err.message : 'Failed to save payment details.');
@@ -830,6 +851,19 @@ export default function AdminEnquiryDetail() {
     return (
       <AdminLayout title="Enquiry Details" scrollRestorationReady={false}>
         <div className="p-6 text-dark-muted text-sm">Loading…</div>
+      </AdminLayout>
+    );
+  }
+
+  if (loadError && !enquiry) {
+    return (
+      <AdminLayout title="Enquiry Details" scrollRestorationReady>
+        <div className="p-6 space-y-3">
+          <LoadErrorState what="this enquiry" onRetry={retryLoad} />
+          <Button variant="outline" size="sm" onClick={() => navigate('/admin/enquiries')}>
+            <ArrowLeft size={14} aria-hidden="true" /> Back to Enquiries
+          </Button>
+        </div>
       </AdminLayout>
     );
   }

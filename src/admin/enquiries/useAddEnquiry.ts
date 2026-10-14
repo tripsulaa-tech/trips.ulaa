@@ -10,6 +10,7 @@ import type { EnquiryForm, WaitlistPersonForm } from './AdminEnquiriesShared';
 import { buildTravellerContacts } from '../travellers/travellerContacts';
 import type { TravellerContact } from '../travellers/travellerContacts';
 import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 import { NO_EMAIL_PLACEHOLDER, realEmail } from '../../utils/placeholderEmail';
 
 /** Owns the "Log an Enquiry" modal — its form state, the waitlist-conversion
@@ -40,6 +41,7 @@ export function useAddEnquiry(params: {
 }) {
   const { trips, enquiries, setTrips, load, loadWaitlistCounts, showToast, getTripPrice } = params;
   const alert = useAlert();
+  const toast = useToast();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -371,7 +373,10 @@ export function useAddEnquiry(params: {
           : {}),
       }, amountPaid > 0 ? { payment_method: form.payment_method || undefined, utr_number: form.payment_utr || undefined } : undefined);
       if (convertingWaitlist) {
-        await markWaitlistConverted(convertingWaitlist.id, created.id).catch(console.error);
+        await markWaitlistConverted(convertingWaitlist.id, created.id).catch(err => {
+          console.error(err);
+          toast.warning('The enquiry was added, but the waitlist entry could not be marked as converted. Please update it on the Waitlist page.');
+        });
         setConvertingWaitlist(null);
         loadWaitlistCounts();
       }

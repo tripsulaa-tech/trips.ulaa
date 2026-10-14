@@ -6,9 +6,9 @@ import {
   Users,
   User,
   CalendarDot as CalendarClock,
-  ArrowRight,
   Bird,
   Baby,
+  Package,
 } from '@phosphor-icons/react';
 import FoodMark from '../../components/ui/FoodMark';
 import { TableHeaderBar, TablePagination, SortableTh } from '../../components/ui/DataTableChrome';
@@ -22,7 +22,7 @@ import {
   PACKAGE_CONFIG,
   foodBadge, foodPreferenceKey, SOURCE_CONFIG,
   listStatusBadge, nextManualAction,
-  closedReasonLabel, canSetFollowUp, followUpStatus,
+  closedReasonLabel, canSetFollowUp, followUpStatus, isNotInterested,
   canSetBookingFollowUp, bookingFollowUpStatus,
 } from './AdminEnquiryCommon';
 import { isGeneralContactMessage, groupColorFor } from './enquiryGrouping';
@@ -87,23 +87,26 @@ interface AdminEnquiriesDesktopTableProps {
  *  variants of that cell below; only the wrapping element and whether the
  *  booking ID is shown beneath it differ. */
 function PaymentSummaryLine({ e }: { e: Enquiry }) {
+  // Two short lines: amount paid of total on top, then ONE coloured status
+  // line. For a partial payment that line is just the balance ("₹26,999
+  // due") — "Partial" and the due amount used to say the same thing twice.
+  const status = paymentStatus(e);
+  const balance = paymentBalance(e);
+  const isPartial = paymentFilterKey(e) === 'partial' && balance != null;
+  const colorClass = status.color.includes('green') ? 'text-green-700'
+    : status.color.includes('amber') ? 'text-amber-700'
+    : status.color.includes('red') ? 'text-red-700'
+    : status.color.includes('orange') ? 'text-orange-700'
+    : 'text-dark-muted';
   return (
-    <p className="text-dark text-xs">
-      <span className="font-medium">{formatPrice(e.amount_paid || 0)}{e.total_amount ? ` / ${formatPrice(e.total_amount)}` : ''}</span>
-      <span className="text-dark-muted"> · </span>
-      <span className={`font-semibold ${
-        paymentStatus(e).color.includes('green') ? 'text-green-700'
-          : paymentStatus(e).color.includes('amber') ? 'text-amber-700'
-          : paymentStatus(e).color.includes('red') ? 'text-red-700'
-          : paymentStatus(e).color.includes('orange') ? 'text-orange-700'
-          : 'text-dark-muted'
-      }`}>
-        {paymentStatus(e).label}
+    <span className="block text-xs text-dark">
+      <span className="block font-medium">
+        {formatPrice(e.amount_paid || 0)}{e.total_amount ? ` of ${formatPrice(e.total_amount)}` : ''}
       </span>
-      {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-        <span className="text-amber-600"> · {formatPrice(paymentBalance(e)!)} Due</span>
-      )}
-    </p>
+      <span className={`block mt-0.5 font-semibold ${colorClass}`}>
+        {isPartial ? `${formatPrice(balance!)} due` : status.label}
+      </span>
+    </span>
   );
 }
 
@@ -144,9 +147,10 @@ export default function AdminEnquiriesDesktopTable({
         itemLabel="enquiries"
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        searchPlaceholder="Search case #, title, owner..."
+        searchPlaceholder="Search name, phone, email, trip..."
         onExport={() => onExportCsv(sortedFiltered, activeGroupTitle, groupLabel, activeGroup?.trip)}
         exportLabel="Export CSV"
+        exportVariant="primary"
       />
       <div
         ref={tableScrollRef}
@@ -160,10 +164,10 @@ export default function AdminEnquiriesDesktopTable({
         // actually dragging, so a drag-scroll doesn't also select cell text.
         className={`overflow-x-auto overflow-y-auto scrollbar-hide mx-4 sm:mx-5 mb-4 sm:mb-5 max-h-[620px] rounded-md border border-background-warm ${isDragging ? 'select-none' : ''}`}
       >
-        <table className="w-full text-sm">
+        <table className="w-full min-w-[1100px] text-sm">
           <thead className="sticky top-0 z-10 bg-background-warm text-dark font-medium">
             <tr>
-              <th className="px-3 py-4 text-left w-8">
+              <th className="px-3 py-3 text-left w-[3%]">
                 <input
                   type="checkbox"
                   checked={paginatedEnquiries.length > 0 && paginatedEnquiries.every(e => selectedIds.has(e.id))}
@@ -172,19 +176,14 @@ export default function AdminEnquiriesDesktopTable({
                   className="w-4 h-4 rounded border-background-warm accent-primary cursor-pointer"
                 />
               </th>
-              <th className="px-3 py-4 text-left hidden md:table-cell">S.No</th>
-              <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left" />
-              <SortableTh label="Group" sortKey="group" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
-              <SortableTh label="Food" sortKey="food" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
-              <th className="px-4 py-4 text-left hidden sm:table-cell">Contact</th>
-              <SortableTh label="Source" sortKey="source" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left hidden lg:table-cell" />
-              <SortableTh label="Date & Time" sortKey="date" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-4 py-4 text-left hidden lg:table-cell" />
-              <SortableTh label="Package" sortKey="package" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-center whitespace-nowrap" />
-              <SortableTh label="Payment" sortKey="payment" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap" />
-              <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-center whitespace-nowrap" />
-              <SortableTh label="Follow-up" sortKey="follow_up" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-2 py-4 text-left whitespace-nowrap hidden md:table-cell" />
-              <th className="px-2 py-4 text-center whitespace-nowrap">Seat</th>
-              <th className="px-2 py-4 text-right whitespace-nowrap">Update</th>
+              <th className="px-3 py-3 text-left hidden md:table-cell w-[4%]">S.No</th>
+              <SortableTh label="Name" sortKey="name" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-3 py-3 text-left w-[25%]" />
+              <th className="px-3 py-3 text-left hidden sm:table-cell whitespace-nowrap w-[19%]">Contact</th>
+              <SortableTh label="Package" sortKey="package" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-3 py-3 text-left whitespace-nowrap hidden md:table-cell w-[10%]" />
+              <SortableTh label="Payment" sortKey="payment" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-3 py-3 text-left whitespace-nowrap w-[12%]" />
+              <SortableTh label="Status" sortKey="status" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-3 py-3 text-left whitespace-nowrap w-[12%]" />
+              <SortableTh label="Follow-up" sortKey="follow_up" activeKey={sortKey} direction={sortDir} onSort={handleSort} className="px-3 py-3 text-left whitespace-nowrap hidden md:table-cell w-[8%]" />
+              <th className="px-3 py-3 text-right whitespace-nowrap w-[7%]">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-background-warm">
@@ -207,7 +206,7 @@ export default function AdminEnquiriesDesktopTable({
                     isHighlighted ? 'bg-amber-50 ring-2 ring-inset ring-primary/40' : clr ? clr.row : 'hover:bg-background/50'
                   }`}
                 >
-                  <td className="px-3 py-4">
+                  <td className="px-3 py-3">
                     <input
                       type="checkbox"
                       checked={selectedIds.has(e.id)}
@@ -216,19 +215,19 @@ export default function AdminEnquiriesDesktopTable({
                       className="w-4 h-4 rounded border-background-warm accent-primary cursor-pointer"
                     />
                   </td>
-                  <td className="px-3 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">{idx + 1}</td>
-                  <td className="px-4 py-4 max-w-[150px] sm:max-w-none">
+                  <td className="px-3 py-3 text-dark-muted hidden md:table-cell whitespace-nowrap">{idx + 1}</td>
+                  <td className="px-3 py-3">
                     <button
                       onClick={() => navigate(`/admin/enquiries/${e.id}`)}
                       className="text-left min-w-0 w-full group"
                       title="Open Full CRM Page"
                     >
-                      <p className="font-medium text-dark group-hover:text-primary transition-colors flex items-center gap-1.5 min-w-0">
-                        <span className="truncate min-w-0">{e.full_name}</span>
+                      <p className="font-medium text-dark group-hover:text-primary transition-colors flex flex-wrap items-center gap-1.5 min-w-0">
+                        <span className="truncate min-w-0 max-w-full">{e.full_name}</span>
                         {e.has_child_addon && (
                           <span
                             title="A Child Fare add-on has been added to this booking"
-                            className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
+                            className="inline-flex items-center gap-1 text-xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
                           >
                             <Baby size={9} className="shrink-0" aria-hidden="true" /> Child
                           </span>
@@ -236,72 +235,65 @@ export default function AdminEnquiriesDesktopTable({
                         {!e.trip_id && !activeGroup && (
                           <span
                             title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
-                            className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
+                            className="inline-flex items-center gap-1 text-xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                           >
                             <MessageCircle size={9} className="shrink-0" aria-hidden="true" /> General
                           </span>
                         )}
+                        {/* Only what differs from the norm gets a chip: Solo and
+                            Normal price are the defaults, so they're not drawn.
+                            Food stays a tiny icon-only chip. Package has its own column. */}
+                        {e.group_size && e.group_size > 1 && (
+                          <span
+                            title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
+                            className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-0.5 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
+                          >
+                            <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
+                          </span>
+                        )}
+                        <span
+                          title={`Food preference: ${food.label}`}
+                          aria-label={`Food preference: ${food.label}`}
+                          role="img"
+                          className={`inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0 ${food.color}`}
+                        >
+                          <FoodMark type={foodPreferenceKey(e)} size={12} />
+                        </span>
                       </p>
                       <p className="text-dark-muted text-xs truncate sm:hidden">{realEmail(e.email) || 'No email'}</p>
                     </button>
+                    {/* Source · Date sits on its own muted line so it always
+                        starts at the same x position (it used to trail the
+                        chips and jump around from row to row). */}
+                    <p className="mt-0.5 text-xs text-dark-muted whitespace-nowrap truncate">
+                      {srcCfg.label} · {formatDate(e.created_at, { day: 'numeric', month: 'short' })}, {formatTime(e.created_at)}
+                    </p>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap">
-                    {e.group_size && e.group_size > 1 ? (
-                      <span
-                        title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
-                        className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
-                      >
-                        <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
-                      </span>
-                    ) : (
-                      <span
-                        title="Booked individually, not part of a group"
-                        className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md shrink-0 whitespace-nowrap bg-slate-100 text-dark-muted"
-                      >
-                        <User size={12} className="shrink-0" aria-hidden="true" /> Solo
-                      </span>
-                    )}
+                  <td className="px-3 py-3 text-dark-muted hidden sm:table-cell max-w-0">
+                    <p className="text-xs truncate" title={realEmail(e.email) || undefined}>{realEmail(e.email) || 'No email'}</p>
+                    <p className="text-xs mt-0.5 text-dark">{e.phone}</p>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center gap-1 text-xs font-button font-semibold whitespace-nowrap ${
-                      e.food_preference === 'veg' ? 'text-green-700' : e.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark-muted'
-                    }`}>
-                      <FoodMark type={foodPreferenceKey(e)} size={12} /> {food.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-dark-muted hidden sm:table-cell">
-                    <p className="text-xs truncate">{realEmail(e.email) || 'No email'}</p>
-                    <p className="text-xs mt-0.5">{e.phone}</p>
-                  </td>
-                  <td className="px-4 py-4 text-dark-muted hidden lg:table-cell truncate">
-                    <span className="text-xs">
-                      {srcCfg.label}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">
-                    <p>{formatDate(e.created_at, { day: 'numeric', month: 'short' })}</p>
-                    <p className="text-2xs text-dark-muted/80">{formatTime(e.created_at)}</p>
-                  </td>
-                  <td className="px-2 py-4 text-center">
-                    {/* Trip package the traveler chose (Basic / Premium / ...)
-                        on top, price tier (Early Bird / Normal) underneath.
-                        Trips without packages just show the tier. */}
+                  <td className="px-3 py-3 text-left whitespace-nowrap hidden md:table-cell">
+                    {/* Line 1: the trip package the traveller picked.
+                        Line 2: which price they got (Early Bird / Normal). */}
                     {e.package_name && (
                       <p
-                        title="Trip package this traveler chose"
-                        className={`text-xs font-button font-bold whitespace-nowrap ${isPremiumPackage(e.package_name) ? 'premium-gold-text' : 'text-primary'}`}
+                        title={`Trip package: ${e.package_name}`}
+                        className={`mb-0.5 inline-flex items-center gap-1 text-xs font-button font-semibold ${isPremiumPackage(e.package_name) ? 'premium-gold-text' : 'text-primary'}`}
                       >
+                        <Package size={12} className="shrink-0" aria-hidden="true" />
                         {e.package_name}
                       </p>
                     )}
-                    <span className={`inline-flex items-center gap-1 font-button font-semibold whitespace-nowrap ${
-                      e.package_name ? 'text-2xs' : 'text-xs'
-                    } ${e.package_type === 'early_bird' ? 'text-purple-700' : e.package_name ? 'text-dark-muted' : 'text-slate-700'}`}>
-                      {e.package_type === 'early_bird' && <Bird size={e.package_name ? 10 : 12} className="shrink-0" aria-hidden="true" />}
+                    <p
+                      title={e.package_type === 'early_bird' ? 'Early Bird pricing applied' : 'Regular (normal) pricing applied'}
+                      className={`flex items-center gap-1 text-xs font-semibold ${e.package_type === 'early_bird' ? 'text-purple-700' : 'text-dark-muted'}`}
+                    >
+                      {e.package_type === 'early_bird' && <Bird size={12} className="shrink-0" aria-hidden="true" />}
                       {PACKAGE_CONFIG[e.package_type || 'normal'].label}
-                    </span>
+                    </p>
                   </td>
-                  <td className="px-2 py-4 text-left whitespace-nowrap">
+                  <td className="px-3 py-3 text-left whitespace-nowrap">
                     {/* Same gate as the kebab's Add Payment / the detail
                         page's inline Track Payment form — a New Enquiry
                         hasn't been through Contact Outcome yet, so this
@@ -314,26 +306,40 @@ export default function AdminEnquiriesDesktopTable({
                         <PaymentSummaryLine e={e} />
                       </div>
                     ) : (
-                      <button onClick={() => openPayment(e)} className="text-left hover:opacity-75 transition-opacity">
+                      <button
+                        onClick={() => openPayment(e)}
+                        title={e.booking_id ? `Booking ID: ${e.booking_id} — click to open payments` : 'Open payments'}
+                        className="text-left hover:opacity-75 transition-opacity"
+                      >
                         <PaymentSummaryLine e={e} />
-                        {e.booking_id && (
-                          <span title="Booking ID" className="mt-0.5 block text-2xs font-mono text-dark-muted truncate">{e.booking_id}</span>
-                        )}
                       </button>
                     )}
                     {refundStatus(e, true) && (
-                      <p className={`text-2xs font-medium mt-1 px-1.5 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e, true)!.color}`}>
+                      <p className={`text-xs font-medium mt-1 px-2 py-0.5 rounded-md inline-block whitespace-nowrap ${refundStatus(e, true)!.color}`}>
                         {refundStatus(e, true)!.label}
                       </p>
                     )}
                   </td>
-                  <td className="px-2 py-4 text-center">
+                  <td className="px-3 py-3 text-left">
+                    <div className="flex flex-col items-start gap-1">
                     <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                       <jb.icon size={12} className="shrink-0" aria-hidden="true" />
                       {jb.label}
                     </span>
+                    {/* A closed "Not Interested" enquiry is obviously not
+                        booked — drop the second badge there. */}
+                    {!(isNotInterested(e) && seat.label === 'Not booked') && (
+                      <span
+                        title={seat.title}
+                        className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${seat.color}`}
+                      >
+                        <seat.icon size={12} className="shrink-0" aria-hidden="true" />
+                        {seat.label}
+                      </span>
+                    )}
+                    </div>
                   </td>
-                  <td className="px-2 py-4 text-left whitespace-nowrap hidden md:table-cell">
+                  <td className="px-3 py-3 text-left whitespace-nowrap hidden md:table-cell">
                     {(() => {
                       const fu = followUpStatus(e);
                       if (fu) {
@@ -355,7 +361,7 @@ export default function AdminEnquiriesDesktopTable({
                             onClick={() => openFollowUpModal(e)}
                             disabled={updating === e.id}
                             title="Set a follow-up reminder"
-                            className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                           >
                             <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> Set
                           </button>
@@ -385,7 +391,7 @@ export default function AdminEnquiriesDesktopTable({
                             onClick={() => setBookingFollowUpTarget(e)}
                             disabled={updating === e.id}
                             title="Set a booking follow-up reminder"
-                            className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
+                            className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
                           >
                             <CalendarClock size={12} className="shrink-0" aria-hidden="true" /> Set
                           </button>
@@ -394,45 +400,22 @@ export default function AdminEnquiriesDesktopTable({
                       return <span className="text-dark-muted/50 text-xs">—</span>;
                     })()}
                   </td>
-                  <td className="px-2 py-4 text-center">
-                    <span
-                      title={seat.title}
-                      className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${seat.color}`}
-                    >
-                      <seat.icon size={12} className="shrink-0" aria-hidden="true" />
-                      {seat.label}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4 text-right">
+                  <td className="px-3 py-3 text-right">
                     <div className="flex items-center justify-end gap-1.5">
                       {nma && (
                         <button
                           onClick={() => handleAdvance(e)}
                           disabled={updating === e.id || completingId === e.id}
                           title={nma.label}
-                          className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1.5 rounded border border-primary/30 text-primary hover:bg-primary/5 transition-colors whitespace-nowrap disabled:opacity-50"
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-md border-2 border-primary bg-primary text-white shadow-warm hover:bg-primary-dark hover:border-primary-dark transition-colors disabled:opacity-50"
                         >
-                          <nma.icon size={12} className="shrink-0" aria-hidden="true" />
-                          {nma.label}
+                          <nma.icon size={14} className="shrink-0" aria-hidden="true" />
+                          <span className="sr-only">{nma.label}</span>
                         </button>
                       )}
-                      {/* "Not Interested (Close Query)" used to have its
-                          own standalone icon button here too — dropped
-                          since it's already one click away in the kebab
-                          below (see useRowActions.ts), and having it twice
-                          on the same row was redundant. This slot now
-                          carries the same "View Full CRM" jump the mobile
-                          card's footer already has next to its own
-                          Mark Contacted/nma chip, which the desktop table
-                          had no equivalent of before. */}
-                      <button
-                        onClick={() => navigate(`/admin/enquiries/${e.id}`)}
-                        disabled={updating === e.id || completingId === e.id}
-                        title="View Full CRM"
-                        className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1.5 rounded border border-background-warm text-dark-muted hover:bg-background-warm transition-colors whitespace-nowrap disabled:opacity-50"
-                      >
-                        View Full CRM <ArrowRight size={12} className="shrink-0" aria-hidden="true" />
-                      </button>
+                      {/* No separate "View Full CRM" arrow on desktop — the
+                          name in the first column already opens the CRM page.
+                          "Not Interested" lives in the kebab (useRowActions.ts). */}
                       <ActionsMenu disabled={updating === e.id} items={buildRowActions(e)} />
                     </div>
                   </td>

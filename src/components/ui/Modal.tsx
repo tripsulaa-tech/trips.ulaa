@@ -149,7 +149,7 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', f
               <div className={`flex items-center border-b border-background-warm flex-shrink-0 ${
                 compactHeader ? 'flex-wrap gap-2 sm:gap-4 p-4 sm:p-6' : 'gap-4 p-6'
               }`}>
-                <h3 id={titleId} className={`font-display font-bold text-dark flex-shrink-0 ${compactHeader ? 'text-lg sm:text-2xl' : 'text-2xl'}`}>{title}</h3>
+                <h3 id={titleId} className={`font-display font-bold text-dark flex-shrink-0 ${compactHeader ? 'text-lg sm:text-2xl max-sm:flex-1' : 'text-2xl'}`}>{title}</h3>
                 <div className={`flex-1 min-w-0 flex justify-end ${compactHeader ? 'order-last basis-full sm:basis-auto sm:order-none' : ''}`}>{headerContent}</div>
                 <button
                   onClick={onClose}

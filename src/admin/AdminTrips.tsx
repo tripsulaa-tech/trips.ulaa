@@ -27,7 +27,7 @@ import { useToast } from '../components/ui/useToast';
  *  single-component version. */
 export default function AdminTrips() {
   const toast = useToast();
-  const { trips, loading, load } = useTripsData();
+  const { trips, loading, loadError, load, retry } = useTripsData();
   const [viewingTrip, setViewingTrip] = useState<UpcomingTrip | null>(null);
   const [checkInTrip, setCheckInTrip] = useState<UpcomingTrip | null>(null);
   const { revenueByTripId } = useTripFinanceData();
@@ -133,6 +133,8 @@ export default function AdminTrips() {
       <AdminTripsTable
         trips={trips}
         loading={loading}
+        loadError={loadError}
+        onRetryLoad={retry}
         pdfDownloadingId={pdfDownloadingId}
         importInputRef={importInputRef}
         onImportInputChange={handleImportInputChange}

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { updateWaitlistStatus, deleteWaitlistEntry } from '../../services/api';
 import { useConfirm } from '../../components/ui/useConfirm';
+import { useToast } from '../../components/ui/useToast';
 import type { WaitlistEntry } from '../../types/types-index';
 import { canConvert, convertedCount, seatsRemaining } from './waitlistShared';
 
@@ -18,6 +19,7 @@ export function useWaitlistActions(
   load: () => void
 ) {
   const confirm = useConfirm();
+  const toast = useToast();
   const navigate = useNavigate();
   const [updating, setUpdating] = useState<string | null>(null);
 
@@ -47,8 +49,18 @@ export function useWaitlistActions(
 
   const handleStatusChange = async (id: string, status: WaitlistEntry['status']) => {
     setUpdating(id);
+    const previousStatus = entries.find(e => e.id === id)?.status;
     setEntries(prev => prev.map(e => (e.id === id ? { ...e, status } : e)));
-    await updateWaitlistStatus(id, status).catch(console.error);
+    try {
+      await updateWaitlistStatus(id, status);
+    } catch (err) {
+      console.error(err);
+      // The row was already changed on screen before the save finished, so put it back.
+      if (previousStatus !== undefined) {
+        setEntries(prev => prev.map(e => (e.id === id ? { ...e, status: previousStatus } : e)));
+      }
+      toast.error("Couldn't change the status. It has been put back. Please try again.");
+    }
     setUpdating(null);
     // The optimistic update above only touches this entry's status — it
     // doesn't refresh seatsAvailable, so a stale "N seats open" badge could
@@ -60,8 +72,14 @@ export function useWaitlistActions(
   const handleDelete = async (entry: WaitlistEntry) => {
     if (!(await confirm({ message: `Remove ${entry.full_name} from the waitlist?`, confirmLabel: 'Remove' }))) return;
     setUpdating(entry.id);
-    await deleteWaitlistEntry(entry.id).catch(console.error);
-    setEntries(prev => prev.filter(e => e.id !== entry.id));
+    try {
+      await deleteWaitlistEntry(entry.id);
+      setEntries(prev => prev.filter(e => e.id !== entry.id));
+      toast.success(`${entry.full_name} was removed from the waitlist.`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't remove this entry. It is still on the waitlist. Please try again.");
+    }
     setUpdating(null);
   };
 

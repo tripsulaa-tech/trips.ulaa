@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getWaitlistEntries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin, getEnquiries } from '../../services/api';
 import { seatsLeft } from '../../utils/utils-index';
 import type { WaitlistEntry, UpcomingTrip, CompletedTrip, Enquiry } from '../../types/types-index';
+import { useToast } from '../../components/ui/useToast';
 
 /** Owns every data list AdminWaitlist renders from — waitlist entries, seat
  *  availability per trip, the full upcoming-trips list (for the Add to
@@ -37,6 +38,8 @@ export function useWaitlistData() {
   // signups (see useWaitlistGroups), matching what the Enquiries page shows.
   const [enquiriesForGroups, setEnquiriesForGroups] = useState<Enquiry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const toast = useToast();
 
   const load = () => {
     Promise.all([getWaitlistEntries(), getAllUpcomingTripsAdmin(), getEnquiries(), getAllCompletedTripsAdmin()])
@@ -49,10 +52,17 @@ export function useWaitlistData() {
         setSeatsAvailable(map);
         setCancelledEnquiryIds(new Set(enquiries.filter(en => !!en.cancelled_at).map(en => en.id)));
         setEnquiriesForGroups(enquiries);
+        setLoadError(false);
       })
-      .catch(console.error)
+      .catch(err => {
+        console.error(err);
+        setLoadError(true);
+        toast.error("Couldn't load the waitlist. Please try again.");
+      })
       .finally(() => setLoading(false));
   };
+
+  const retry = () => { setLoading(true); load(); };
 
   useEffect(() => { load(); }, []);
 
@@ -64,6 +74,8 @@ export function useWaitlistData() {
     cancelledEnquiryIds,
     enquiriesForGroups,
     loading,
+    loadError,
     load,
+    retry,
   };
 }

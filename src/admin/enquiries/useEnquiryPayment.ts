@@ -7,6 +7,7 @@ import type { Enquiry, UpcomingTrip, Payment } from '../../types/types-index';
 import { validatePaymentForm, reconcilePaymentType } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { useAlert } from '../../components/ui/useAlert';
+import { useToast } from '../../components/ui/useToast';
 
 /** Owns the Track Payment modal — its target/form state, the inline payment-
  *  history ledger (lazy-loaded on demand, same pattern as the Details
@@ -34,6 +35,7 @@ export function useEnquiryPayment(params: {
 }) {
   const { setTrips, load, getTripPrice } = params;
   const alert = useAlert();
+  const toast = useToast();
 
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
   const [paymentForm, setPaymentForm] = useState<PaymentForm>({ package_type: 'normal', total_amount: '', discount_amount: '', discount_reason: '', amount_paid: '', payment_type: 'advance', status: 'paid', payment_method: '', payment_utr: '', refund_amount: '', refund_method: '', refund_utr: '', refund_date: '', refund_notes: '', food_preference: '', notes: '' });
@@ -56,7 +58,10 @@ export function useEnquiryPayment(params: {
     setPaymentHistoryLoading(true);
     getPaymentsForEnquiry(paymentTarget.id)
       .then(rows => { if (!cancelled) setPaymentHistory(rows); })
-      .catch(err => console.error(err))
+      .catch(err => {
+        console.error(err);
+        if (!cancelled) toast.error("Couldn't load the payment history. Please close and reopen to try again.");
+      })
       .finally(() => { if (!cancelled) setPaymentHistoryLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only paymentTarget.id is read; re-fetching on every paymentTarget reference change would refetch unnecessarily

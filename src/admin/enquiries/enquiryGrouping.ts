@@ -113,7 +113,8 @@ export const describeWaiting = (summary: { entries: number; people: number }): s
 // useEnquiryData.
 export const fetchWaitlistCounts = (
   setWaitlistEntriesForGroups: (entries: WaitlistEntry[]) => void,
-  setWaitlistWaitingCounts: (counts: Record<string, { entries: number; people: number }>) => void
+  setWaitlistWaitingCounts: (counts: Record<string, { entries: number; people: number }>) => void,
+  onError?: (err: unknown) => void
 ) => {
   getWaitlistEntries()
     .then(entries => {
@@ -127,5 +128,8 @@ export const fetchWaitlistCounts = (
       });
       setWaitlistWaitingCounts(counts);
     })
-    .catch(console.error);
+    .catch(err => {
+      console.error(err);
+      onError?.(err);
+    });
 };

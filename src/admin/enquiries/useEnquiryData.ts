@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getEnquiries, getAllUpcomingTripsAdmin, getAllCompletedTripsAdmin } from '../../services/api';
 import { subscribeToTable } from '../../services/realtime';
+import { useToast } from '../../components/ui/useToast';
 import type { Enquiry, UpcomingTrip, CompletedTrip } from '../../types/types-index';
 
 /** Owns the three core data lists AdminEnquiries renders from — enquiries,
@@ -19,15 +20,33 @@ export function useEnquiryData() {
   // it's only needed for this lookup, not for editing/booking flows.
   const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const toast = useToast();
 
   const load = () => {
-    getEnquiries().then(setEnquiries).catch(console.error).finally(() => setLoading(false));
+    getEnquiries()
+      .then(data => { setEnquiries(data); setLoadError(false); })
+      .catch(err => {
+        console.error(err);
+        setLoadError(true);
+        toast.error("Couldn't load the enquiries. Please try again.");
+      })
+      .finally(() => setLoading(false));
   };
+
+  const retry = () => { setLoading(true); load(); };
 
   useEffect(() => {
     load();
-    getAllUpcomingTripsAdmin().then(setTrips).catch(console.error);
-    getAllCompletedTripsAdmin().then(setCompletedTrips).catch(console.error);
+    getAllUpcomingTripsAdmin().then(setTrips).catch(err => {
+      console.error(err);
+      toast.error("Couldn't load the trips list, so trip names may be missing. Please refresh.");
+    });
+    getAllCompletedTripsAdmin().then(setCompletedTrips).catch(err => {
+      console.error(err);
+      toast.error("Couldn't load the completed trips, so some trip names may be missing. Please refresh.");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Live updates — pushes a brand-new website/manual enquiry straight into
@@ -63,5 +82,5 @@ export function useEnquiryData() {
     return unsubscribe;
   }, []);
 
-  return { enquiries, trips, completedTrips, loading, load, setTrips };
+  return { enquiries, trips, completedTrips, loading, loadError, load, retry, setTrips };
 }

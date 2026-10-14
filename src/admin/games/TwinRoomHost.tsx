@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Crown, ArrowsClockwise } from '@phosphor-icons/react';
+import { Crown, ArrowsClockwise, Users } from '@phosphor-icons/react';
 import GameCard, { EmptyGame, primaryBtn, smallBtn } from './GameCard';
 import FindMyTwinGame from '../../components/ui/FindMyTwinGame';
 import { cleanName, loadPlayerName, savePlayerName, MAX_NAME } from '../../components/ui/gameUi';
@@ -40,7 +40,7 @@ export default function TwinRoomHost({ roster }: { roster: TripRoster }) {
   }, [code]);
 
   if (!roster.tripId) {
-    return <GameCard game={<EmptyGame>Pick a trip to play Find My Twin.</EmptyGame>} shareTitle="Find My Twin" status={{ tone: 'idle', text: 'Waiting for a trip' }} />;
+    return <GameCard game={<EmptyGame title="Find My Twin" Icon={Users}>Pick a trip to play</EmptyGame>} shareTitle="Find My Twin" status={{ tone: 'idle', text: 'Waiting for a trip' }} />;
   }
 
   const create = async () => {

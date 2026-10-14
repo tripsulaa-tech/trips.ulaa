@@ -1,3 +1,4 @@
+import todBottle from '../../assets/truth-or-dare-bottle.svg';
 import TruthOrDareGame from '../../components/ui/TruthOrDareGame';
 import { createTodShare, updateTodShare } from '../../services/api/todShare';
 import RosterGameCard from './RosterGameCard';
@@ -16,6 +17,7 @@ export default function TruthOrDareHost({ roster }: { roster: TripRoster }) {
       path="/play/truth-or-dare"
       minPlayers={2}
       maxPlayers={MAX_PLAYERS}
+      iconSrc={todBottle}
       renderGame={names => (
         <TruthOrDareGame tripId={roster.trip?.id} tripSlug={roster.trip?.slug} tripTitle={roster.trip?.title} players={names} maxPlayers={MAX_PLAYERS} row />
       )}

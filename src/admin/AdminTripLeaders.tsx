@@ -31,6 +31,7 @@ import {
 } from '../hooks/useSessionDraft';
 import { STORAGE_BUCKET } from '../constants/storage';
 import { useToast } from '../components/ui/useToast';
+import LoadErrorState from '../components/ui/LoadErrorState';
 
 
 interface TripLeaderForm {
@@ -92,9 +93,20 @@ export default function AdminTripLeaders() {
   const [baseline, setBaseline] = useState<TripLeaderForm | null>(null);
   const [heldDraft, setHeldDraft] = useState<{ recordId: string | null; form: TripLeaderForm; baseline: TripLeaderForm } | null>(null);
 
+  const [loadError, setLoadError] = useState(false);
+
   const load = () => {
-    getAllTripLeadersAdmin().then(setItems).catch(console.error).finally(() => setLoading(false));
+    getAllTripLeadersAdmin()
+      .then(data => { setItems(data); setLoadError(false); })
+      .catch(err => {
+        console.error(err);
+        setLoadError(true);
+        toast.error("Couldn't load the trip leaders. Please try again.");
+      })
+      .finally(() => setLoading(false));
   };
+
+  const retryLoad = () => { setLoading(true); load(); };
 
   useEffect(() => {
     load();
@@ -260,6 +272,8 @@ export default function AdminTripLeaders() {
 
         {loading ? (
           <div className="text-center py-16 text-dark-muted">Loading...</div>
+        ) : loadError && items.length === 0 ? (
+          <LoadErrorState what="the trip leaders" onRetry={retryLoad} />
         ) : items.length === 0 ? (
           <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">No trip leaders yet.</div>
         ) : (

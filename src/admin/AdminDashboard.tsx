@@ -22,6 +22,8 @@ import {
 import { formatDate as formatDateBase, formatDuration } from '../utils/utils-index';
 import type { UpcomingTrip, Enquiry } from '../types/types-index';
 import bannerImg from '../assets/hero.webp';
+import { useToast } from '../components/ui/useToast';
+import LoadErrorState from '../components/ui/LoadErrorState';
 
 const STATUS_STYLES: Record<Enquiry['status'], string> = {
   new: 'bg-primary/10 text-primary',
@@ -95,6 +97,9 @@ export default function AdminDashboard() {
   const [completedCount, setCompletedCount] = useState(0);
   const [waitingCount, setWaitingCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const toast = useToast();
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     // Best-effort: catch its own errors so a sync failure never blocks the
@@ -111,9 +116,17 @@ export default function AdminDashboard() {
         setCompletedCount(completed.length);
         setEnquiries(allEnquiries);
         setWaitingCount(waitlistEntries.filter(w => w.status === 'waiting').length);
-      }).catch(console.error).finally(() => setLoading(false));
+        setLoadError(false);
+      }).catch(err => {
+        console.error(err);
+        setLoadError(true);
+        toast.error("Couldn't load the dashboard. Please try again.");
+      }).finally(() => setLoading(false));
     });
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadKey]);
+
+  const retryLoad = () => { setLoading(true); setReloadKey(k => k + 1); };
 
   // Compare against local-midnight timestamps rather than toDateString(),
   // so "today" is computed once from a single reference point (the browser's
@@ -190,6 +203,8 @@ export default function AdminDashboard() {
               </div>
             ))}
           </div>
+        ) : loadError ? (
+          <LoadErrorState what="the dashboard" onRetry={retryLoad} />
         ) : (
         <motion.div
           variants={gridVariants}
@@ -278,7 +293,8 @@ export default function AdminDashboard() {
           </motion.div>
         </div>
 
-        {/* Recent Enquiries + Upcoming Trips */}
+        {/* Recent Enquiries + Upcoming Trips (hidden when the load failed, so empty lists aren't mistaken for no data) */}
+        {!loadError && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5">
           <div className="bg-white rounded-md sm:rounded-lg p-3 sm:p-4 shadow-card">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
@@ -431,6 +447,7 @@ export default function AdminDashboard() {
             )}
           </div>
         </div>
+        )}
       </div>
     </AdminLayout>
   );

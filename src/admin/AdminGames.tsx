@@ -111,7 +111,7 @@ function EditorBar({ dirty, custom, saving, onSave, onDiscard, onReset }: {
 }) {
   // Quiet when nothing changed (just the status); Discard and Save appear once there is something to save.
   return (
-    <div className={`sticky bottom-3 z-10 rounded-2xl border bg-white/95 backdrop-blur shadow-warm-lg px-3 sm:px-4 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 transition-colors ${dirty ? 'border-primary/40' : 'border-background-warm'}`}>
+    <div className={`sticky bottom-3 z-10 rounded-md border bg-white/95 backdrop-blur shadow-warm-lg px-3 sm:px-4 py-2 sm:py-2.5 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 transition-colors ${dirty ? 'border-primary/40' : 'border-background-warm'}`}>
       <div className="flex items-center gap-2 sm:mr-auto min-w-0">
         <span className={`w-2 h-2 shrink-0 rounded-full ${dirty ? 'bg-amber-500' : custom ? 'bg-green-600' : 'bg-dark-muted/40'}`} aria-hidden="true" />
         <span className={`text-xs sm:text-sm ${dirty ? 'text-dark font-semibold' : 'text-dark-muted'}`} role="status">
@@ -170,7 +170,7 @@ function Segmented<T extends string>({ value, onChange, options, label, tone = '
   );
 }
 
-const Card = ({ children }: { children: ReactNode }) => <div className="bg-white rounded-2xl shadow-card p-3 sm:p-5 space-y-3 sm:space-y-4">{children}</div>;
+const Card = ({ children }: { children: ReactNode }) => <div className="bg-white rounded-md shadow-card p-3 sm:p-5 space-y-3 sm:space-y-4">{children}</div>;
 
 // Explanations are folded away by default so the list is the first thing you
 // see; `always` keeps short, essential instructions open.
@@ -1025,7 +1025,7 @@ function GamePicker({ value, onChange, dirty }: { value: EditGame; onChange: (g:
             role="tab"
             aria-selected={on}
             onClick={() => onChange(g.id)}
-            className={`relative flex items-center gap-2.5 min-h-[56px] px-3 py-2 rounded-2xl border-2 text-left transition-colors ${on ? 'bg-primary border-primary text-white shadow-card' : 'bg-white border-transparent shadow-card text-dark hover:border-primary/30'}`}
+            className={`relative flex items-center gap-2.5 min-h-[56px] px-3 py-2 rounded-md border-2 text-left transition-colors ${on ? 'bg-primary border-primary text-white shadow-card' : 'bg-white border-transparent shadow-card text-dark hover:border-primary/30'}`}
           >
             <span className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center ${on ? 'bg-white/20 text-white' : 'bg-primary/10 text-primary'}`} aria-hidden="true">
               <g.Icon size={20} weight="duotone" />
@@ -1115,6 +1115,7 @@ export default function AdminGames() {
                     game={<DumbCharadesGame row />}
                     path="/play/dumb-charades"
                     title="Dumb Charades"
+                    Icon={FilmSlate}
                     tripId={roster.tripId}
                     tripTitle={roster.trip?.title}
                     note="Teams act out Tamil movies on one phone."

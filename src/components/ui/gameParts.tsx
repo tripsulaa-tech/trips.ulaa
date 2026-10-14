@@ -172,7 +172,7 @@ export function GameTile({ onClick, compact, thumb, row, Icon, iconSrc, title, s
 
   if (row) {
     return (
-      <motion.button type="button" onClick={onClick} onPointerDown={press} whileTap={tapAnim} className={`${shell} p-2.5 flex items-center gap-3 touch-manipulation [-webkit-tap-highlight-color:transparent]`}>
+      <motion.button type="button" onClick={onClick} onPointerDown={press} whileTap={tapAnim} className={`${shell.replace('rounded-2xl', 'rounded-md')} p-2.5 flex items-center gap-3 touch-manipulation [-webkit-tap-highlight-color:transparent]`}>
         {glows}
         <span className={`relative w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br ${medallion} flex items-center justify-center`} aria-hidden="true">
           {iconSrc ? <img src={iconSrc} alt="" className="w-6 h-6 object-contain" draggable={false} /> : Icon && <Icon size={24} weight="duotone" />}

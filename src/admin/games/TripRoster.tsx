@@ -24,7 +24,7 @@ export default function TripRosterPanel({ roster }: { roster: TripRoster }) {
   const preview = present.slice(0, 5);
 
   return (
-    <div className="bg-white rounded-2xl shadow-card overflow-hidden">
+    <div className="bg-white rounded-md shadow-card overflow-hidden">
       <div className="p-3 sm:p-4">
         {tripsError ? (
           <p role="alert" className="text-sm text-dark">Couldn't load the trips. Please refresh the page.</p>

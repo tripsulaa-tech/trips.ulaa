@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { ShareNetwork, Copy, WhatsappLogo } from '@phosphor-icons/react';
 import { useToast } from '../../components/ui/useToast';
 
@@ -32,8 +33,18 @@ const TONE: Record<NonNullable<GameCardProps['status']>['tone'], { chip: string;
 };
 
 /** Shown in place of a game's tile while it can't start yet (no trip picked, too few players). */
-export const EmptyGame = ({ children }: { children: ReactNode }) => (
-  <p className="rounded-2xl border border-dashed border-background-warm bg-background-warm/30 px-4 py-5 text-center text-sm text-dark-muted">{children}</p>
+/** Looks like the game's own tile (same dark card, medallion and rounded Play pill) but dimmed and not tappable. */
+export const EmptyGame = ({ title, iconSrc, Icon, children }: { title: string; iconSrc?: string; Icon?: PhosphorIcon; children: ReactNode }) => (
+  <div aria-disabled="true" className="relative w-full rounded-md overflow-hidden text-left text-cream bg-gradient-to-br from-dark to-footer border border-gold/30 p-2.5 flex items-center gap-3 opacity-60 select-none">
+    <span className="relative w-11 h-11 shrink-0 rounded-xl bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center" aria-hidden="true">
+      {iconSrc ? <img src={iconSrc} alt="" className="w-6 h-6 object-contain" draggable={false} /> : Icon && <Icon size={24} weight="duotone" />}
+    </span>
+    <span className="relative block min-w-0 flex-1">
+      <span className="block font-display text-[15px] font-extrabold leading-tight text-white">{title}</span>
+      <span className="block text-[11px] text-cream/60 truncate">{children}</span>
+    </span>
+    <span className="relative shrink-0 rounded-full bg-white/10 border border-white/20 px-3.5 py-1.5 text-xs font-bold text-[#F0CE7A]">Play</span>
+  </div>
 );
 
 export default function GameCard({ game, url, shareText = '', shareTitle, action, status, note, footer }: GameCardProps) {
@@ -52,7 +63,7 @@ export default function GameCard({ game, url, shareText = '', shareTitle, action
   const hasShare = !!(action || url);
 
   return (
-    <div className="h-full bg-white rounded-2xl shadow-card p-3 sm:p-4 flex flex-col gap-3">
+    <div className="h-full bg-white rounded-md shadow-card p-3 sm:p-4 flex flex-col gap-3">
       {game}
       {status && (
         <p role="status" className={`self-start inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${TONE[status.tone].chip}`}>

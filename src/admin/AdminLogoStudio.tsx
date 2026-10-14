@@ -752,7 +752,7 @@ export default function AdminLogoStudio() {
       hasUnsavedChanges={hasUnsavedChanges}
       fixedHeight={lockHeight}
     >
-      <div className={`bg-white rounded-md border border-background-warm shadow-card ${lockHeight ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : ''}`}>
+      <div className={`bg-white sm:rounded-md sm:border sm:border-background-warm sm:shadow-card ${lockHeight ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : '-m-4 min-h-[calc(100dvh-76px)] sm:m-0 sm:min-h-0'}`}>
         <div role="tablist" aria-label="Logo Studio sections" onKeyDown={onTabsKeyDown} className={`flex flex-wrap gap-2 px-4 sm:px-6 ${lockHeight ? 'pt-3' : 'pt-4 sm:pt-6'}`}>
           {TABS.map(([id, label]) => (
             <button

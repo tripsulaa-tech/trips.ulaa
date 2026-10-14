@@ -36,6 +36,9 @@ interface TableHeaderBarProps {
   // (not just disabled) on pages that don't wire it up.
   onExport?: () => void;
   exportLabel?: string;
+  // 'primary' = solid brand-colour button (same look as the page's "Add" button);
+  // default 'outline' keeps the original look for every other table.
+  exportVariant?: 'outline' | 'primary';
   // Optional — pass the table's page-size key (see useAdminPageSize) to show a "Rows" selector.
   pageSizeKey?: string;
 }
@@ -70,6 +73,7 @@ export function TableHeaderBar({
   searchPlaceholder = 'Search...',
   onExport,
   exportLabel = 'Export CSV',
+  exportVariant = 'outline',
   pageSizeKey,
 }: TableHeaderBarProps) {
   return (
@@ -109,7 +113,11 @@ export function TableHeaderBar({
             disabled={total === 0}
             title={total === 0 ? 'Nothing to export' : `${exportLabel} — exports exactly what's currently filtered`}
             aria-label={exportLabel}
-            className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border-2 border-background-warm text-dark text-sm font-button font-semibold hover:border-primary/40 hover:text-primary disabled:opacity-40 disabled:hover:border-background-warm disabled:hover:text-dark transition-colors"
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border-2 text-sm font-button font-semibold disabled:opacity-40 transition-colors ${
+              exportVariant === 'primary'
+                ? 'bg-primary text-white border-primary shadow-warm hover:bg-primary-dark hover:border-primary-dark'
+                : 'border-background-warm text-dark hover:border-primary/40 hover:text-primary disabled:hover:border-background-warm disabled:hover:text-dark'
+            }`}
           >
             <Download size={14} aria-hidden="true" />
             <span className="hidden sm:inline">{exportLabel}</span>

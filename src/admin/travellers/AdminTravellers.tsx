@@ -12,6 +12,7 @@ import AdminMergeTravellerModal from './AdminMergeTravellerModal';
 import AdminSharedPhoneAlert from './AdminSharedPhoneAlert';
 import AdminTravellerProfilePanel from './AdminTravellerProfilePanel';
 import { useTravellerWaitlist } from './useTravellerWaitlist';
+import LoadErrorState from '../../components/ui/LoadErrorState';
 
 // Shared by both the mobile filter card and the desktop bar above the
 // table — same button, just two different places to sit depending on
@@ -43,6 +44,8 @@ function RepeatToggle({ active, onToggle }: { active: boolean; onToggle: () => v
 export default function AdminTravellers() {
   const {
     loading,
+    loadError,
+    retryLoad,
     contacts,
     totalCount,
     searchQuery, setSearchQuery,
@@ -88,7 +91,7 @@ export default function AdminTravellers() {
         <KpiCards cards={KPI_CARDS} columns={4} />
         <KpiCarousel cards={KPI_CARDS} />
 
-        {!loading && <AdminSharedPhoneAlert groups={sharedPhoneGroups} onReview={openMerge} />}
+        {!loading && !loadError && <AdminSharedPhoneAlert groups={sharedPhoneGroups} onReview={openMerge} />}
 
         {/* Mobile (below sm): filter card with its own search + toggle,
             above the stacked card list. */}
@@ -116,6 +119,8 @@ export default function AdminTravellers() {
 
         {loading ? (
           <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">Loading contacts&hellip;</div>
+        ) : loadError && totalCount === 0 ? (
+          <LoadErrorState what="the travellers" onRetry={retryLoad} />
         ) : pageItems.length === 0 ? (
           totalCount === 0 ? (
             <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">

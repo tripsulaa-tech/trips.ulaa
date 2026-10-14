@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import GameCard, { EmptyGame } from './GameCard';
 
 // Admin -> Games -> Play, for the games that need no player list (Dumb Charades,
@@ -11,16 +12,18 @@ interface LinkGameHostProps {
   /** Public path the link opens, e.g. "/play/dumb-charades". */
   path: string;
   title: string;
+  /** Icon for the dimmed tile shown until a trip is picked. */
+  Icon?: PhosphorIcon;
   note?: string;
   /** The trip picked in the roster card; the game stays locked until there is one. */
   tripId: string;
   tripTitle?: string;
 }
 
-export default function LinkGameHost({ game, path, title, note, tripId, tripTitle }: LinkGameHostProps) {
+export default function LinkGameHost({ game, path, title, Icon, note, tripId, tripTitle }: LinkGameHostProps) {
   const url = `${window.location.origin}${path}`;
   if (!tripId) {
-    return <GameCard game={<EmptyGame>Pick a trip to play {title}.</EmptyGame>} shareTitle={title} status={{ tone: 'idle', text: 'Waiting for a trip' }} />;
+    return <GameCard game={<EmptyGame title={title} Icon={Icon}>Pick a trip to play</EmptyGame>} shareTitle={title} status={{ tone: 'idle', text: 'Waiting for a trip' }} />;
   }
   return (
     <GameCard

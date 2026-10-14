@@ -19,6 +19,8 @@ interface RosterGameCardProps {
   path: string;
   minPlayers: number;
   maxPlayers: number;
+  /** Artwork for the dimmed tile shown until the game can start. */
+  iconSrc?: string;
   /** Renders the game tile for these names. */
   renderGame: (names: string[]) => ReactNode;
   create: (names: string[], tripTitle: string) => Promise<string>;
@@ -30,7 +32,7 @@ interface RosterGameCardProps {
 
 type Share = { code: string; sig: string; tripId: string };
 
-export default function RosterGameCard({ roster, id, title, path, minPlayers, maxPlayers, renderGame, create, update, migrationFile, extra }: RosterGameCardProps) {
+export default function RosterGameCard({ roster, id, title, path, minPlayers, maxPlayers, iconSrc, renderGame, create, update, migrationFile, extra }: RosterGameCardProps) {
   const toast = useToast();
   const key = `ulaa:admin-games:share:${id}`;
   const { tripId, trip } = roster;
@@ -81,12 +83,12 @@ export default function RosterGameCard({ roster, id, title, path, minPlayers, ma
   };
 
   const needTrip = !tripId;
-  const empty = (text: string) => <EmptyGame>{text}</EmptyGame>;
+  const empty = (text: string) => <EmptyGame title={title} iconSrc={iconSrc}>{text}</EmptyGame>;
   const game = needTrip
-    ? empty(`Pick a trip to play ${title}.`)
+    ? empty('Pick a trip to play')
     : canShare
       ? renderGame(names)
-      : empty(`Tick at least ${minPlayers} people to play ${title}.`);
+      : empty(`Tick at least ${minPlayers} people to play`);
   const capped = roster.names.length > maxPlayers;
   const status = needTrip
     ? { tone: 'idle' as const, text: 'Waiting for a trip' }

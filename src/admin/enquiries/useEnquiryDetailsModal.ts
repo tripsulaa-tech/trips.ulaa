@@ -52,7 +52,10 @@ export function useEnquiryDetailsModal() {
     setDetailsInvoicesLoading(true);
     getPaymentsForEnquiry(detailsTarget.id)
       .then(rows => { if (!cancelled) setDetailsInvoices(rows); })
-      .catch(err => console.error(err))
+      .catch(err => {
+        console.error(err);
+        if (!cancelled) toast.error("Couldn't load the payment history. Please close and reopen to try again.");
+      })
       .finally(() => { if (!cancelled) setDetailsInvoicesLoading(false); });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only detailsTarget.id is read; re-fetching on every detailsTarget reference change would refetch unnecessarily

@@ -9,7 +9,6 @@ import {
   List as Menu,
   X,
   CaretDown as ChevronDown,
-  ArrowSquareOut as ExternalLink,
   FileText,
   ListChecks,
   CaretDoubleLeft as ChevronsLeft,
@@ -22,15 +21,11 @@ import {
   Calculator,
   Receipt,
   Swatches,
-  Compass,
-  Globe,
-  UsersThree,
-  ChartLineUp,
   Coins,
   IdentificationCard,
   GameController,
 } from '@phosphor-icons/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../context/useAuth';
 import NotificationsPanel from './NotificationsPanel';
 import PushNotificationToggle from './PushNotificationToggle';
@@ -70,14 +65,13 @@ const NAV_ITEM_DEFS: Record<string, AdminNavItemDef> = {
 };
 
 // Sidebar layout, grouped by default: "Dashboard" stays a standalone link at
-// the top, and everything else lives in a collapsible section so the list
-// stays short instead of one long scrolling column. The admin can still drag
+// the top, and everything else sits under a small always-visible section
+// label (TRIPS, CUSTOMERS, ...) so the list stays easy to scan. The admin can still drag
 // any item to reorder it, or into a different section — the groups themselves
 // (names/icons/order) are fixed, only which items sit where is remembered.
 interface NavGroupDef {
   id: string;
   label: string;
-  icon: TripHighlightIconType;
   items: string[];
 }
 
@@ -87,10 +81,10 @@ const DEFAULT_TOP_ITEMS = ['Dashboard'];
 // people booking them, handle the money, and finally the public website and
 // its branding (touched least often, so it sits last).
 const NAV_GROUPS: NavGroupDef[] = [
-  { id: 'trips', label: 'Trips', icon: Compass, items: ['Upcoming Trips', 'Completed Trips', 'Trip Leaders', 'Travel Cards'] },
-  { id: 'customers', label: 'Customers', icon: UsersThree, items: ['Enquiries', 'Waitlist', 'Travellers'] },
-  { id: 'business', label: 'Business', icon: ChartLineUp, items: ['Trip Finance', 'Invoice Generator', 'Reports', 'Rate Calculator'] },
-  { id: 'website', label: 'Website', icon: Globe, items: ['Home Page', 'About Page', 'Games', 'Logo Studio'] },
+  { id: 'trips', label: 'Trips', items: ['Upcoming Trips', 'Completed Trips', 'Trip Leaders', 'Travel Cards'] },
+  { id: 'customers', label: 'Customers', items: ['Enquiries', 'Waitlist', 'Travellers'] },
+  { id: 'business', label: 'Business', items: ['Trip Finance', 'Invoice Generator', 'Reports', 'Rate Calculator'] },
+  { id: 'website', label: 'Website', items: ['Home Page', 'About Page', 'Games', 'Logo Studio'] },
 ];
 
 interface NavOrder {
@@ -102,31 +96,6 @@ interface NavOrder {
 // order from an older version would otherwise keep overriding the new layout
 // for everyone who had ever opened the admin.
 const NAV_ORDER_STORAGE_KEY = 'admin-sidebar-order-v3';
-
-// Which sidebar sections the admin has expanded. Every admin page renders its
-// own AdminLayout, so the sidebar remounts on each navigation; without this the
-// open sections reset to just the current page's section. A section stays open
-// until the admin closes it themselves.
-const NAV_OPEN_GROUPS_KEY = 'admin-sidebar-open-groups';
-
-function loadOpenGroups(): Record<string, boolean> {
-  try {
-    const raw = window.localStorage.getItem(NAV_OPEN_GROUPS_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, boolean>;
-  } catch {
-    // Storage unavailable or corrupt — fall back to defaults.
-  }
-  return {};
-}
-
-function saveOpenGroups(open: Record<string, boolean>) {
-  try {
-    window.localStorage.setItem(NAV_OPEN_GROUPS_KEY, JSON.stringify(open));
-  } catch {
-    // Storage unavailable — sections still work for this page view.
-  }
-}
 
 function defaultNavOrder(): NavOrder {
   return {
@@ -184,6 +153,32 @@ function saveNavOrder(order: NavOrder) {
   }
 }
 
+// Where the sidebar menu was scrolled to. Every admin page renders its own
+// AdminLayout (and the mobile drawer unmounts when closed), so without this the
+// menu would jump back to the top each time. Kept in memory and sessionStorage.
+const NAV_SCROLL_KEY = 'admin-sidebar-scroll';
+let savedNavScroll: number | null = null;
+
+function readNavScroll(): number | null {
+  if (savedNavScroll !== null) return savedNavScroll;
+  try {
+    const raw = window.sessionStorage.getItem(NAV_SCROLL_KEY);
+    const n = raw === null ? NaN : Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeNavScroll(top: number) {
+  savedNavScroll = top;
+  try {
+    window.sessionStorage.setItem(NAV_SCROLL_KEY, String(top));
+  } catch {
+    // Storage unavailable — position is still kept for this page view.
+  }
+}
+
 interface AdminLayoutProps {
   children: ReactNode;
   title: string;
@@ -222,6 +217,7 @@ interface SidebarContentProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   guardNavigate?: (e: React.MouseEvent, proceed?: () => void) => void;
+  onSignOut: () => void;
 }
 
 interface DragTarget {
@@ -230,38 +226,26 @@ interface DragTarget {
   label?: string;
 }
 
-function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onToggleCollapse, guardNavigate }: SidebarContentProps) {
-  const location = useLocation();
+function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onToggleCollapse, guardNavigate, onSignOut }: SidebarContentProps) {
   const { urls: brand } = useBranding();
-  const [navOrder, setNavOrder] = useState<NavOrder>(loadNavOrder);
+  // The mobile drawer (no collapse toggle) gets larger, touch-friendly sizing;
+  // the desktop sidebar stays compact so every tab fits.
+  const roomy = !onToggleCollapse;
+  const navRef = useRef<HTMLElement>(null);
 
-  const isItemActive = (label: string) => {
-    const { to } = NAV_ITEM_DEFS[label];
-    return location.pathname === to || location.pathname.startsWith(`${to}/`);
-  };
-  const groupHasActive = (groupId: string, order: NavOrder = navOrder) =>
-    (order.groups[groupId] ?? []).some(isItemActive);
-
-  // Sections the admin opened stay open (remembered across pages and visits)
-  // until they close them; the section holding the current page is always open.
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const saved = loadOpenGroups();
-    return Object.fromEntries(NAV_GROUPS.map(g => [g.id, saved[g.id] === true || groupHasActive(g.id)]));
-  });
-
-  // Navigating (sidebar link, dashboard quick action, back button, ...) into
-  // a page that lives in a collapsed section opens that section. Adjusted
-  // during render rather than in an effect to avoid an extra render pass.
-  const [prevPathname, setPrevPathname] = useState(location.pathname);
-  if (location.pathname !== prevPathname) {
-    setPrevPathname(location.pathname);
-    const home = NAV_GROUPS.find(g => groupHasActive(g.id));
-    if (home && !openGroups[home.id]) {
-      const next = { ...openGroups, [home.id]: true };
-      setOpenGroups(next);
-      saveOpenGroups(next);
+  // Put the menu back where it was left. With nothing saved yet (first visit),
+  // bring the current page's link into view instead.
+  useLayoutEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const saved = readNavScroll();
+    if (saved !== null) {
+      el.scrollTop = saved;
+    } else {
+      el.querySelector('[aria-current="page"]')?.scrollIntoView({ block: 'nearest' });
     }
-  }
+  }, []);
+  const [navOrder, setNavOrder] = useState<NavOrder>(loadNavOrder);
 
   const [draggedLabel, setDraggedLabel] = useState<string | null>(null);
   // Every row (item, plus each section's end-of-list drop slot) registers its
@@ -270,12 +254,6 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
   // dragging work with touch as well as a mouse, since native HTML5
   // drag-and-drop never fires from touch gestures on mobile browsers.
   const rowsRef = useRef<Map<string, { el: HTMLElement; target: DragTarget }>>(new Map());
-
-  const toggleGroup = (id: string) => {
-    const next = { ...openGroups, [id]: !openGroups[id] };
-    setOpenGroups(next);
-    saveOpenGroups(next);
-  };
 
   const updateOrder = (updater: (order: NavOrder) => NavOrder) => {
     setNavOrder(prev => {
@@ -400,7 +378,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       role="button"
       tabIndex={0}
       aria-label={`Reorder ${label}. Use the up and down arrow keys to move it.`}
-      className="shrink-0 flex items-center justify-center w-8 h-10 -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/50 hover:text-dark-muted rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className={`shrink-0 flex items-center justify-center ${roomy ? 'w-7 h-11' : 'w-6 h-8'} -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/50 hover:text-dark-muted rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
       style={{
         WebkitTouchCallout: 'none',
         WebkitUserDrag: 'none',
@@ -411,9 +389,8 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
     </span>
   );
 
-  // One nav link row. `nested` rows sit inside a section (slightly smaller);
-  // the collapsed icon rail renders every row flat and icon-only.
-  const renderRow = (label: string, list: string, nested: boolean) => {
+  // One nav link row. The collapsed icon rail renders every row icon-only.
+  const renderRow = (label: string, list: string) => {
     const { to, icon: Icon } = NAV_ITEM_DEFS[label];
     return (
       <div
@@ -421,7 +398,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
         ref={el => { if (el) rowsRef.current.set(label, { el, target: { list, label } }); else rowsRef.current.delete(label); }}
         className={`flex items-center gap-1 rounded-md ${collapsed ? 'justify-center' : ''} ${draggedLabel === label ? 'opacity-40' : ''}`}
       >
-        {!collapsed && renderGrip(label, list, nested ? 13 : 14)}
+        {!collapsed && renderGrip(label, list, roomy ? 14 : 12)}
         <NavLink
           to={to}
           end={label === 'Dashboard'}
@@ -429,13 +406,12 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
           title={collapsed ? label : undefined}
           aria-label={collapsed ? label : undefined}
           className={({ isActive }) => `
-            flex-1 flex items-center rounded-md text-sm font-medium transition-all min-w-0
-            ${nested ? 'gap-2.5 py-2.5 px-2' : 'gap-3 py-3 px-3'}
-            ${collapsed ? '!justify-center !px-0 !gap-0 !py-3' : ''}
+            flex-1 flex items-center ${roomy ? 'gap-3 py-3 px-3 text-base' : 'gap-2.5 py-1.5 px-2.5 text-sm'} rounded-md font-medium transition-colors min-w-0
+            ${collapsed ? '!justify-center !px-0 !gap-0' : ''}
             ${isActive ? 'bg-primary text-white' : 'text-dark hover:bg-background-warm hover:text-primary'}
           `}
         >
-          <Icon size={nested && !collapsed ? 16 : 18} className="shrink-0" aria-hidden="true" />
+          <Icon size={roomy ? 20 : 16} className="shrink-0" aria-hidden="true" />
           {!collapsed && <span className="truncate">{label}</span>}
         </NavLink>
       </div>
@@ -447,12 +423,12 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       {/* Announces keyboard-driven reorders, which otherwise only show up
           as a visual position change. */}
       <div aria-live="polite" className="sr-only">{moveAnnouncement}</div>
-      <div className={`relative pt-6 pb-4 flex items-center ${collapsed ? 'flex-col gap-3 px-2' : 'justify-center px-6'}`}>
+      <div className={`relative flex items-center ${collapsed ? 'flex-col justify-center gap-2 px-2 py-3' : `${roomy ? 'h-20' : 'h-16'} justify-start pl-6 pr-16`}`}>
         <Link to="/" className="inline-block shrink-0" onClick={guardNavigate}>
           {collapsed ? (
-            <img src={brand.admin_icon} alt="Ulaa" className="h-11 w-11 object-contain" />
+            <img src={brand.admin_icon} alt="Ulaa" className="h-8 w-8 object-contain" />
           ) : (
-            <img src={brand.admin_logo} alt="Ulaa" className="h-32 max-w-full object-contain" />
+            <img src={brand.admin_logo} alt="Ulaa" className={`${roomy ? 'h-14' : 'h-11'} max-w-full object-contain`} />
           )}
         </Link>
         {/* Collapse/expand toggle — desktop only; the mobile drawer always
@@ -462,8 +438,8 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
             onClick={onToggleCollapse}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-            className={`shrink-0 flex items-center justify-center w-8 h-8 rounded-lg border border-background-warm bg-background-warm/60 text-dark-muted hover:bg-background-warm hover:text-primary transition-colors ${
-              collapsed ? '' : 'absolute right-4 top-6'
+            className={`shrink-0 flex items-center justify-center w-7 h-7 rounded-lg border border-background-warm bg-background-warm/60 text-dark-muted hover:bg-background-warm hover:text-primary transition-colors ${
+              collapsed ? '' : 'absolute right-4 top-1/2 -translate-y-1/2'
             }`}
           >
             {collapsed ? <ChevronsRight size={16} aria-hidden="true" /> : <ChevronsLeft size={16} aria-hidden="true" />}
@@ -471,88 +447,76 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
         )}
       </div>
 
-      <div className={`mb-4 pb-4 flex items-center gap-3 border-b border-background-warm ${collapsed ? 'mx-2 justify-center' : 'mx-6'}`}>
-        <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-display font-semibold flex-shrink-0">
-          {initial}
-        </div>
-        {!collapsed && (
-          <div className="min-w-0">
-            <p className="text-xs text-dark-muted">Admin</p>
-            <p className="text-sm font-semibold text-dark truncate">{userEmail}</p>
-          </div>
-        )}
-      </div>
-
-      <nav className={`flex-1 space-y-1 overflow-y-auto app-scroll ${collapsed ? 'px-2' : 'px-4'}`}>
+      <nav
+        ref={navRef}
+        onScroll={e => writeNavScroll(e.currentTarget.scrollTop)}
+        className={`flex-1 space-y-0.5 overflow-y-auto app-scroll ${collapsed ? 'px-2' : 'px-4'}`}>
         {/* Ungrouped items (Dashboard by default). */}
-        {navOrder.top.map(label => renderRow(label, 'top', false))}
+        {navOrder.top.map(label => renderRow(label, 'top'))}
 
         {NAV_GROUPS.map(group => {
           const items = navOrder.groups[group.id] ?? [];
 
-          // Collapsed icon rail has no room for section headers, so every
+          // Collapsed icon rail has no room for section labels, so every
           // section's items are shown flat, with a thin divider between
           // sections to keep the grouping visible.
           if (collapsed) {
             if (items.length === 0) return null;
             return (
-              <div key={group.id} className="pt-2 mt-2 border-t border-background-warm space-y-1">
-                {items.map(label => renderRow(label, group.id, false))}
+              <div key={group.id} className="pt-1.5 mt-1.5 border-t border-background-warm space-y-0.5">
+                {items.map(label => renderRow(label, group.id))}
               </div>
             );
           }
 
-          // While dragging, every section opens so an item can be dropped
-          // into any of them, even one that was collapsed.
-          const isOpen = !!draggedLabel || (openGroups[group.id] ?? false);
-          const hasActive = items.some(isItemActive);
-          const GroupIcon = group.icon;
-
           return (
-            <div key={group.id} className="pt-1">
-              <button
-                type="button"
-                onClick={() => toggleGroup(group.id)}
-                aria-expanded={isOpen}
-                aria-controls={`admin-nav-group-${group.id}`}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold uppercase tracking-wider transition-colors hover:bg-background-warm hover:text-primary ${
-                  hasActive && !isOpen ? 'text-primary' : 'text-dark-muted'
-                }`}
+            <div key={group.id} role="group" aria-labelledby={`admin-nav-group-${group.id}`} className={roomy ? 'pt-5' : 'pt-2.5'}>
+              <p
+                id={`admin-nav-group-${group.id}`}
+                className={`${roomy ? 'px-3 pb-2 text-xs' : 'px-2.5 pb-1 text-[10px]'} font-semibold uppercase tracking-[0.14em] text-dark-muted`}
               >
-                <GroupIcon size={16} className="shrink-0" aria-hidden="true" />
-                <span className="flex-1 text-left truncate">{group.label}</span>
-                <ChevronDown size={14} className={`shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-              </button>
-
-              {isOpen && (
-                <div id={`admin-nav-group-${group.id}`} className="mt-1 ml-4 pl-3 py-1 space-y-1 border-l border-background-warm">
-                  {items.map(label => renderRow(label, group.id, true))}
-                  {/* End-of-section drop slot — lets an item be dropped at
-                      the bottom of (or into an empty) section. */}
-                  {draggedLabel && (
-                    <div
-                      ref={el => { if (el) rowsRef.current.set(`__END_${group.id}__`, { el, target: { list: group.id } }); else rowsRef.current.delete(`__END_${group.id}__`); }}
-                      className="h-8 rounded-md border-2 border-dashed border-primary/30"
-                    />
-                  )}
-                </div>
-              )}
+                {group.label}
+              </p>
+              <div className="space-y-0.5">
+                {items.map(label => renderRow(label, group.id))}
+                {/* End-of-section drop slot — lets an item be dropped at the
+                    bottom of (or into an empty) section while dragging. */}
+                {draggedLabel && (
+                  <div
+                    ref={el => { if (el) rowsRef.current.set(`__END_${group.id}__`, { el, target: { list: group.id } }); else rowsRef.current.delete(`__END_${group.id}__`); }}
+                    className="h-8 rounded-md border-2 border-dashed border-primary/30"
+                  />
+                )}
+              </div>
             </div>
           );
         })}
       </nav>
 
-      <div className={`p-4 border-t border-background-warm ${collapsed ? 'px-2' : ''}`}>
-        <Link
-          to="/"
-          onClick={guardNavigate}
-          title={collapsed ? 'View Site' : undefined}
-          aria-label={collapsed ? 'View Site' : undefined}
-          className={`flex items-center justify-center gap-2 py-2.5 rounded-md border border-background-warm text-sm font-medium text-dark hover:bg-background-warm transition-colors ${collapsed ? 'px-0' : 'px-4'}`}
-        >
-          <ExternalLink size={16} className="shrink-0" aria-hidden="true" />
-          {!collapsed && 'View Site'}
-        </Link>
+      <div className={`border-t border-background-warm ${collapsed ? 'p-2 flex flex-col items-center gap-2' : roomy ? 'px-4 py-4' : 'px-4 py-2.5'}`}>
+        <div className={`flex items-center ${collapsed ? 'flex-col gap-2' : 'gap-2.5'}`}>
+          <div
+            title={collapsed ? userEmail : undefined}
+            className={`${roomy ? 'w-10 h-10 text-base' : 'w-7 h-7 text-xs'} rounded-full bg-primary text-white flex items-center justify-center font-display font-semibold shrink-0`}
+          >
+            {initial}
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className={`${roomy ? 'text-xs' : 'text-[11px]'} leading-tight text-dark-muted`}>Admin</p>
+              <p className={`${roomy ? 'text-sm' : 'text-xs'} font-semibold leading-tight text-dark truncate`}>{userEmail}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={onSignOut}
+            title="Sign Out"
+            aria-label="Sign Out"
+            className={`shrink-0 flex items-center justify-center ${roomy ? 'w-11 h-11' : 'w-8 h-8'} rounded-md text-dark-muted hover:bg-background-warm hover:text-primary transition-colors`}
+          >
+            <LogOut size={roomy ? 22 : 18} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -705,7 +669,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
       {/* Desktop sidebar — collapses to an icon-only rail via the toggle
           button inside SidebarContent. */}
       <aside
-        className={`hidden lg:flex ${collapsed ? 'w-20' : 'w-64'} bg-white border-r border-background-warm flex-col fixed inset-y-0 z-30 transition-all duration-200`}
+        className={`hidden lg:flex ${collapsed ? 'w-16' : 'w-60'} bg-white border-r border-background-warm flex-col fixed inset-y-0 z-30 transition-all duration-200`}
       >
         <SidebarContent
           userEmail={user?.email}
@@ -714,6 +678,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
           collapsed={collapsed}
           onToggleCollapse={toggleCollapsed}
           guardNavigate={guardNavigate}
+          onSignOut={handleSignOut}
         />
       </aside>
 
@@ -722,22 +687,22 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
       {sidebarOpen && (
         <div className="lg:hidden fixed inset-0 z-40 flex">
           <div className="fixed inset-0 bg-dark/50" onClick={() => setSidebarOpen(false)} />
-          <div role="dialog" aria-modal="true" aria-label="Admin navigation menu" className="relative w-72 bg-white flex flex-col z-50">
+          <div role="dialog" aria-modal="true" aria-label="Admin navigation menu" className="relative w-80 max-w-[85vw] bg-white flex flex-col z-50">
             <button
               ref={mobileCloseBtnRef}
               onClick={() => setSidebarOpen(false)}
               aria-label="Close navigation menu"
-              className="absolute top-4 right-4 p-2 rounded-md text-dark-muted hover:bg-background"
+              className="absolute top-[22px] right-4 p-2 rounded-md text-dark-muted hover:bg-background"
             >
               <X size={20} aria-hidden="true" />
             </button>
-            <SidebarContent userEmail={user?.email} initial={initial} onNavigate={() => setSidebarOpen(false)} guardNavigate={guardNavigate} />
+            <SidebarContent userEmail={user?.email} initial={initial} onNavigate={() => setSidebarOpen(false)} guardNavigate={guardNavigate} onSignOut={handleSignOut} />
           </div>
         </div>
       )}
 
       {/* Main */}
-      <div className={`flex-1 min-w-0 ${fixedHeight ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-20' : 'lg:pl-64'}`}>
+      <div className={`flex-1 min-w-0 ${fixedHeight ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col transition-all duration-200 ${collapsed ? 'lg:pl-16' : 'lg:pl-60'}`}>
         {/* Top bar */}
         <header className="bg-white border-b border-background-warm px-4 sm:px-6 lg:px-8 py-4 sm:py-6 min-h-[76px] sm:min-h-[92px] flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-3 min-w-0">
@@ -794,7 +759,7 @@ export default function AdminLayout({ children, title, subtitle, hasUnsavedChang
           </div>
         </header>
 
-        <main className={`flex-1 min-w-0 p-4 sm:p-6 lg:p-6 ${fixedHeight ? 'overflow-hidden flex flex-col min-h-0' : ''}`}>
+        <main className={`flex-1 min-w-0 ${fixedHeight ? 'p-0 sm:p-6 overflow-hidden flex flex-col min-h-0' : 'p-4 sm:p-6 lg:p-6'}`}>
           {children}
         </main>
       </div>

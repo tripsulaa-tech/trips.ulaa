@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { deleteUpcomingTripCascade, getTripDeletionImpact, updateUpcomingTrip } from '../../services/api';
 import type { UpcomingTrip } from '../../types/types-index';
 import { useConfirm } from '../../components/ui/useConfirm';
+import { useToast } from '../../components/ui/useToast';
 
 /** Row-level quick actions for the Trips table: delete (with a linked-data
  *  impact warning), publish/unpublish, coming-soon toggle, hide-PDF toggle,
@@ -9,7 +10,20 @@ import { useConfirm } from '../../components/ui/useConfirm';
  *  Each mutating action re-runs `load()` to refresh the table afterwards. */
 export function useTripActions(trips: UpcomingTrip[], load: () => void) {
   const confirm = useConfirm();
+  const toast = useToast();
   const [pdfDownloadingId, setPdfDownloadingId] = useState<string | null>(null);
+
+  // Runs a save, then refreshes the table. If the save fails, says so instead of
+  // leaving the row looking unchanged with no explanation.
+  const saveThenReload = async (save: () => Promise<unknown>, failMessage: string) => {
+    try {
+      await save();
+    } catch (err) {
+      console.error(err);
+      toast.error(failMessage);
+    }
+    load();
+  };
 
   const handleDelete = async (trip: UpcomingTrip) => {
     // Look up what's actually attached to this trip first, so the warning
@@ -33,8 +47,7 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
       confirmLabel: 'Delete everything',
     });
     if (!ok) return;
-    await deleteUpcomingTripCascade(trip);
-    load();
+    await saveThenReload(() => deleteUpcomingTripCascade(trip), `Couldn't delete "${trip.title}". Please try again.`);
   };
 
   // Eye/EyeOff quick action: draft -> published (full listing, bypassing the
@@ -42,8 +55,7 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
   // offline). Mirrors the old is_published toggle's behavior.
   const togglePublish = async (trip: UpcomingTrip) => {
     const status = trip.status === 'draft' ? 'published' : 'draft';
-    await updateUpcomingTrip(trip.id, { status });
-    load();
+    await saveThenReload(() => updateUpcomingTrip(trip.id, { status }), "Couldn't change the publish status. Please try again.");
   };
 
   // Hourglass quick action: flips between the two "live" sub-states
@@ -52,24 +64,21 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
   // still filling in content" workflow.
   const toggleComingSoon = async (trip: UpcomingTrip) => {
     const status = trip.status === 'coming_soon' ? 'published' : 'coming_soon';
-    await updateUpcomingTrip(trip.id, { status });
-    load();
+    await saveThenReload(() => updateUpcomingTrip(trip.id, { status }), "Couldn't change the coming-soon status. Please try again.");
   };
 
   // Toggles whether the public Trip Detail page's "Download itinerary PDF"
   // option is shown for this trip. Purely a visibility flag for the public
   // site — doesn't touch this admin table's own download button above.
   const toggleHidePdfDownload = async (trip: UpcomingTrip) => {
-    await updateUpcomingTrip(trip.id, { hide_pdf_download: !trip.hide_pdf_download });
-    load();
+    await saveThenReload(() => updateUpcomingTrip(trip.id, { hide_pdf_download: !trip.hide_pdf_download }), "Couldn't change the PDF setting. Please try again.");
   };
 
   // Toggles whether the Trip Detail hero draws the trip title over the
   // banner. Turn it on when the banner artwork already contains the title.
   // See add_trip_banner_has_text.sql.
   const toggleBannerHasText = async (trip: UpcomingTrip) => {
-    await updateUpcomingTrip(trip.id, { banner_has_text: !trip.banner_has_text });
-    load();
+    await saveThenReload(() => updateUpcomingTrip(trip.id, { banner_has_text: !trip.banner_has_text }), "Couldn't change the banner setting. Please try again.");
   };
 
   // Toggles whether this trip's special-offer *promotion* (homepage
@@ -78,8 +87,7 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
   // window, keeps applying, it just stops being advertised. See
   // add_trip_hide_special_offer_promo.sql.
   const toggleHideSpecialOfferPromo = async (trip: UpcomingTrip) => {
-    await updateUpcomingTrip(trip.id, { hide_special_offer_promo: !trip.hide_special_offer_promo });
-    load();
+    await saveThenReload(() => updateUpcomingTrip(trip.id, { hide_special_offer_promo: !trip.hide_special_offer_promo }), "Couldn't change the special-offer setting. Please try again.");
   };
 
   // ↑/↓ quick action: swaps this trip's sort_order with its neighbour in
@@ -93,10 +101,16 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
     const b = trips[target];
     const aOrder = a.sort_order ?? index;
     const bOrder = b.sort_order ?? target;
-    await Promise.all([
-      updateUpcomingTrip(a.id, { sort_order: bOrder }),
-      updateUpcomingTrip(b.id, { sort_order: aOrder }),
-    ]);
+    try {
+      await Promise.all([
+        updateUpcomingTrip(a.id, { sort_order: bOrder }),
+        updateUpcomingTrip(b.id, { sort_order: aOrder }),
+      ]);
+    } catch (err) {
+      console.error(err);
+      toast.error("Couldn't change the trip order. Please try again.");
+    }
+    // Reload either way so the table shows what is actually saved.
     load();
   };
 
@@ -110,6 +124,7 @@ export function useTripActions(trips: UpcomingTrip[], load: () => void) {
       await downloadTripItineraryPdf(trip);
     } catch (err) {
       console.error('Failed to generate itinerary PDF', err);
+      toast.error(`Couldn't create the itinerary PDF for "${trip.title}". Please try again.`);
     } finally {
       setPdfDownloadingId(null);
     }

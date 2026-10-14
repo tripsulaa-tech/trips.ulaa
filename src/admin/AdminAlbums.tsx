@@ -6,6 +6,8 @@ import {
   Trash as Trash2,
   Eye,
   EyeSlash as EyeOff,
+  MagnifyingGlass,
+  X,
 } from '@phosphor-icons/react';
 import AdminLayout from './AdminLayout';
 import Button from '../components/ui/Button';
@@ -27,6 +29,7 @@ import { FORM_INPUT_CLASS as inputClass } from '../constants/formStyles';
 import { STORAGE_BUCKET } from '../constants/storage';
 import { useAlert } from '../components/ui/useAlert';
 import { useToast } from '../components/ui/useToast';
+import LoadErrorState from '../components/ui/LoadErrorState';
 
 interface AlbumForm {
   title: string;
@@ -91,9 +94,20 @@ export default function AdminAlbums() {
   // A kept draft whose album changed after the draft was started: held until the admin chooses.
   const [heldDraft, setHeldDraft] = useState<{ recordId: string | null; form: AlbumForm; baseline: AlbumForm } | null>(null);
 
+  const [loadError, setLoadError] = useState(false);
+
   const load = () => {
-    getAllCompletedTripsAdmin().then(setAlbums).catch(console.error).finally(() => setLoading(false));
+    getAllCompletedTripsAdmin()
+      .then(data => { setAlbums(data); setLoadError(false); })
+      .catch(err => {
+        console.error(err);
+        setLoadError(true);
+        toast.error("Couldn't load the completed trips. Please try again.");
+      })
+      .finally(() => setLoading(false));
   };
+
+  const retryLoad = () => { setLoading(true); load(); };
 
   useEffect(() => { load(); }, []);
 
@@ -258,6 +272,18 @@ export default function AdminAlbums() {
   // alert() after Save.
   const duplicateAlbum = findDuplicateAlbum(form, albums, editing?.id);
 
+  // List filters (search + status) — they only change what is shown.
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const isFiltered = query.trim() !== '' || statusFilter !== 'all';
+  const q = query.trim().toLowerCase();
+  const visibleAlbums = albums.filter(a =>
+    (statusFilter === 'all' || (statusFilter === 'published') === a.is_published) &&
+    (q === '' || `${a.title} ${a.destination ?? ''} ${a.batch ?? ''}`.toLowerCase().includes(q)),
+  );
+  const publishedCount = albums.filter(a => a.is_published).length;
+  const clearFilters = () => { setQuery(''); setStatusFilter('all'); };
+
   return (
     <AdminLayout title="Completed Trips" scrollRestorationReady={!loading}>
       <div className="space-y-6">
@@ -269,15 +295,62 @@ export default function AdminAlbums() {
           />
         )}
         <div className="flex justify-between items-center">
-          <p className="text-dark-muted">{albums.length} albums</p>
+          <p className="text-dark-muted">{isFiltered ? `${visibleAlbums.length} of ${albums.length} albums` : `${albums.length} albums`}</p>
           <div className="hidden sm:block">
             <Button variant="primary" size="sm" onClick={openCreate}><Plus size={16} aria-hidden="true" /> Add Album</Button>
           </div>
         </div>
         <AddFab onClick={openCreate} label="Add album" />
 
+        {albums.length > 1 && (
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="relative flex-1">
+              <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
+              <input
+                type="search"
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search albums by name, destination or batch"
+                aria-label="Search albums"
+                className="w-full bg-white rounded-lg shadow-card pl-9 pr-9 py-2.5 text-sm text-dark placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              {query && (
+                <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-dark-muted hover:text-primary">
+                  <X size={14} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2" role="group" aria-label="Filter by status">
+              {([
+                ['all', `All ${albums.length}`],
+                ['published', `${publishedCount} Published`],
+                ['draft', `${albums.length - publishedCount} Draft`],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={statusFilter === value}
+                  onClick={() => setStatusFilter(value)}
+                  className={`text-xs font-button font-semibold px-3 py-2 rounded-md whitespace-nowrap transition-colors ${
+                    statusFilter === value ? 'bg-primary text-white' : 'bg-white text-dark-muted shadow-card hover:text-primary'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div role="status" className="text-center py-16 text-dark-muted">Loading...</div>
+        ) : loadError && albums.length === 0 ? (
+          <LoadErrorState what="the completed trips" onRetry={retryLoad} />
+        ) : visibleAlbums.length === 0 && isFiltered ? (
+          <div className="text-center py-12 bg-white rounded-lg shadow-card">
+            <p className="text-dark-muted mb-3">No albums match your filters.</p>
+            <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button>
+          </div>
         ) : (
           <>
             {/* Mobile (below sm): a card per album — the desktop table's
@@ -286,7 +359,7 @@ export default function AdminAlbums() {
                 title/status/actions row, so this gives every field room to
                 breathe instead. Same pattern as AdminTripLeaders. */}
             <div className="sm:hidden space-y-3">
-              {albums.map(album => (
+              {visibleAlbums.map(album => (
                 <motion.div
                   key={album.id}
                   initial={{ opacity: 0 }}
@@ -303,7 +376,7 @@ export default function AdminAlbums() {
                       <div className="min-w-0">
                         <button
                           onClick={() => setViewing(album)}
-                          className="text-sm font-medium text-dark truncate text-left hover:text-primary hover:underline underline-offset-2 block"
+                          className="text-sm font-medium text-dark text-left leading-snug w-full line-clamp-2 break-words hover:text-primary hover:underline underline-offset-2 block"
                           aria-label={`View details for ${album.title}`}
                         >
                           {album.title}
@@ -359,7 +432,7 @@ export default function AdminAlbums() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-background-warm">
-                    {albums.map(album => (
+                    {visibleAlbums.map(album => (
                       <motion.tr key={album.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
                         <td className="px-4 py-4 font-medium text-dark max-w-[150px] sm:max-w-none">
                           <div className="flex items-center gap-1.5 min-w-0">

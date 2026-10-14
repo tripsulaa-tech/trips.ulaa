@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Plus,
@@ -16,6 +17,8 @@ import {
   SignIn as LogIn,
   CaretUp as ChevronUp,
   CaretDown as ChevronDown,
+  MagnifyingGlass,
+  X,
 } from '@phosphor-icons/react';
 import Button from '../../components/ui/Button';
 import AddFab from '../../components/ui/AddFab';
@@ -23,10 +26,14 @@ import ActionsMenu from '../../components/ui/ActionsMenu';
 import type { ActionMenuItem } from '../../components/ui/ActionsMenu';
 import type { UpcomingTrip } from '../../types/types-index';
 import { formatDate } from '../../utils/utils-index';
+import LoadErrorState from '../../components/ui/LoadErrorState';
 
 interface AdminTripsTableProps {
   trips: UpcomingTrip[];
   loading: boolean;
+  /** The trips list failed to load (shown instead of "No trips yet"). */
+  loadError: boolean;
+  onRetryLoad: () => void;
   pdfDownloadingId: string | null;
   importInputRef: React.RefObject<HTMLInputElement | null>;
   onImportInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -50,7 +57,7 @@ interface AdminTripsTableProps {
  *  Split out of the original single-file AdminTrips.tsx — see that
  *  component's own comment for the rest of the split. */
 export default function AdminTripsTable({
-  trips, loading, pdfDownloadingId,
+  trips, loading, loadError, onRetryLoad, pdfDownloadingId,
   importInputRef, onImportInputChange, onExportTemplate,
   onAddTrip, onView, onCheckIn, onEdit, onDelete,
   onTogglePublish, onToggleComingSoon, onToggleHidePdf, onToggleBannerHasText, onToggleSpecialOfferPromo, onMoveTrip, onDownloadPdf,
@@ -58,6 +65,26 @@ export default function AdminTripsTable({
   const publishedCount = trips.filter(t => t.status === 'published').length;
   const comingSoonCount = trips.filter(t => t.status === 'coming_soon').length;
   const draftCount = trips.filter(t => t.status === 'draft').length;
+
+  // Filters (search + status) only change what is listed here. Reordering is
+  // paused while one is active because the arrows move a trip within the full
+  // homepage order, which would look wrong on a partial list.
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<UpcomingTrip['status'] | null>(null);
+  const isFiltered = query.trim() !== '' || statusFilter !== null;
+  const q = query.trim().toLowerCase();
+  const visibleTrips = trips
+    .map((trip, index) => ({ trip, index }))
+    .filter(({ trip }) =>
+      (statusFilter === null || trip.status === statusFilter) &&
+      (q === '' || `${trip.title} ${trip.destination ?? ''}`.toLowerCase().includes(q)),
+    );
+  const clearFilters = () => { setQuery(''); setStatusFilter(null); };
+  const toggleStatus = (status: UpcomingTrip['status']) => setStatusFilter(prev => (prev === status ? null : status));
+  const pillClass = (status: UpcomingTrip['status'], tone: string) =>
+    `inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-md transition-shadow ${tone} ${
+      statusFilter === status ? 'ring-2 ring-primary' : 'hover:ring-1 hover:ring-primary/40'
+    }`;
 
   // Everything except Edit and Delete lives in each row's ⋮ menu, so the
   // Actions column stays short instead of carrying seven icon buttons.
@@ -136,18 +163,18 @@ export default function AdminTripsTable({
         <div className="bg-white rounded-lg shadow-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             <ClipboardList size={18} className="text-primary shrink-0" aria-hidden="true" />
-            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-md bg-green-50 text-green-700">
+            <button type="button" aria-pressed={statusFilter === 'published'} onClick={() => toggleStatus('published')} title="Show only Published trips" className={pillClass('published', 'bg-green-50 text-green-700')}>
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" aria-hidden="true" />
               {publishedCount} Published
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-md bg-amber-50 text-amber-700">
+            </button>
+            <button type="button" aria-pressed={statusFilter === 'coming_soon'} onClick={() => toggleStatus('coming_soon')} title="Show only Coming Soon trips" className={pillClass('coming_soon', 'bg-amber-50 text-amber-700')}>
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
               {comingSoonCount} Coming Soon
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-xs font-button font-semibold pl-1.5 pr-2.5 py-1 rounded-md bg-background-warm text-dark-muted">
+            </button>
+            <button type="button" aria-pressed={statusFilter === 'draft'} onClick={() => toggleStatus('draft')} title="Show only Draft trips" className={pillClass('draft', 'bg-background-warm text-dark-muted')}>
               <span className="w-1.5 h-1.5 rounded-full bg-dark-muted shrink-0" aria-hidden="true" />
               {draftCount} Draft
-            </span>
+            </button>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <input
@@ -174,6 +201,24 @@ export default function AdminTripsTable({
           </div>
         </div>
         {trips.length > 1 && (
+          <div className="relative">
+            <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-muted pointer-events-none" aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search trips by name or destination"
+              aria-label="Search trips"
+              className="w-full bg-white rounded-lg shadow-card pl-9 pr-9 py-2.5 text-sm text-dark placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-dark-muted hover:text-primary">
+                <X size={14} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        )}
+        {trips.length > 1 && !isFiltered && (
           <p className="text-xs text-dark-muted flex items-center gap-1.5 px-1">
             <ChevronUp size={12} className="shrink-0" aria-hidden="true" />
             Use the ↑/↓ arrows next to each trip to set the order cards appear in on the homepage and the full Trips page.
@@ -183,10 +228,17 @@ export default function AdminTripsTable({
 
       {loading ? (
         <div className="text-center py-16 text-dark-muted">Loading...</div>
+      ) : loadError && trips.length === 0 ? (
+        <LoadErrorState what="the trips" onRetry={onRetryLoad} />
       ) : trips.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg shadow-card">
           <p className="font-display text-xl text-dark-muted mb-4">No trips yet.</p>
           <Button variant="primary" size="md" className="max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={onAddTrip}><Plus size={16} aria-hidden="true" /> Add Your First Trip</Button>
+        </div>
+      ) : visibleTrips.length === 0 ? (
+        <div className="text-center py-12 bg-white rounded-lg shadow-card">
+          <p className="text-dark-muted mb-3">No trips match your filters.</p>
+          <Button variant="outline" size="sm" onClick={clearFilters}>Clear filters</Button>
         </div>
       ) : (
         <>
@@ -197,7 +249,7 @@ export default function AdminTripsTable({
               action room to breathe instead. Same pattern as AdminAlbums /
               AdminTripLeaders. */}
           <div className="sm:hidden space-y-3">
-            {trips.map((trip, index) => {
+            {visibleTrips.map(({ trip, index }) => {
               const seatsLeft = Math.max(0, trip.total_seats - trip.seats_booked);
               return (
                 <motion.div
@@ -209,8 +261,8 @@ export default function AdminTripsTable({
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="flex flex-col shrink-0">
-                        <button onClick={() => onMoveTrip(index, -1)} disabled={index === 0} aria-label={`Move ${trip.title} up`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={14} aria-hidden="true" /></button>
-                        <button onClick={() => onMoveTrip(index, 1)} disabled={index === trips.length - 1} aria-label={`Move ${trip.title} down`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={14} aria-hidden="true" /></button>
+                        <button onClick={() => onMoveTrip(index, -1)} disabled={isFiltered || index === 0} aria-label={`Move ${trip.title} up`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={14} aria-hidden="true" /></button>
+                        <button onClick={() => onMoveTrip(index, 1)} disabled={isFiltered || index === trips.length - 1} aria-label={`Move ${trip.title} down`} className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={14} aria-hidden="true" /></button>
                       </div>
                       {trip.cover_image ? (
                         <img src={trip.cover_image} alt={trip.title} className="w-12 h-12 rounded-md object-cover flex-shrink-0" loading="lazy" decoding="async" />
@@ -220,7 +272,7 @@ export default function AdminTripsTable({
                       <div className="min-w-0">
                         <button
                           onClick={() => onView(trip)}
-                          className="text-sm font-medium text-dark truncate text-left hover:text-primary hover:underline underline-offset-2 block"
+                          className="text-sm font-medium text-dark text-left leading-snug w-full line-clamp-2 break-words hover:text-primary hover:underline underline-offset-2 block"
                           aria-label={`View details for ${trip.title}`}
                         >
                           {trip.title}
@@ -277,12 +329,12 @@ export default function AdminTripsTable({
                 </tr>
               </thead>
               <tbody className="divide-y divide-background-warm">
-                {trips.map((trip, index) => (
+                {visibleTrips.map(({ trip, index }) => (
                   <motion.tr key={trip.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="hover:bg-background/50">
                     <td className="px-2 py-4">
                       <div className="flex flex-col items-center">
-                        <button onClick={() => onMoveTrip(index, -1)} disabled={index === 0} aria-label={`Move ${trip.title} up`} title="Move up (homepage order)" className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={13} aria-hidden="true" /></button>
-                        <button onClick={() => onMoveTrip(index, 1)} disabled={index === trips.length - 1} aria-label={`Move ${trip.title} down`} title="Move down (homepage order)" className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={13} aria-hidden="true" /></button>
+                        <button onClick={() => onMoveTrip(index, -1)} disabled={isFiltered || index === 0} aria-label={`Move ${trip.title} up`} title="Move up (homepage order)" className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronUp size={13} aria-hidden="true" /></button>
+                        <button onClick={() => onMoveTrip(index, 1)} disabled={isFiltered || index === trips.length - 1} aria-label={`Move ${trip.title} down`} title="Move down (homepage order)" className="p-0.5 rounded hover:bg-background disabled:opacity-30 text-dark-muted"><ChevronDown size={13} aria-hidden="true" /></button>
                       </div>
                     </td>
                     <td className="px-4 py-4 font-medium text-dark truncate max-w-[150px] sm:max-w-none">

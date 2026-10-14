@@ -389,7 +389,16 @@ export default function AdminTravellerProfilePanel({
                         <span className="inline-flex items-center gap-1.5">
                           <FoodMark type={profile.food} size={12} /> {profile.food === 'veg' ? 'Veg' : 'Non-veg'}
                         </span>
-                      ) : <span className="text-dark-muted/60">Not on file</span>}
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(contact)}
+                          title="Set this traveller's food preference"
+                          className="text-primary font-button font-semibold hover:underline"
+                        >
+                          + Set food
+                        </button>
+                      )}
                     </dd>
                   </div>
                   <div>

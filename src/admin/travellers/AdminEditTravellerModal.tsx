@@ -14,6 +14,7 @@ import {
 } from '../../utils/formValidation';
 import { getCitySuggestions, getEmailSuggestions, phoneSignature } from '../enquiries/AdminEnquiriesShared';
 import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
+import FoodMark from '../../components/ui/FoodMark';
 import { useSuggestionField } from '../useSuggestionField';
 
 export type TravellerEditForm = {
@@ -23,16 +24,19 @@ export type TravellerEditForm = {
   second_phone: string;
   email: string;
   city: string;
+  // '' = not set. Only written to the bookings when it actually changed.
+  food_preference: 'veg' | 'non_veg' | '';
 };
 
 function seedForm(contact: TravellerContact | null): TravellerEditForm {
-  if (!contact) return { full_name: '', phone: '', second_phone: '', email: '', city: '' };
+  if (!contact) return { full_name: '', phone: '', second_phone: '', email: '', city: '', food_preference: '' };
   return {
     full_name: contact.fullName === 'Unnamed traveller' ? '' : contact.fullName,
     phone: contact.phone,
     second_phone: contact.emergencyContact || '',
     email: contact.email,
     city: contact.city || '',
+    food_preference: contact.foodPreference ?? '',
   };
 }
 
@@ -183,6 +187,36 @@ export default function AdminEditTravellerModal({
           />
           {touched && cityError && <p id="tc-edit-city-error" role="alert" className="text-red-500 text-xs mt-1">{cityError}</p>}
           {citySuggestField.open && <SuggestionDropdown items={citySuggestField.suggestions} onSelect={citySuggestField.select} />}
+        </div>
+        <div>
+          <span id="tc-edit-food-label" className="block text-sm font-medium text-dark mb-1">Food preference</span>
+          <div role="radiogroup" aria-labelledby="tc-edit-food-label" className="grid grid-cols-3 gap-2">
+            {([
+              { value: 'veg', label: 'Veg', active: 'border-green-600 bg-green-50 text-green-700' },
+              { value: 'non_veg', label: 'Non-veg', active: 'border-red-600 bg-red-50 text-red-700' },
+              { value: '', label: 'Not set', active: 'border-dark-muted bg-background-warm text-dark' },
+            ] as const).map(opt => {
+              const selected = form.food_preference === opt.value;
+              return (
+                <button
+                  key={opt.label}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => { setForm(f => ({ ...f, food_preference: opt.value })); setTouched(true); }}
+                  className={`inline-flex items-center justify-center gap-1.5 px-2 py-2 rounded-md border-2 text-sm font-button font-semibold transition-colors ${
+                    selected ? opt.active : 'border-background-warm bg-white text-dark-muted hover:border-primary/40'
+                  }`}
+                >
+                  <FoodMark type={opt.value === '' ? 'not_set' : opt.value} size={12} />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+          {target && target.tripCount > 1 && (
+            <p className="text-2xs text-dark-muted mt-1">Applies to all of this traveller's trips.</p>
+          )}
         </div>
         <div className="flex gap-3 pt-2">
           <Button variant="outline" size="md" className="flex-1" onClick={onClose}>Cancel</Button>

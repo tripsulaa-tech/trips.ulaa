@@ -9,6 +9,7 @@ import Button from './Button';
 import type { UpcomingTrip } from '../../types/types-index';
 import { canShareItineraryPdf, downloadTripItineraryPdf, shareTripItineraryPdf } from '../../utils/tripItineraryPdf';
 import { useCloseOnOutsideClick } from '../../hooks/useCloseOnOutsideClick';
+import { useToast } from './useToast';
 
 interface PdfDownloadMenuProps {
   trip: UpcomingTrip;
@@ -54,6 +55,7 @@ export default function PdfDownloadMenu({ trip, variant, className = '' }: PdfDo
   const [canShare] = useState(canShareItineraryPdf);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<'download' | 'share' | null>(null);
+  const toast = useToast();
   const menuRef = useRef<HTMLDivElement>(null);
 
   useCloseOnOutsideClick(open, [menuRef], () => setOpen(false), { escape: true });
@@ -65,6 +67,7 @@ export default function PdfDownloadMenu({ trip, variant, className = '' }: PdfDo
       await downloadTripItineraryPdf(trip);
     } catch (err) {
       console.error('Failed to generate itinerary PDF', err);
+      toast.error("Couldn't create the itinerary PDF. Please try again.");
     } finally {
       setBusy(null);
     }
@@ -77,6 +80,10 @@ export default function PdfDownloadMenu({ trip, variant, className = '' }: PdfDo
       await shareTripItineraryPdf(trip);
     } catch (err) {
       console.error('Failed to share itinerary PDF', err);
+      // Closing the phone's share sheet without choosing an app is not an error.
+      if (!(err instanceof DOMException && err.name === 'AbortError')) {
+        toast.error("Couldn't share the itinerary PDF. Please try again.");
+      }
     } finally {
       setBusy(null);
     }

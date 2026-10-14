@@ -87,7 +87,7 @@ export default function ContentEditorShell({
           via flex-1/min-h-0 against AdminLayout's fixedHeight main (rather
           than a max-h calc guess) so it always fills exactly the remaining
           viewport space with zero slack for the page itself to scroll. */}
-      <div className="w-full flex-1 min-h-0 bg-white rounded-md shadow-warm-lg border border-background-warm overflow-hidden flex flex-col">
+      <div className="w-full flex-1 min-h-0 bg-white sm:rounded-md sm:shadow-warm-lg sm:border sm:border-background-warm overflow-hidden flex flex-col">
         <div ref={scrollBodyRef} className="app-scroll overflow-y-auto flex-1 min-h-0">
           <div data-sticky-toolbar className="sticky top-0 z-10 bg-white p-4 pb-3 sm:p-6 sm:pb-4 border-b border-background-warm space-y-3 sm:space-y-4">
             <div className="relative w-full sm:max-w-xs">
