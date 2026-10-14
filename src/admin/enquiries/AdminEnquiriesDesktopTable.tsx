@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import {
   ChatCircle as MessageCircle,
   Users,
-  User,
   CalendarDot as CalendarClock,
   Bird,
   Baby,
