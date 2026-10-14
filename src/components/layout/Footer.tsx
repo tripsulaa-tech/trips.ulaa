@@ -82,7 +82,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-dark text-cream/95 overflow-hidden">
+    <footer data-header-theme="dark" className="bg-dark text-cream/95 overflow-hidden">
       {/* ===================== MOBILE / TABLET ===================== */}
       <div className="lg:hidden">
         <div className="max-w-md mx-auto px-6 sm:px-8 pt-6 pb-10 text-center">

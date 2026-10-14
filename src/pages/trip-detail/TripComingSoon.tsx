@@ -19,7 +19,7 @@ interface TripComingSoonProps {
 export default function TripComingSoon({ trip }: TripComingSoonProps) {
   return (
     <Layout>
-      <div className="relative mt-[81px] aspect-[9/16] sm:aspect-[21/9] overflow-hidden bg-dark">
+      <div className="relative mx-1 sm:mx-1.5 mt-20 rounded-lg aspect-[9/16] sm:aspect-[21/9] overflow-hidden bg-dark">
         <img
           src={trip.hero_mobile_image || trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.title}

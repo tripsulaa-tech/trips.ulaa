@@ -133,9 +133,13 @@ export default function HeroSection() {
   const currentSlide = slides[index] ?? slides[0];
 
   return (
+    // Framed hero: the page background shows around a rounded photo card, and
+    // the navbar sits on that same background above it (header + card fill
+    // exactly one screen). The card keeps every behaviour it had before.
+    <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
     <section
       ref={containerRef}
-      className="relative min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
+      className="relative overflow-hidden rounded-lg h-[calc(100svh-10.6rem)] min-h-[440px] sm:h-[calc(100svh-5.4rem)] sm:min-h-[520px]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
@@ -289,5 +293,6 @@ export default function HeroSection() {
         <div className="w-px h-10 bg-gradient-to-b from-white/60 to-transparent" />
       </motion.div>
     </section>
+    </div>
   );
 }

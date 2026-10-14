@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
-import { motion, useMotionValue, animate as animateMotionValue, type PanInfo } from 'framer-motion';
+import { motion, useMotionValue, useReducedMotion, animate as animateMotionValue, type PanInfo } from 'framer-motion';
 import {
   CaretLeft as ChevronLeft,
   CaretRight as ChevronRight,
@@ -28,6 +28,15 @@ interface PagedCarouselProps<T> {
    *  touch swipes are always available rather than only appearing once
    *  prev/next controls show up. */
   alwaysDrag?: boolean;
+  /** When set, the carousel advances on its own every this-many milliseconds
+   *  and loops back to the first card after the last. It pauses while the
+   *  visitor is touching/hovering it (and for a moment afterwards), only runs
+   *  while on screen, and stays off for people who prefer reduced motion. */
+  autoPlayMs?: number;
+  /** Sizes the carousel to the card(s) currently showing instead of the
+   *  tallest card in the list, and eases the height whenever the visible
+   *  card changes — so a short card isn't followed by a blank gap. */
+  autoHeight?: boolean;
 }
 
 // How far (as a fraction of one card's width) or how fast (px/s) a swipe
@@ -38,7 +47,7 @@ const OFFSET_FRACTION_THRESHOLD = 0.2;
 const VELOCITY_THRESHOLD = 400;
 
 function PagedCarouselInner<T>(
-  { items, itemsPerView, renderItem, keyExtractor, topOverflow = 0, alwaysDrag = false }: PagedCarouselProps<T>,
+  { items, itemsPerView, renderItem, keyExtractor, topOverflow = 0, alwaysDrag = false, autoPlayMs, autoHeight = false }: PagedCarouselProps<T>,
   ref: React.Ref<PagedCarouselHandle>
 ) {
   const maxIndex = Math.max(0, items.length - itemsPerView);
@@ -88,6 +97,57 @@ function PagedCarouselInner<T>(
     }
   }, [index, itemWidth, x]);
 
+  // Auto height (opt-in via autoHeight): follow the tallest card currently in
+  // view, re-measured whenever it resizes (images loading, text wrapping).
+  const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [slideHeight, setSlideHeight] = useState<number | null>(null);
+  useEffect(() => {
+    if (!autoHeight) return;
+    const visible = slideRefs.current.slice(index, index + itemsPerView).filter((el): el is HTMLDivElement => !!el);
+    if (visible.length === 0) return;
+    const update = () => setSlideHeight(Math.max(...visible.map(el => el.offsetHeight)));
+    update();
+    const ro = new ResizeObserver(update);
+    visible.forEach(el => ro.observe(el));
+    return () => ro.disconnect();
+  }, [autoHeight, index, itemsPerView, items.length]);
+
+  // Autoplay (opt-in via autoPlayMs).
+  const reduceMotion = useReducedMotion();
+  const pausedRef = useRef(false);
+  const visibleRef = useRef(true);
+  const resumeTimer = useRef<number>(0);
+  const pauseAutoPlay = () => {
+    pausedRef.current = true;
+    window.clearTimeout(resumeTimer.current);
+  };
+  const resumeAutoPlaySoon = () => {
+    window.clearTimeout(resumeTimer.current);
+    resumeTimer.current = window.setTimeout(() => {
+      pausedRef.current = false;
+    }, 2500);
+  };
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!autoPlayMs || !el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      visibleRef.current = entry.isIntersecting;
+    }, { threshold: 0.4 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [autoPlayMs]);
+  useEffect(() => {
+    if (!autoPlayMs || reduceMotion || maxIndex < 1) return;
+    const id = window.setInterval(() => {
+      if (pausedRef.current || !visibleRef.current || document.hidden) return;
+      setIndex(i => (Math.min(i, maxIndex) >= maxIndex ? 0 : Math.min(i, maxIndex) + 1));
+    }, autoPlayMs);
+    return () => {
+      window.clearInterval(id);
+      window.clearTimeout(resumeTimer.current);
+    };
+  }, [autoPlayMs, reduceMotion, maxIndex]);
+
   const prev = () => setIndex(i => Math.max(0, i - 1));
   const next = () => setIndex(i => Math.min(maxIndex, i + 1));
 
@@ -109,14 +169,29 @@ function PagedCarouselInner<T>(
   const enableDrag = showControls || alwaysDrag;
 
   return (
-    <div>
+    <div
+      onPointerDown={autoPlayMs ? pauseAutoPlay : undefined}
+      onPointerUp={autoPlayMs ? resumeAutoPlaySoon : undefined}
+      onPointerCancel={autoPlayMs ? resumeAutoPlaySoon : undefined}
+      onMouseEnter={autoPlayMs ? pauseAutoPlay : undefined}
+      onMouseLeave={autoPlayMs ? resumeAutoPlaySoon : undefined}
+    >
       <div
         ref={viewportRef}
         className="overflow-hidden -mx-3"
-        style={topOverflow ? { paddingTop: topOverflow, marginTop: -topOverflow } : undefined}
+        style={{
+          ...(topOverflow ? { paddingTop: topOverflow, marginTop: -topOverflow } : null),
+          // +12px of room so a card's drop shadow isn't clipped by overflow-hidden.
+          ...(autoHeight && slideHeight !== null
+            ? {
+                height: slideHeight + topOverflow + 12,
+                transition: reduceMotion ? 'none' : 'height 450ms cubic-bezier(0.22, 1, 0.36, 1)',
+              }
+            : null),
+        }}
       >
         <motion.div
-          className="flex"
+          className={`flex ${autoHeight ? 'items-start' : ''}`}
           drag={enableDrag ? 'x' : false}
           dragConstraints={{ left: -maxOffset, right: 0 }}
           dragElastic={0.08}
@@ -126,6 +201,9 @@ function PagedCarouselInner<T>(
           {items.map((item, i) => (
             <div
               key={keyExtractor ? keyExtractor(item, i) : i}
+              ref={el => {
+                slideRefs.current[i] = el;
+              }}
               className="shrink-0 px-3"
               style={{ width: `${slideWidthPct}%` }}
             >

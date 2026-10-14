@@ -132,7 +132,6 @@ export default function CompletedTripsPage() {
           showFilters,
           onToggleFilters: () => setShowFilters(!showFilters),
         }}
-        filterBarClassName="bg-background"
         beforeFilters={
           <>
             {/* Stats */}
@@ -152,7 +151,7 @@ export default function CompletedTripsPage() {
             {/* Albums intro */}
             <div className="relative isolate px-6 lg:px-8 pt-6 md:pt-16">
               <div className="max-w-[1344px] mx-auto">
-                <div className="mb-6 md:mb-12 flex justify-center">
+                <div className="mb-4 md:mb-6 flex justify-center">
                   <SectionTitle
                     label="Our Stories"
                     title="Adventures we've lived."

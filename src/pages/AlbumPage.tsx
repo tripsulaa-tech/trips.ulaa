@@ -219,7 +219,7 @@ export default function AlbumPage() {
           to a bottom-weighted scrim (title legibility) plus a light top
           scrim so the sticky navbar doesn't float over a bright sky.
          --------------------------------------------------------------- */}
-      <section className="relative h-[60vh] min-h-[440px] md:h-[70vh] md:min-h-[560px] lg:h-[calc(100svh-4rem)] lg:min-h-[640px] lg:max-h-[900px] overflow-hidden">
+      <section className="relative mx-1 sm:mx-1.5 mt-20 rounded-lg h-[60vh] min-h-[440px] md:h-[70vh] md:min-h-[560px] lg:h-[calc(100svh-5.4rem)] lg:min-h-[640px] overflow-hidden">
         <img
           src={album.cover_image || PLACEHOLDER_IMAGE}
           alt={album.title}
@@ -229,15 +229,13 @@ export default function AlbumPage() {
         />
         {/* Scrim: heavy at the bottom and still strong through the middle, so the location line and title stay readable on bright, busy covers. */}
         <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(45,33,24,0.92)_0%,rgba(45,33,24,0.6)_40%,rgba(45,33,24,0.2)_72%,rgba(45,33,24,0.22)_100%)] lg:bg-[linear-gradient(to_top,rgba(45,33,24,0.85)_0%,rgba(45,33,24,0.45)_30%,rgba(45,33,24,0.08)_58%,rgba(45,33,24,0.12)_100%)]" />
-        {/* Soft fade into the page so the photo doesn't end on a hard edge behind the card. */}
-        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-24 lg:h-14 bg-gradient-to-t from-background to-transparent" />
 
         {/* Controls — solid white circles (readable on any cover, matches the
             app's solid cards) pinned to the top so they stay off the faces.
             pt-24 = the fixed navbar (h-20) + 16px: the hero starts at the very
             top of the page, underneath the navbar, so anything higher is hidden. */}
         <div className="absolute inset-x-0 top-0 z-10 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-[1344px] mx-auto pt-24 flex items-center justify-between gap-3">
+          <div className="max-w-[1344px] mx-auto pt-4 sm:pt-6 flex items-center justify-between gap-3">
             <Link
               to="/completed-trips"
               onClick={() => {

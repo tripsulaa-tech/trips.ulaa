@@ -7,6 +7,8 @@ import SectionTitle from '../../components/ui/SectionTitle';
 import TripCard from '../../components/ui/TripCard';
 import { SkeletonGrid } from '../../components/ui/Skeletons';
 import Button from '../../components/ui/Button';
+import PagedCarousel from '../../components/ui/PagedCarousel';
+import { useResponsiveItemsPerView } from '../../components/ui/useResponsiveItemsPerView';
 import { getUpcomingTrips } from '../../services/api';
 import { subscribeToTable } from '../../services/realtime';
 import type { UpcomingTrip } from '../../types/types-index';
@@ -14,6 +16,8 @@ import type { UpcomingTrip } from '../../types/types-index';
 export default function UpcomingTripsPreview() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
   const [loading, setLoading] = useState(true);
+  // 1 on phones (< 768px) -> the same paged carousel Completed Trips uses, auto-sliding; 2+ -> the grid.
+  const isMobile = useResponsiveItemsPerView({ base: 1, md: 2 }) === 1;
 
   useEffect(() => {
     getUpcomingTrips()
@@ -60,6 +64,17 @@ export default function UpcomingTripsPreview() {
             <p className="font-display text-xl text-dark-muted">No upcoming trips yet.</p>
             <p className="text-sm text-dark-muted mt-2">New adventures are being planned — check back soon.</p>
           </div>
+        ) : isMobile ? (
+          // Same arrows-and-dots carousel as the Completed Trips section, one
+          // card per page, sliding on its own until the visitor touches it.
+          <PagedCarousel
+            items={trips}
+            itemsPerView={1}
+            autoPlayMs={4500}
+            autoHeight
+            keyExtractor={trip => trip.id}
+            renderItem={(trip, i) => <TripCard trip={trip} index={i} />}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
             {trips.map((trip, i) => (

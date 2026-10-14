@@ -46,7 +46,7 @@ export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderP
   const socialLinks = founder.social_links.filter(l => l.platform && l.url);
 
   return (
-    <section className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-dark relative overflow-hidden">
+    <section data-header-theme="dark" className="py-12 sm:py-20 px-4 sm:px-6 lg:px-8 bg-dark relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8 md:gap-16 items-center">
         <motion.div {...fadeUp()} className="flex justify-center md:justify-start">

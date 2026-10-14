@@ -106,7 +106,6 @@ export default function UpcomingTripsPage() {
           showFilters,
           onToggleFilters: () => setShowFilters(!showFilters),
         }}
-        filterBarClassName="bg-white"
         afterFilters={
           // Live special offer(s) — only rendered when at least one trip has
           // a flash offer live right now; disappears on its own once the

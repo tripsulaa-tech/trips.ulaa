@@ -201,9 +201,10 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           1. HERO BANNER — identical layout to home HeroSection
       ══════════════════════════════════════════════════════════════ */}
+<div className="px-1 sm:px-1.5 pt-20 pb-1.5">
       <section
         ref={heroContainerRef}
-        className="relative min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
+        className="relative overflow-hidden rounded-lg min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
       >
         {/* Parallax Background */}
         <div className="absolute inset-0 overflow-hidden">
@@ -302,6 +303,7 @@ export default function AboutPage() {
           <div className="w-px h-10 bg-gradient-to-b from-white/60 to-transparent" />
         </motion.div>
       </section>
+      </div>
 
       {/* ══════════════════════════════════════════════════════════════
           2. OUR STORY

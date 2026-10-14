@@ -64,7 +64,7 @@ export default function BrowseShell<T>({
   hero,
   beforeFilters,
   filters,
-  filterBarClassName = 'bg-white',
+  filterBarClassName = 'bg-background',
   afterFilters,
   loading,
   skeletonType,
@@ -82,10 +82,11 @@ export default function BrowseShell<T>({
   return (
     <>
       {/* Hero */}
-      <div className="relative h-80 md:h-96 overflow-hidden">
+      <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
+      <div className="relative h-80 md:h-96 overflow-hidden rounded-lg">
         <img src={hero.image} alt={hero.imageAlt} className="w-full h-full object-cover" loading="eager" fetchPriority="high" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/60 to-dark/80" />
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8 pt-16">
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
             <span className="text-secondary font-script font-normal text-2xl sm:text-3xl md:text-4xl block">{hero.label}</span>
             <h1 className="font-display text-4xl md:text-6xl font-bold mt-3">{hero.title}</h1>
@@ -93,12 +94,16 @@ export default function BrowseShell<T>({
           </motion.div>
         </div>
       </div>
+      </div>
 
       {beforeFilters}
 
       {/* Search & Filters */}
-      <div className={`${filterBarClassName} border-b border-background-warm sticky ${STICKY_FILTER_TOP_CLASS} z-30 px-4 sm:px-6 lg:px-8`}>
-        <div className="max-w-[1344px] mx-auto py-4">
+      <div className={`${filterBarClassName} sticky ${STICKY_FILTER_TOP_CLASS} z-30 px-4 sm:px-6 lg:px-8 py-3`}>
+        {/* White card holding the search box and month filters. The sticky
+            strip around it stays page-coloured so cards scrolling underneath
+            are covered, and the card itself floats on top. */}
+        <div className="max-w-[1344px] mx-auto bg-white rounded-xl border border-background-warm shadow-card p-2.5 sm:p-3">
           <TripSearchFilterBar
             search={filters.search}
             onSearchChange={filters.onSearchChange}
@@ -114,7 +119,7 @@ export default function BrowseShell<T>({
       {afterFilters}
 
       {/* Grid */}
-      <div className="relative isolate px-4 sm:px-6 lg:px-8 py-6 md:py-16">
+      <div className="relative isolate px-4 sm:px-6 lg:px-8 pt-2 pb-6 md:pt-4 md:pb-16">
         <div className="max-w-[1344px] mx-auto">
           {loading ? (
             <SkeletonGrid count={6} type={skeletonType} />
@@ -140,7 +145,7 @@ export default function BrowseShell<T>({
                 </div>
               ) : (
                 <>
-                  <p className="text-dark-muted text-base sm:text-lg mb-6 md:mb-8">
+                  <p className="text-dark-muted text-base sm:text-lg mb-4 md:mb-5">
                     <span className="font-semibold text-primary">{countLabel}</span>{' '}
                     <span className="text-sm sm:text-base">
                       Showing <span className="font-semibold text-dark">{filteredItems.length}</span> {countNoun}

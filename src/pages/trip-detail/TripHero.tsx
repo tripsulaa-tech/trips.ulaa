@@ -174,7 +174,7 @@ export default function TripHero({
           cover_image is used instead, sized to aspect-[9/8] (the ratio the
           Cover Image Editor's crop is framed at) and anchored to the top,
           with bg-dark filling the rest. */}
-      <div className="sm:hidden relative mt-[81px] aspect-[9/16] overflow-hidden bg-dark">
+      <div className="sm:hidden relative mx-1 mt-20 mb-3 rounded-lg aspect-[9/16] overflow-hidden bg-dark">
         <img
           src={trip.hero_mobile_image || trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.title}
@@ -198,7 +198,7 @@ export default function TripHero({
       </div>
 
       {/* ---------------- Tablet / desktop (sm+) ---------------- */}
-      <div className="hidden sm:block mt-[81px]">
+      <div className="hidden sm:block mx-1.5 mt-20 mb-5 rounded-lg overflow-hidden">
         {/* The banner at full brightness; only its bottom edge melts into
             the brown panel below (same idea as the mobile hero's bottom
             fade), so there is no hard line. Shorter than before: capped at

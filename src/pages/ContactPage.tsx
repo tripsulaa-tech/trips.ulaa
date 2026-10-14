@@ -149,7 +149,8 @@ export default function ContactPage() {
           blob-masked photo collage on the right (script note, rotating
           "explore more together" seal, torn sticky note).
          --------------------------------------------------------------- */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-background-warm via-background to-cream px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+      <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
+<section className="relative overflow-hidden rounded-lg ring-1 ring-primary/10 bg-gradient-to-br from-background-warm via-background to-cream px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
         <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
         <div className="max-w-[1344px] mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-8 items-center">
@@ -240,6 +241,7 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
+      </div>
 
       {/* ---------------------------------------------------------------
           Channels + message form

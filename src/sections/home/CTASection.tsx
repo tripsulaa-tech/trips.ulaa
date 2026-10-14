@@ -21,7 +21,7 @@ export default function CTASection() {
   const { image, eyebrow, heading_line1, heading_highlight, subheading, primary_label, secondary_label } = content;
 
   return (
-    <section className="relative py-20 sm:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
+    <section data-header-theme="dark" className="relative py-20 sm:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
         <img src={image} alt="Adventure awaits" className="w-full h-full object-cover" />
