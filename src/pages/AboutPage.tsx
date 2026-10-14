@@ -110,13 +110,12 @@ export default function AboutPage() {
     center: { x: 0, opacity: 1 },
     exit: (dir: number) => ({ x: dir > 0 ? -80 : 80, opacity: 0 }),
   };
-  // Parallax hero — mirrors HeroSection.tsx exactly
+  // Hero — mirrors HeroSection.tsx (static image in the frame; only the text fades on scroll)
   const heroContainerRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress: heroScrollY } = useScroll({
     target: heroContainerRef,
     offset: ['start start', 'end start'],
   });
-  const heroY = useTransform(heroScrollY, [0, 1], ['0%', '30%']);
   const heroOpacity = useTransform(heroScrollY, [0, 0.8], [1, 0]);
   const heroTextVariants = {
     hidden: { opacity: 0, y: 30 },
@@ -204,11 +203,11 @@ export default function AboutPage() {
 <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
       <section
         ref={heroContainerRef}
-        className="relative overflow-hidden rounded-lg min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
+        className="relative isolate transform-gpu overflow-hidden rounded-lg min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
       >
-        {/* Parallax Background */}
+        {/* Background (static inside the frame) */}
         <div className="absolute inset-0 overflow-hidden">
-          <motion.div className="absolute inset-0" style={{ y: heroY }}>
+          <div className="absolute inset-0">
             {(hero.image || hero.mobile_image) ? (
               <>
                 <img
@@ -229,7 +228,7 @@ export default function AboutPage() {
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary/80 to-dark" />
             )}
-          </motion.div>
+          </div>
           {/* Gradient Overlays — identical to home hero */}
           <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/40 to-dark/80" />
           <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />

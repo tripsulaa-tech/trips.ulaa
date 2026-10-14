@@ -28,6 +28,7 @@ const LIGHT_LOGO = '/ULAA-logo-Header-Biege.png';
 // vertical middle, so the header flips exactly as a section passes under it.
 const HEADER_PROBE_Y = 40;
 
+
 function useHeaderTheme(routeKey: string) {
   const [dark, setDark] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -36,14 +37,21 @@ function useHeaderTheme(routeKey: string) {
     let frame = 0;
     const measure = () => {
       frame = 0;
-      setScrolled(window.scrollY > 8);
+      // Small buffers (hysteresis): the state only flips back after moving a
+      // few pixels past the point where it flipped, so it can't toggle
+      // rapidly back and forth while scrolling slowly near a threshold.
+      const y = window.scrollY;
+      setScrolled(prev => (prev ? y > 2 : y > 16));
       const sections = document.querySelectorAll<HTMLElement>('[data-header-theme="dark"]');
-      let over = false;
-      sections.forEach(el => {
-        const r = el.getBoundingClientRect();
-        if (r.top <= HEADER_PROBE_Y && r.bottom > HEADER_PROBE_Y) over = true;
-      });
-      setDark(over);
+      const isOver = (probe: number) => {
+        let over = false;
+        sections.forEach(el => {
+          const r = el.getBoundingClientRect();
+          if (r.top <= probe && r.bottom > probe) over = true;
+        });
+        return over;
+      };
+      setDark(prev => isOver(prev ? HEADER_PROBE_Y + 8 : HEADER_PROBE_Y - 8));
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(measure);
@@ -109,31 +117,28 @@ export default function Navbar() {
         isOpen ? 'bg-white border-b border-background-warm shadow-card' : ''
       }`}
     >
-      {/* No solid bar: a fading veil sits behind the header. Content scrolling
-          underneath is blurred most at the very top and fades to sharp lower
-          down (mask), and a tint keeps the links readable — dark over photos
-          and dark sections, white over light pages. */}
+      {/* Seamless backing for the header once the page is scrolled: no size
+          change, no shadow or border, so the switch is not noticeable. Over
+          light pages it is the exact page beige (same as the un-scrolled
+          header); over dark sections it is deep brown. Hidden at the very
+          top and while the mobile menu panel is open. */}
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute inset-x-0 top-0 h-[calc(100%+28px)] transition-opacity duration-300 ${
-          isOpen ? 'opacity-0' : 'opacity-100'
+        className={`pointer-events-none absolute inset-0 transform-gpu transition-opacity duration-200 ${
+          isOpen || !scrolled ? 'opacity-0' : 'opacity-100'
         }`}
       >
+        {/* Two solid layers that crossfade by opacity only (no blur and no
+            colour transition), so flipping light/dark never flashes a muddy
+            in-between shade or re-renders a backdrop filter. */}
         <div
-          className={`absolute inset-0 backdrop-blur-md transition-opacity duration-300 ${scrolled ? 'opacity-100' : 'opacity-0'}`}
-          style={{
-            WebkitMaskImage: 'linear-gradient(to bottom, #000 55%, transparent 100%)',
-            maskImage: 'linear-gradient(to bottom, #000 55%, transparent 100%)',
-          }}
-        />
-        <div
-          className={`absolute inset-0 bg-gradient-to-b from-black/50 via-black/20 to-transparent transition-opacity duration-300 ${
-            dark ? 'opacity-100' : 'opacity-0'
+          className={`absolute inset-0 bg-background transition-opacity duration-300 ${
+            dark ? 'opacity-0' : 'opacity-100'
           }`}
         />
         <div
-          className={`absolute inset-0 bg-gradient-to-b from-background via-background/80 to-transparent transition-opacity duration-300 ${
-            dark ? 'opacity-0' : 'opacity-100'
+          className={`absolute inset-0 bg-dark/95 transition-opacity duration-300 ${
+            dark ? 'opacity-100' : 'opacity-0'
           }`}
         />
       </div>

@@ -20,7 +20,6 @@ export default function HeroSection() {
     offset: ['start start', 'end start'],
   });
 
-  const y = useTransform(scrollYProgress, [0, 1], ['0%', '30%']);
   const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   const textVariants = {
@@ -139,14 +138,14 @@ export default function HeroSection() {
     <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
     <section
       ref={containerRef}
-      className="relative overflow-hidden rounded-lg h-[calc(100svh-10.6rem)] min-h-[440px] sm:h-[calc(100svh-5.4rem)] sm:min-h-[520px]"
+      className="relative isolate transform-gpu overflow-hidden rounded-lg h-[calc(100svh-10.6rem)] min-h-[440px] sm:h-[calc(100svh-5.4rem)] sm:min-h-[520px]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Parallax Background — carousel when the admin has added 2+ active
+      {/* Background (static inside the frame, no scroll parallax) — carousel when the admin has added 2+ active
           photos (AdminHomeHero.tsx), otherwise a single static image. */}
       <div className="absolute inset-0 overflow-hidden">
-        <motion.div className="absolute inset-0 overflow-hidden" style={{ y }}>
+        <div className="absolute inset-0 overflow-hidden">
           <AnimatePresence initial={false} custom={direction} mode="sync">
             <motion.div
               key={currentSlide.id}
@@ -179,7 +178,7 @@ export default function HeroSection() {
               </picture>
             </motion.div>
           </AnimatePresence>
-        </motion.div>
+        </div>
 
         {/* Gradient overlay — dark fade for text legibility. Shown on every
             slide now that the headline/subheading render on all of them,

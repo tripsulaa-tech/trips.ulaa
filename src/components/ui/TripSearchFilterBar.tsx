@@ -116,10 +116,13 @@ export function TripSearchFilterBar({
           onClick={onToggleFilters}
           aria-expanded={showFilters}
           aria-controls="mobile-month-filters"
-          className="md:hidden flex items-center gap-2 px-4 py-2 rounded-md border-2 border-background-warm text-dark font-button text-sm shrink-0"
+          aria-label="Filter by month"
+          title="Filter"
+          className={`md:hidden flex items-center justify-center w-11 h-11 rounded-md border-2 text-dark shrink-0 transition-colors ${
+            showFilters ? 'border-primary text-primary bg-background' : 'border-background-warm'
+          }`}
         >
-          <Filter size={16} aria-hidden="true" />
-          Filter
+          <Filter size={20} aria-hidden="true" />
         </button>
       </div>
       {/* Mobile filters */}
