@@ -9,9 +9,8 @@ import { getUpcomingTrips } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { useMonthFilteredTrips } from '../hooks/useMonthFilteredTrips';
-import { useLiveNavLabel } from '../hooks/useLiveNavLabel';
 import { usePageMeta } from '../hooks/usePageMeta';
-import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
+import { BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import { withBasicPricing } from '../utils/tripOptions';
 import { getActivePrice, specialOfferDaysLeft } from '../utils/utils-index';
 import type { UpcomingTrip } from '../types/types-index';
@@ -29,11 +28,11 @@ const getStartDate = (trip: UpcomingTrip) => trip.start_date;
 const isComingSoon = (trip: UpcomingTrip) => trip.status === 'coming_soon';
 
 // This page is the "Upcoming" tab in the bottom nav bar (see
-// constants/bottomNav.ts) — its route below is used to pull that tab's
-// admin-editable label for the "Showing N trips" line, so renaming the tab
-// (e.g. via the Home Page admin) updates this text automatically too.
+// constants/bottomNav.ts) — its route below is used to read that tab's
+// fixed label for the "Showing N trips" line, so renaming the tab in
+// constants/bottomNav.ts updates this text too.
 const NAV_ROUTE = '/trips';
-const DEFAULT_NAV_LABEL = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Upcoming';
+const NAV_LABEL = BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Upcoming';
 
 export default function UpcomingTripsPage() {
   const [trips, setTrips] = useState<UpcomingTrip[]>([]);
@@ -43,7 +42,6 @@ export default function UpcomingTripsPage() {
   const [showFilters, setShowFilters] = useState(false);
   // This tab's label in the bottom nav bar (e.g. "Upcoming") — admin-editable
   // in the Home Page admin, shown in front of "Showing N trips" below.
-  const navLabel = useLiveNavLabel(NAV_ROUTE, DEFAULT_NAV_LABEL);
 
   useEffect(() => {
     getUpcomingTrips()
@@ -159,7 +157,7 @@ export default function UpcomingTripsPage() {
         noResultsState={{ title: 'No trips found.', message: 'Try adjusting your search or filters.' }}
         hasActiveFilters={search !== '' || month !== 'All'}
         onClearFilters={() => { setSearch(''); setMonth('All'); }}
-        countLabel={navLabel}
+        countLabel={NAV_LABEL}
         countNoun="trip"
         itemKey={trip => trip.id}
         renderItem={(trip, i) => <TripCard trip={trip} index={i} />}

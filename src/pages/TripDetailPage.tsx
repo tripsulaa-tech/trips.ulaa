@@ -237,8 +237,7 @@ export default function TripDetailPage() {
   // Admin-editable "Pack Your Bags" / "Join Waitlist" button text (see
   // the Home Page admin's "Button Naming" tab). Starts from the defaults
   // so there's no flash of missing text, then swaps in the saved copy once
-  // it loads, and stays live via the same site_content Realtime channel
-  // BottomNav.tsx subscribes to for its own admin-edited content.
+  // it loads, and stays live via the site_content Realtime channel.
   useEffect(() => {
     getSiteContent<ButtonLabelsConfig>('button_labels')
       .then(data => {

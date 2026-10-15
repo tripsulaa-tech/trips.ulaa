@@ -87,7 +87,7 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
                   Just {formatPrice(gap)} more than {entry.name}
                 </p>
               )}
-              {earlyBird && <p className={`text-xs font-semibold mt-1 ${popular ? 'text-gold-deep' : 'text-primary'}`}>Early-bird price</p>}
+              {earlyBird && !showSeats && <p className={`text-xs font-semibold mt-1 ${popular ? 'text-gold-deep' : 'text-primary'}`}>Early-bird price</p>}
               <ul className="mt-4 space-y-2 text-sm text-dark flex-1">
                 <li className="flex items-start gap-2">
                   <CheckCircle size={18} weight="fill" className={`${tick} shrink-0 mt-0.5`} aria-hidden="true" />

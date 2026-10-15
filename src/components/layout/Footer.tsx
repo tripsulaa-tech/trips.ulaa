@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Envelope as Mail,
@@ -10,10 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
-import { getSiteContent } from '../../services/api';
-import { useNavIconResolver } from '../../hooks/useNavIcons';
-import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
-import type { BottomNavItemConfig } from '../../types/types-index';
+import { FOOTER_NAV_ITEMS } from '../../constants/bottomNav';
 import { FOOTER_LOGO_SRC, SITE_HOST, SITE_ORIGIN, SITE_SHORT_NAME, BRAND_MOTTO, CONTACT_EMAIL, CONTACT_PHONE_E164, CONTACT_PHONE_DISPLAY, INSTAGRAM_URL, WHATSAPP_NUMBER, FOOTER_TAGLINE, FOOTER_TAGLINE_SUB, FOOTER_BLURB, FOOTER_REGION, FOOTER_REGION_LONG, FOOTER_SIGNOFF } from '../../constants/site';
 
 const socialItems = [
@@ -46,31 +42,15 @@ const socialItems = [
 export default function Footer() {
   const year = new Date().getFullYear();
 
-  // Mirrors the same admin-configurable tabs used by the mobile BottomNav
-  // (see the Home Page admin's "Bottom Nav Bar" tab) so the footer's nav links —
-  // icon and label alike — always stay in sync with the site's bottom nav
-  // bar instead of drifting out of consistency with it.
-  const [navConfig, setNavConfig] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
-  const resolveIcon = useNavIconResolver(navConfig.map(item => item.icon));
-
-  useEffect(() => {
-    getSiteContent<BottomNavItemConfig[]>('bottom_nav', { cached: true })
-      .then(data => {
-        if (data && data.length > 0) setNavConfig(data);
-      })
-      .catch(() => {
-        // Fetch failed — keep the defaults already in state.
-      });
-  }, []);
-
+  // Fixed quick links from constants/bottomNav.ts (the bottom-bar tabs plus Games).
   // Mobile nav row excludes Home (there's already a dedicated logo/home
   // link above it), matching the bottom nav bar's remaining tabs.
-  const navItems = navConfig
+  const navItems = FOOTER_NAV_ITEMS
     .filter(item => item.to !== '/')
     .map(item => ({
       label: item.label,
       to: item.to,
-      icon: resolveIcon(item.icon),
+      icon: item.Icon,
     }));
 
   // Desktop "Quick Links" column includes Home in addition to the same tabs.

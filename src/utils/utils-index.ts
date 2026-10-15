@@ -86,7 +86,7 @@ export function earlyBirdSeatsLeft(trip: {
 }
 
 /**
- * "3 of 5 seats left at early-bird price" for a seat-limited early bird that still has
+ * "3 of 5 early-bird seats left" for a seat-limited early bird that still has
  * seats, otherwise null (not seat-limited, or sold out).
  *
  * Worded as seats *at the early-bird price* (not "seats left") on purpose: the trip itself
@@ -100,13 +100,12 @@ export function earlyBirdSeatsLabel(trip: {
 }): string | null {
   const left = earlyBirdSeatsLeft(trip);
   if (left === null || left <= 0 || !trip.early_bird_seats) return null;
-  return `${left} of ${trip.early_bird_seats} seats left at early-bird price`;
+  return `${left} of ${trip.early_bird_seats} early-bird seats left`;
 }
 
 /**
- * Friendly rule for a seat-limited early bird, e.g. "Lock in ₹1,799 — this price is only
- * for the first 5 travellers to pay. Remaining seats are at the regular price. Pay your
- * ₹499 advance to confirm yours."
+ * Friendly rule for a seat-limited early bird, e.g. "First 5 travellers get ₹1,799.
+ * Pay your ₹499 advance to lock it in."
  * Null when there are no early-bird seats left to talk about.
  */
 export function earlyBirdRuleNote(
@@ -120,7 +119,7 @@ export function earlyBirdRuleNote(
 ): string | null {
   if (earlyBirdSeatsLabel(trip) === null || earlyPrice == null) return null;
   const advanceText = advance && advance > 0 ? `your ${formatPrice(advance)} advance` : 'your advance';
-  return `Lock in ${formatPrice(earlyPrice)} — this price is only for the first ${trip.early_bird_seats} travellers to pay. Other seats on this trip stay open at the regular price. Pay ${advanceText} to confirm yours.`;
+  return `First ${trip.early_bird_seats} travellers get ${formatPrice(earlyPrice)}. Pay ${advanceText} to lock it in.`;
 }
 
 /** Format a date string to a readable format */

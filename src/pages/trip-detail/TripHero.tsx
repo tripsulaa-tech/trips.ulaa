@@ -168,13 +168,13 @@ export default function TripHero({
   return (
     <>
       {/* ---------------- Mobile (<sm) ----------------
-          Banner box stays a fixed aspect-[9/16] to match the Hero Banner
-          Image (Mobile) upload's recommended portrait shape (Admin →
+          Banner box uses the same height as the Home page hero
+          (100svh - 10.6rem, min 440px), so both pages match (Admin →
           Add/Edit Trip → Media). With no hero_mobile_image, the landscape
           cover_image is used instead, sized to aspect-[9/8] (the ratio the
           Cover Image Editor's crop is framed at) and anchored to the top,
           with bg-dark filling the rest. */}
-      <div className="sm:hidden relative mx-1 mt-20 mb-3 rounded-lg aspect-[9/16] overflow-hidden bg-dark">
+      <div className="sm:hidden relative mx-1 mt-20 mb-3 rounded-lg min-h-[max(440px,calc(100svh-10.6rem))] flex flex-col overflow-hidden bg-dark">
         <img
           src={trip.hero_mobile_image || trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.title}
@@ -186,7 +186,7 @@ export default function TripHero({
           style={trip.hero_mobile_image ? undefined : getCoverImageStyle(trip.cover_image_crop)}
         />
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,transparent_55%,var(--color-dark)_78%)]" />
-        <div className="relative w-full h-full flex flex-col justify-end px-4 pt-32 pb-8">
+        <div className="relative w-full flex-1 flex flex-col justify-end px-4 pt-32 pb-8">
           <motion.div className="flex flex-col" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             {backLink}
             {heading}
@@ -197,60 +197,54 @@ export default function TripHero({
         </div>
       </div>
 
-      {/* ---------------- Tablet / desktop (sm+) ---------------- */}
-      <div className="hidden sm:block mx-1.5 mt-20 mb-5 rounded-lg overflow-hidden">
-        {/* The banner at full brightness; only its bottom edge melts into
-            the brown panel below (same idea as the mobile hero's bottom
-            fade), so there is no hard line. Shorter than before: capped at
-            640px tall. The sm+ hero always uses cover_image with its saved
-            crop (Admin → Edit Trip → Media moves what stays in frame). */}
-        <div className="relative aspect-[21/8] max-h-[640px] overflow-hidden bg-dark">
-          <img
-            src={trip.cover_image || PLACEHOLDER_IMAGE}
-            alt={trip.title}
-            className="absolute inset-0 w-full h-full object-cover"
-            style={getCoverImageStyle(trip.cover_image_crop)}
-          />
-          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,transparent_0%,transparent_68%,var(--color-dark)_100%)]" aria-hidden="true" />
-        </div>
+      {/* ---------------- Tablet / desktop (sm+) ----------------
+          Same frame and height as the Home page hero (100svh - 5.4rem, min 520px):
+          the cover photo fills the card and the title, description, buttons and
+          trip facts all sit INSIDE it, over a dark fade from the bottom. The card
+          grows only if the content (e.g. an expanded description) needs more room. */}
+      <div className="hidden sm:flex relative mx-1.5 mt-20 mb-5 rounded-lg overflow-hidden bg-dark min-h-[max(520px,calc(100svh-5.4rem))]">
+        <img
+          src={trip.cover_image || PLACEHOLDER_IMAGE}
+          alt={trip.title}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={getCoverImageStyle(trip.cover_image_crop)}
+        />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-dark via-dark/75 via-40% to-dark/10" aria-hidden="true" />
 
-        {/* Everything readable lives here, on solid theme brown. */}
-        <div className="bg-dark -mt-px">
-          <motion.div
-            className="max-w-[1344px] mx-auto px-6 lg:px-8 pt-7 pb-6 lg:pt-9"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] gap-x-12 gap-y-6 lg:items-end">
-              <div className="min-w-0">
-                {backLink}
-                {heading}
-                {destination}
-                {trip.description && (
-                  <div className="max-w-2xl">
-                    <p className={`text-white/85 text-base lg:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-3'}`}>
-                      {trip.description}
-                    </p>
-                    {trip.description.length > 100 && (
-                      <button
-                        type="button"
-                        onClick={() => setDescriptionExpanded(v => !v)}
-                        aria-expanded={descriptionExpanded}
-                        className="group/more mt-1.5 inline-flex items-center gap-1 text-secondary hover:text-white text-sm font-button font-semibold transition-colors"
-                      >
-                        {descriptionExpanded ? 'Read less' : 'Read more'}
-                        <CaretDown size={14} weight="bold" aria-hidden="true" className={`transition-transform duration-200 ${descriptionExpanded ? 'rotate-180' : 'group-hover/more:translate-y-0.5'}`} />
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="lg:pb-1">{ctas}</div>
+        <motion.div
+          className="relative z-10 w-full max-w-[1344px] mx-auto px-6 lg:px-8 pt-28 pb-6 lg:pb-8 flex flex-col justify-end"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_auto] gap-x-12 gap-y-6 lg:items-end">
+            <div className="min-w-0">
+              {backLink}
+              {heading}
+              {destination}
+              {trip.description && (
+                <div className="max-w-2xl">
+                  <p className={`text-white/85 text-base lg:text-lg leading-relaxed ${descriptionExpanded ? '' : 'line-clamp-3'}`}>
+                    {trip.description}
+                  </p>
+                  {trip.description.length > 100 && (
+                    <button
+                      type="button"
+                      onClick={() => setDescriptionExpanded(v => !v)}
+                      aria-expanded={descriptionExpanded}
+                      className="group/more mt-1.5 inline-flex items-center gap-1 text-secondary hover:text-white text-sm font-button font-semibold transition-colors"
+                    >
+                      {descriptionExpanded ? 'Read less' : 'Read more'}
+                      <CaretDown size={14} weight="bold" aria-hidden="true" className={`transition-transform duration-200 ${descriptionExpanded ? 'rotate-180' : 'group-hover/more:translate-y-0.5'}`} />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="mt-6 pt-5 border-t border-white/10">{facts(true)}</div>
-          </motion.div>
-        </div>
+            <div className="lg:pb-1">{ctas}</div>
+          </div>
+          <div className="mt-6 pt-5 border-t border-white/15">{facts(true)}</div>
+        </motion.div>
       </div>
     </>
   );

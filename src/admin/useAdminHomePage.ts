@@ -12,11 +12,10 @@ import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../constants/founder';
 import { DEFAULT_CTA_BANNER, mergeWithDefaults as mergeCta } from '../constants/cta-banner';
 import { DEFAULT_TESTIMONIALS_SECTION } from '../constants/testimonials-section';
-import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
 import type {
   HomeHeroContent, WhyUlaaContent, FounderContent, CtaBannerContent,
-  TestimonialsSectionContent, GalleryImage, Testimonial, BottomNavItemConfig, ButtonLabelsConfig,
+  TestimonialsSectionContent, GalleryImage, Testimonial, ButtonLabelsConfig,
 } from '../types/types-index';
 import { STORAGE_BUCKET } from '../constants/storage';
 import { useAlert } from '../components/ui/useAlert';
@@ -26,11 +25,10 @@ import { useConfirm } from '../components/ui/useConfirm';
 
 // The public homepage's real section order (see src/pages/HomePage.tsx) —
 // Upcoming Trips and Completed Trips are skipped here since those are
-// auto-pulled from the Trips/Albums tables, not editable content. Bottom
-// Nav Bar and Button Naming are tacked on at the end — neither is a
-// homepage section (Bottom Nav Bar is mobile-only chrome, Button Naming
-// drives the trip-page CTA buttons), but both are folded in here per the
-// same "one place to edit everything" direction as the rest of this page.
+// auto-pulled from the Trips/Albums tables, not editable content. Button
+// Naming is tacked on at the end — it is not a homepage section (it drives
+// the trip-page CTA buttons), but it is folded in here per the same
+// "one place to edit everything" direction as the rest of this page.
 export const SECTION_TITLES = [
   'Hero Banner',
   'Why Ulaa',
@@ -38,7 +36,6 @@ export const SECTION_TITLES = [
   'Instagram Moments',
   'Meet the Founder',
   'CTA Banner',
-  'Bottom Nav Bar',
   'Button Naming',
 ];
 
@@ -77,8 +74,6 @@ interface UseAdminHomePageResult {
   setGalleryImages: React.Dispatch<React.SetStateAction<GalleryImage[]>>;
   testimonials: Testimonial[];
   setTestimonials: React.Dispatch<React.SetStateAction<Testimonial[]>>;
-  bottomNavItems: BottomNavItemConfig[];
-  setBottomNavItems: React.Dispatch<React.SetStateAction<BottomNavItemConfig[]>>;
   buttonLabels: ButtonLabelsConfig;
   setButtonLabels: React.Dispatch<React.SetStateAction<ButtonLabelsConfig>>;
 
@@ -103,20 +98,19 @@ interface UseAdminHomePageResult {
 interface HomeState {
   hero: HomeHeroContent; why: WhyUlaaContent; founder: FounderContent; cta: CtaBannerContent;
   testimonialsSection: TestimonialsSectionContent; gallery: GalleryImage[]; items: Testimonial[];
-  bottomNav: BottomNavItemConfig[]; buttonLabels: ButtonLabelsConfig;
+  buttonLabels: ButtonLabelsConfig;
 }
 
 const DRAFT_KEY = 'home-page';
 
 /** Reads the saved version of every part of the page from the database. */
 async function fetchSavedHomeState(): Promise<HomeState> {
-  const [heroData, whyData, founderData, ctaData, testimonialsSectionData, bottomNavData, buttonLabelsData, gallery, items] = await Promise.all([
+  const [heroData, whyData, founderData, ctaData, testimonialsSectionData, buttonLabelsData, gallery, items] = await Promise.all([
     getSiteContent<Partial<HomeHeroContent>>('home_hero'),
     getSiteContent<Partial<WhyUlaaContent>>('why_ulaa'),
     getSiteContent<Partial<FounderContent>>('founder'),
     getSiteContent<Partial<CtaBannerContent>>('cta_banner'),
     getSiteContent<Partial<TestimonialsSectionContent>>('testimonials_section'),
-    getSiteContent<BottomNavItemConfig[]>('bottom_nav'),
     getSiteContent<Partial<ButtonLabelsConfig>>('button_labels'),
     getGalleryImages(),
     getAllTestimonialsAdmin(),
@@ -127,7 +121,6 @@ async function fetchSavedHomeState(): Promise<HomeState> {
     founder: mergeFounderWithDefaults(founderData),
     cta: mergeCta(ctaData),
     testimonialsSection: { ...DEFAULT_TESTIMONIALS_SECTION, ...testimonialsSectionData },
-    bottomNav: bottomNavData && bottomNavData.length > 0 ? bottomNavData : DEFAULT_BOTTOM_NAV_ITEMS,
     buttonLabels: buttonLabelsData?.primaryCta ? (buttonLabelsData as ButtonLabelsConfig) : DEFAULT_BUTTON_LABELS,
     gallery,
     items,
@@ -149,7 +142,6 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   const [testimonialsSectionContent, setTestimonialsSectionContent] = useState<TestimonialsSectionContent>(DEFAULT_TESTIMONIALS_SECTION);
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
-  const [bottomNavItems, setBottomNavItems] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
   const [buttonLabels, setButtonLabels] = useState<ButtonLabelsConfig>(DEFAULT_BUTTON_LABELS);
 
   const [loading, setLoading] = useState(true);
@@ -169,9 +161,9 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   const snapshot = (
     hero: HomeHeroContent, why: WhyUlaaContent, founder: FounderContent, cta: CtaBannerContent,
     testimonialsSection: TestimonialsSectionContent, gallery: GalleryImage[], items: Testimonial[],
-    bottomNav: BottomNavItemConfig[], buttonLabels: ButtonLabelsConfig,
+    buttonLabels: ButtonLabelsConfig,
   ) => JSON.stringify({
-    hero, why, founder, cta, testimonialsSection, bottomNav, buttonLabels,
+    hero, why, founder, cta, testimonialsSection, buttonLabels,
     gallery: gallery.map(g => ({ id: g.id, image_url: g.image_url, is_featured: g.is_featured })),
     items: items.map(t => ({
       id: t.id, name: t.name, photo: t.photo || '', review: t.review, rating: t.rating,
@@ -190,7 +182,6 @@ export function useAdminHomePage(): UseAdminHomePageResult {
     setTestimonialsSectionContent(st.testimonialsSection);
     setGalleryImages(st.gallery);
     setTestimonials(st.items);
-    setBottomNavItems(st.bottomNav);
     setButtonLabels(st.buttonLabels);
   };
 
@@ -211,7 +202,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
         ...collectStorageUrls(saved.founder, STORAGE_BUCKET),
         ...collectStorageUrls(saved.cta, STORAGE_BUCKET),
       ]);
-      savedContentRef.current = snapshot(saved.hero, saved.why, saved.founder, saved.cta, saved.testimonialsSection, saved.gallery, saved.items, saved.bottomNav, saved.buttonLabels);
+      savedContentRef.current = snapshot(saved.hero, saved.why, saved.founder, saved.cta, saved.testimonialsSection, saved.gallery, saved.items, saved.buttonLabels);
       savedStateRef.current = saved;
       setDraftBase(base);
     }).catch(() => {
@@ -225,8 +216,8 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   const workingState = useMemo<HomeState>(() => ({
     hero: heroContent, why: whyContent, founder: founderContent, cta: ctaContent,
     testimonialsSection: testimonialsSectionContent, gallery: galleryImages, items: testimonials,
-    bottomNav: bottomNavItems, buttonLabels,
-  }), [heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent, galleryImages, testimonials, bottomNavItems, buttonLabels]);
+    buttonLabels,
+  }), [heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent, galleryImages, testimonials, buttonLabels]);
 
   // Keep the unsaved edits while they differ from what is saved (paused while a draft is on hold).
   useDraftKeeper({ key: DRAFT_KEY, value: workingState, base: heldDraft ? null : draftBase, bucket: STORAGE_BUCKET });
@@ -242,7 +233,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   };
 
   const hasUnsavedChanges = () =>
-    snapshot(heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent, galleryImages, testimonials, bottomNavItems, buttonLabels) !== savedContentRef.current;
+    snapshot(heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent, galleryImages, testimonials, buttonLabels) !== savedContentRef.current;
 
   const handleSave = async () => {
     if (!hasUnsavedChanges()) {
@@ -269,7 +260,6 @@ export function useAdminHomePage(): UseAdminHomePageResult {
         upsertSiteContent('founder', founderContent),
         upsertSiteContent('cta_banner', ctaContent),
         upsertSiteContent('testimonials_section', testimonialsSectionContent),
-        upsertSiteContent('bottom_nav', bottomNavItems),
         upsertSiteContent('button_labels', buttonLabels),
       ]);
 
@@ -355,12 +345,12 @@ export function useAdminHomePage(): UseAdminHomePageResult {
       originalTestimonialsRef.current = resolvedTestimonials;
       savedContentRef.current = snapshot(
         heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent,
-        resolvedGallery, resolvedTestimonials, bottomNavItems, buttonLabels,
+        resolvedGallery, resolvedTestimonials, buttonLabels,
       );
       savedStateRef.current = {
         hero: heroContent, why: whyContent, founder: founderContent, cta: ctaContent,
         testimonialsSection: testimonialsSectionContent, gallery: resolvedGallery, items: resolvedTestimonials,
-        bottomNav: bottomNavItems, buttonLabels,
+        buttonLabels,
       };
       setDraftBase(stableStringify(savedStateRef.current));
       toast.success('Home page saved.');
@@ -406,7 +396,6 @@ export function useAdminHomePage(): UseAdminHomePageResult {
     testimonialsSectionContent, setTestimonialsSectionContent,
     galleryImages, setGalleryImages,
     testimonials, setTestimonials,
-    bottomNavItems, setBottomNavItems,
     buttonLabels, setButtonLabels,
     activeSection, setSectionRef, tabBarRef, tabButtonRefs, showLeftFade, showRightFade,
     handleTabSelect, pageSearch, setPageSearch, pageSearchNoMatch, scrollBodyRef,

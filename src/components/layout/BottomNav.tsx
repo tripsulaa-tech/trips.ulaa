@@ -1,69 +1,19 @@
-import { useEffect, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { getSiteContent } from '../../services/api';
-import { subscribeToTable } from '../../services/realtime';
-import { useNavIconResolver } from '../../hooks/useNavIcons';
-import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
-import type { BottomNavItemConfig } from '../../types/types-index';
-
-// Admin-saved tab sets predate the Games section, so slot it in (before the
-// last two tabs) when it is missing, so the section is always reachable.
-const GAMES_ITEM = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.id === 'games');
-function withGames(items: BottomNavItemConfig[]): BottomNavItemConfig[] {
-  if (!GAMES_ITEM || items.some(i => i.to === GAMES_ITEM.to) || items.length >= 6) return items;
-  const at = Math.max(0, items.length - 2);
-  return [...items.slice(0, at), GAMES_ITEM, ...items.slice(at)];
-}
+import { BOTTOM_NAV_ITEMS as navItems } from '../../constants/bottomNav';
 
 export default function BottomNav() {
   const location = useLocation();
   const reduceMotion = useReducedMotion();
 
-  // Starts from the defaults (so there's no flash of an empty bar) and
-  // swaps in the admin's saved tabs, if any, once the fetch resolves. See
-  // the Home Page admin's "Bottom Nav Bar" tab (src/admin/home-sections/BottomNavSection.tsx) for where these are edited.
-  const [navItems, setNavItems] = useState<BottomNavItemConfig[]>(DEFAULT_BOTTOM_NAV_ITEMS);
-  const resolveIcon = useNavIconResolver(navItems.map(item => item.icon));
-
-  useEffect(() => {
-    getSiteContent<BottomNavItemConfig[]>('bottom_nav', { cached: true })
-      .then(data => {
-        if (data && data.length > 0) setNavItems(withGames(data));
-      })
-      .catch(() => {
-        // Fetch failed — keep the defaults already in state.
-      });
-  }, []);
-
-  // Live updates — this bar is mounted once, persistently, outside of
-  // <Routes> (see routes/AppRouter.tsx's PersistentBottomNav, which keeps
-  // it from remounting on every navigation), so the one-time fetch above
-  // only ever runs on the very first page load. Without this subscription,
-  // an admin's icon/label/link edit in the Home Page admin wouldn't show up
-  // here until the visitor did a full page reload. Re-pulling on every
-  // site_content change means it updates live instead, matching how the
-  // "Showing N trips" label already does on the trips pages.
-  useEffect(() => {
-    const unsubscribe = subscribeToTable(
-      'site_content',
-      () => {
-        getSiteContent<BottomNavItemConfig[]>('bottom_nav')
-          .then(data => {
-            if (data && data.length > 0) setNavItems(withGames(data));
-          })
-          .catch(() => {});
-      },
-      'key=eq.bottom_nav'
-    );
-    return unsubscribe;
-  }, []);
+  // Tabs (names, routes, icons) are fixed in constants/bottomNav.ts: no database fetch,
+  // no live subscription.
 
   const isItemActive = (to: string) =>
     to === '/' ? location.pathname === to : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
+  // -1 (no tab highlighted) on pages that are not a tab, e.g. /games.
   const activeIndex = navItems.findIndex(({ to }) => isItemActive(to));
-  const safeIndex = Math.max(activeIndex, 0);
 
   return (
     <motion.nav
@@ -86,11 +36,8 @@ export default function BottomNav() {
       {/* Edge-to-edge bar — fills the full width and sits directly on the
           bottom edge of the screen on both iOS and Android. */}
       <div className="relative mx-auto flex h-16 w-full max-w-md">
-        {navItems.map(({ id, label, to, icon }, index) => {
-          const isActive = index === safeIndex;
-          // Falls back to the Home icon if a saved icon key doesn't resolve
-          // (e.g. it was removed from the shared library after being saved).
-          const Icon = resolveIcon(icon);
+        {navItems.map(({ id, label, to, Icon }, index) => {
+          const isActive = index === activeIndex;
 
           return (
             <NavLink

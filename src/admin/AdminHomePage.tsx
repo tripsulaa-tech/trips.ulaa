@@ -8,13 +8,12 @@ import TestimonialsSection from './home-sections/TestimonialsSection';
 import InstagramMomentsSection from './home-sections/InstagramMomentsSection';
 import FounderSection from './home-sections/FounderSection';
 import CtaBannerSection from './home-sections/CtaBannerSection';
-import BottomNavSection from './home-sections/BottomNavSection';
 import ButtonNamingSection from './home-sections/ButtonNamingSection';
 
 // Replaces the old separate admin pages for Home Hero, Why Ulaa,
-// Testimonials, Instagram Moments, Founder, the Bottom Nav Bar, and Button
+// Testimonials, Instagram Moments, Founder, and Button
 // Naming (routes /admin/home-hero, /admin/why-us, /admin/instagram-moments,
-// /admin/testimonials, /admin/founder, /admin/bottom-nav,
+// /admin/testimonials, /admin/founder,
 // /admin/button-labels — all removed, see AppRouter.tsx) plus a brand new
 // CTA Banner tab for what used to be hardcoded copy in CTASection.tsx. This
 // is now the only way to edit any home page content — see
@@ -33,7 +32,6 @@ export default function AdminHomePage() {
     testimonialsSectionContent, setTestimonialsSectionContent,
     galleryImages, setGalleryImages,
     testimonials, setTestimonials,
-    bottomNavItems, setBottomNavItems,
     buttonLabels, setButtonLabels,
     activeSection, setSectionRef, tabBarRef, tabButtonRefs, showLeftFade, showRightFade,
     handleTabSelect, pageSearch, setPageSearch, pageSearchNoMatch, scrollBodyRef,
@@ -107,15 +105,10 @@ export default function AdminHomePage() {
         setContent={setCtaContent}
         sectionRef={el => setSectionRef(5, el)}
       />
-      <BottomNavSection
-        items={bottomNavItems}
-        setItems={setBottomNavItems}
-        sectionRef={el => setSectionRef(6, el)}
-      />
       <ButtonNamingSection
         content={buttonLabels}
         setContent={setButtonLabels}
-        sectionRef={el => setSectionRef(7, el)}
+        sectionRef={el => setSectionRef(6, el)}
       />
     </ContentEditorShell>
   );

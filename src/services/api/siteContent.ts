@@ -4,8 +4,8 @@ import { supabase } from '../supabase';
 // Site Content (editable copy for pages like About)
 // =============================================
 // Short-lived cache + request de-duplication for the public site. The same key
-// (notably 'bottom_nav') is wanted by the bottom bar, the footer and every trips
-// page at once, and each used to make its own request on every page load. That
+// can be wanted by several components at once, and each used to make its own
+// request on every page load. That
 // added up to thousands of requests a day against the Free plan's cached-egress
 // quota. Callers opt in with { cached: true }; admin editors keep reading fresh
 // data so they never edit (and then save over) a stale copy.

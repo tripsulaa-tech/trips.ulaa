@@ -8,10 +8,9 @@ import { getCompletedTrips, getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { useMonthFilteredTrips } from '../hooks/useMonthFilteredTrips';
-import { useLiveNavLabel } from '../hooks/useLiveNavLabel';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { DEFAULT_ABOUT, mergeWithDefaults } from '../constants/about';
-import { DEFAULT_BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
+import { BOTTOM_NAV_ITEMS } from '../constants/bottomNav';
 import type { CompletedTrip, AboutContent } from '../types/types-index';
 
 import { pageTitle } from '../constants/site';
@@ -22,7 +21,7 @@ const HERO_IMAGE = 'https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=
 // admin-editable label for the "Showing N albums" line, so renaming the
 // tab (e.g. via the Home Page admin) updates this text automatically too.
 const NAV_ROUTE = '/completed-trips';
-const DEFAULT_NAV_LABEL = DEFAULT_BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Journey';
+const NAV_LABEL = BOTTOM_NAV_ITEMS.find(i => i.to === NAV_ROUTE)?.label ?? 'Journey';
 
 // Module-level (not inline) so useMonthFilteredTrips' memoization gets a
 // stable function reference across renders.
@@ -40,7 +39,6 @@ export default function CompletedTripsPage() {
   const [statLabels, setStatLabels] = useState<AboutContent['stats']>(DEFAULT_ABOUT.stats);
   // This tab's label in the bottom nav bar (e.g. "Journey") — admin-editable
   // in the Home Page admin, shown in front of "Showing N albums" below.
-  const navLabel = useLiveNavLabel(NAV_ROUTE, DEFAULT_NAV_LABEL);
 
   useEffect(() => {
     getCompletedTrips()
@@ -171,7 +169,7 @@ export default function CompletedTripsPage() {
         noResultsState={{ title: 'No albums found.', message: 'Try adjusting your search or filters.' }}
         hasActiveFilters={search !== '' || month !== 'All'}
         onClearFilters={() => { setSearch(''); setMonth('All'); }}
-        countLabel={navLabel}
+        countLabel={NAV_LABEL}
         countNoun="album"
         itemKey={trip => trip.id}
         renderItem={(trip, i) => <AlbumCard trip={trip} index={i} />}

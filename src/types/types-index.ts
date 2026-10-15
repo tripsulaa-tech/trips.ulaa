@@ -1156,19 +1156,6 @@ export interface CtaBannerContent {
 }
 
 // =============================================
-// Mobile bottom nav bar tabs (editable via Admin)
-// =============================================
-export interface BottomNavItemConfig {
-  /** Stable identifier — used as the React key and framer-motion layoutId anchor. */
-  id: string;
-  label: string;
-  /** Route path, e.g. "/trips". */
-  to: string;
-  /** Icon library key from tripHighlightIcons.ts (e.g. "home", "calendar"). */
-  icon: string;
-}
-
-// =============================================
 // Trip CTA button text (editable via the Home Page admin's "Button Naming" tab).
 // Drives the main "Pack Your Bags" style buttons on TripDetailPage AND the
 // equivalent CTA button on the generated trip itinerary PDF, so an admin
