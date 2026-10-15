@@ -27,7 +27,7 @@ export default function BottomNav() {
   const resolveIcon = useNavIconResolver(navItems.map(item => item.icon));
 
   useEffect(() => {
-    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+    getSiteContent<BottomNavItemConfig[]>('bottom_nav', { cached: true })
       .then(data => {
         if (data && data.length > 0) setNavItems(withGames(data));
       })

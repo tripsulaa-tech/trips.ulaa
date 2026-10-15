@@ -55,8 +55,25 @@ export default function AdminLogin() {
       setLoading(true);
       setError('');
       await signIn(email, password);
-    } catch {
-      setError('Invalid email or password. Please try again.');
+    } catch (err) {
+      console.error(err);
+      // Only a genuine credentials failure should say "wrong password". If the
+      // sign-in service itself is down, over quota (402) or unreachable, say so,
+      // otherwise a correct password looks like it was rejected.
+      const e = err as { status?: number; name?: string } | null;
+      const status = typeof e?.status === 'number' ? e.status : undefined;
+      if (status === 429) {
+        setError('Too many attempts. Please wait a minute and try again.');
+      } else if (
+        e?.name === 'AuthRetryableFetchError' ||
+        status === 0 ||
+        status === 402 ||
+        (status !== undefined && status >= 500)
+      ) {
+        setError("Can't reach the sign-in service right now, so your password hasn't been checked. Please try again shortly.");
+      } else {
+        setError('Invalid email or password. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

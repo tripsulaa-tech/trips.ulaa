@@ -385,7 +385,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     if (phase !== 'offboard') return;
     const call = () => { void online.afterReveal(code).then(refresh).catch(() => undefined); };
     let repeat: number | undefined;
-    const first = window.setTimeout(() => { call(); repeat = window.setInterval(call, 2500); }, 4300);
+    const first = window.setTimeout(() => { call(); repeat = window.setInterval(() => { if (document.visibilityState === 'visible') call(); }, 5000); }, 4300);
     return () => { window.clearTimeout(first); if (repeat) window.clearInterval(repeat); };
   }, [phase, code, refresh]);
 

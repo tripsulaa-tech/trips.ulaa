@@ -19,7 +19,7 @@ export function useLiveNavLabel(navRoute: string, defaultLabel: string): string 
   const [navLabel, setNavLabel] = useState<string>(defaultLabel);
 
   useEffect(() => {
-    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+    getSiteContent<BottomNavItemConfig[]>('bottom_nav', { cached: true })
       .then(data => {
         const match = data?.find(i => i.to === navRoute);
         if (match?.label) setNavLabel(match.label);

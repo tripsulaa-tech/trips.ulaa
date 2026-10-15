@@ -56,7 +56,7 @@ export default function Footer() {
   const resolveIcon = useNavIconResolver(navConfig.map(item => item.icon));
 
   useEffect(() => {
-    getSiteContent<BottomNavItemConfig[]>('bottom_nav')
+    getSiteContent<BottomNavItemConfig[]>('bottom_nav', { cached: true })
       .then(data => {
         if (data && data.length > 0) setNavConfig(data);
       })

@@ -91,7 +91,8 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
         .catch(() => { /* keep what we have; typing a name still works for open rooms */ });
     };
     load();
-    const id = window.setInterval(load, 5000);
+    // Every 10s, and only while this tab is visible, so a forgotten open tab costs nothing.
+    const id = window.setInterval(() => { if (document.visibilityState === 'visible') load(); }, 10000);
     return () => { alive = false; window.clearInterval(id); };
   }, [joiningCode]);
   const picking = view === 'join' && joiningCode.length === 4 && list !== null;

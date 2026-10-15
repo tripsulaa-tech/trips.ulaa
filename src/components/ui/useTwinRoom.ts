@@ -7,7 +7,9 @@ import type { TwinState } from './findMyTwinApi';
 // Realtime reports a change, and polls every few seconds as a safety net (this
 // is also the "I'm still here" signal).
 
-const POLL_MS = 6000;
+// Keep this well under the server's 45-second "away" cut-off (the poll doubles as the
+// "I'm still here" heartbeat). Realtime pushes changes instantly, so this is only a safety net.
+const POLL_MS = 15000;
 
 export function useTwinRoom(code: string | null) {
   const [state, setState] = useState<TwinState | null>(null);
