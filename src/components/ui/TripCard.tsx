@@ -21,7 +21,6 @@ import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
 import TripCardCover from './TripCardCover';
-import { EarlyBirdSeatsStrip } from './EarlyBirdSeatsPrompt';
 import { getEarlyBirdSeatsOffer } from './earlyBirdSeatsOffer';
 
 interface TripCardProps {
@@ -309,7 +308,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-display text-2xl font-bold text-primary">{formatPrice(activePrice)}</span>
                 <span className="text-xs font-medium text-dark-muted">/person</span>
-                {basicPackageName && (
+                {/* "Early Bird" package chip is intentionally hidden on cards (the
+                    price/strike-through already conveys it); other package names stay. */}
+                {basicPackageName && !/early\s*bird/i.test(basicPackageName) && (
                   <span className="text-2xs font-medium text-dark-muted bg-background-warm px-1.5 py-0.5 rounded">{basicPackageName}</span>
                 )}
                 {strikeThroughPrice != null && (
@@ -413,9 +414,9 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 )}
               </p>
             </div>
-          ) : isEarlyBird && (earlySeatsLabel && earlyBirdOffer ? (
-            <EarlyBirdSeatsStrip total={earlyBirdOffer.totalSeats} left={earlyBirdOffer.seatsLeft} />
-          ) : trip.early_bird_deadline && (
+          ) : isEarlyBird && !(earlySeatsLabel && earlyBirdOffer) && trip.early_bird_deadline && (
+            // (The "Only N exclusive Early-bird seats" strip is intentionally not
+            // shown on cards; this plain countdown only renders for date-based offers.)
             <div className="offer-gradient-shift flex items-center gap-1.5 rounded-lg px-3 py-2 mb-5 shadow-warm-lg ring-1 ring-inset ring-white/15">
               <Timer size={14} className="text-white shrink-0" />
               <p className="text-white text-2xs leading-tight">
@@ -426,7 +427,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 ({formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'short', year: 'numeric' })})
               </p>
             </div>
-          ))}
+          )}
         </div>
 
         <Link to={`/trips/${trip.slug}`}>

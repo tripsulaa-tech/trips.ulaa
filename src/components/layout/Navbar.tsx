@@ -7,7 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import Button from '../ui/Button';
 import { useAuth } from '../../context/useAuth';
-import { useBranding } from '../../hooks/useBranding';
+import { HEADER_LOGO_SRC } from '../../constants/site';
 
 const navLinks = [
   { label: 'Home', to: '/' },
@@ -19,7 +19,7 @@ const navLinks = [
 ];
 
 // Beige/cream version of the logo for sitting on photos and dark sections. The
-// regular (dark) logo comes from the admin-managed branding as before.
+// regular (dark) logo is HEADER_LOGO_SRC; both are plain files in /public.
 const LIGHT_LOGO = '/ULAA-logo-Header-Biege.png';
 
 // Any section can opt in to a light-on-dark header while it is behind the
@@ -83,7 +83,6 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { urls: brand } = useBranding();
   const { dark: overDark, scrolled } = useHeaderTheme(location.key);
   // The open mobile menu is a solid white panel, so the bar above it must
   // read as light no matter what is behind it.
@@ -151,7 +150,7 @@ export default function Navbar() {
                 nudged the second logo's position). */}
             <span className="grid transition-transform duration-300 group-hover:scale-105">
               <img
-                src={brand.header_logo}
+                src={HEADER_LOGO_SRC}
                 alt="Ulaa Logo"
                 className={`col-start-1 row-start-1 block h-14 sm:h-16 w-auto transition-opacity duration-300 ${
                   dark ? 'opacity-0' : 'opacity-100'

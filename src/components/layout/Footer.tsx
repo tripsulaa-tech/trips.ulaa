@@ -14,8 +14,7 @@ import { getSiteContent } from '../../services/api';
 import { useNavIconResolver } from '../../hooks/useNavIcons';
 import { DEFAULT_BOTTOM_NAV_ITEMS } from '../../constants/bottomNav';
 import type { BottomNavItemConfig } from '../../types/types-index';
-import { useBranding } from '../../hooks/useBranding';
-import { SITE_HOST, SITE_ORIGIN, SITE_SHORT_NAME, BRAND_MOTTO, CONTACT_EMAIL, CONTACT_PHONE_E164, CONTACT_PHONE_DISPLAY, INSTAGRAM_URL, WHATSAPP_NUMBER, FOOTER_TAGLINE, FOOTER_TAGLINE_SUB, FOOTER_BLURB, FOOTER_REGION, FOOTER_REGION_LONG, FOOTER_SIGNOFF } from '../../constants/site';
+import { FOOTER_LOGO_SRC, SITE_HOST, SITE_ORIGIN, SITE_SHORT_NAME, BRAND_MOTTO, CONTACT_EMAIL, CONTACT_PHONE_E164, CONTACT_PHONE_DISPLAY, INSTAGRAM_URL, WHATSAPP_NUMBER, FOOTER_TAGLINE, FOOTER_TAGLINE_SUB, FOOTER_BLURB, FOOTER_REGION, FOOTER_REGION_LONG, FOOTER_SIGNOFF } from '../../constants/site';
 
 const socialItems = [
   {
@@ -45,7 +44,6 @@ const socialItems = [
 ];
 
 export default function Footer() {
-  const { urls: brand } = useBranding();
   const year = new Date().getFullYear();
 
   // Mirrors the same admin-configurable tabs used by the mobile BottomNav
@@ -89,7 +87,7 @@ export default function Footer() {
           {/* Logo */}
           <Link to="/" className="inline-block">
             <img
-              src={brand.footer_logo}
+              src={FOOTER_LOGO_SRC}
               alt={`${SITE_SHORT_NAME} — ${BRAND_MOTTO}`}
               className="w-full max-w-[260px] mx-auto h-auto -mb-3"
             />
@@ -187,7 +185,7 @@ export default function Footer() {
           <div>
             <Link to="/" className="inline-block">
               <img
-                src={brand.footer_logo}
+                src={FOOTER_LOGO_SRC}
                 alt={`${SITE_SHORT_NAME} — ${BRAND_MOTTO}`}
                 className="w-full max-w-[210px] h-auto"
               />

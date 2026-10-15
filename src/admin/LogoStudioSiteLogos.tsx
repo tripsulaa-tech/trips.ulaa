@@ -18,8 +18,8 @@ import { useConfirm } from '../components/ui/useConfirm';
 import { useAlert } from '../components/ui/useAlert';
 import { useToast } from '../components/ui/useToast';
 
-// Logo Studio → "Site logos": choose which images the site uses for its header,
-// footer, browser tab, install prompt and admin panel, plus the Travel Cards badge,
+// Logo Studio → "Site logos": choose which images the site uses for its browser tab,
+// install prompt and admin panel, plus the Travel Cards badge,
 // card front and card back (drawn by utils/travelCard.ts). Logo slots can take the
 // logo currently shown in the studio in one tap; icons are uploaded. Each slot is
 // stored in the `branding` site_content row (see hooks/useBranding.ts); leaving a
@@ -49,24 +49,6 @@ interface SlotConfig {
 }
 
 const SLOTS: SlotConfig[] = [
-  {
-    slot: 'header_logo',
-    label: 'Header logo',
-    group: 'public',
-    description: 'Top-left of every public page.',
-    studio: 'wide',
-    preview: 'checker',
-    previewClass: 'h-10',
-  },
-  {
-    slot: 'footer_logo',
-    label: 'Footer logo',
-    group: 'public',
-    description: 'Site footer, on a dark background — use the light Footer look.',
-    studio: 'wide',
-    preview: 'dark',
-    previewClass: 'h-10',
-  },
   {
     slot: 'favicon',
     label: 'Browser tab icon',
@@ -405,8 +387,7 @@ export default function LogoStudioSiteLogos({
           <div className="mt-1.5 space-y-1.5">
             <p>
               It puts the logo from the Design tab, in its current colours, into that spot: logos keep a transparent
-              background and icons sit on a square tile in the background colour. Pick the Footer look first for the
-              footer. Badge and card artwork is made at its own size in the studio's background colour; the Travel Cards
+              background and icons sit on a square tile in the background colour. Badge and card artwork is made at its own size in the studio's background colour; the Travel Cards
               page uses it for previews, downloads and A3 print sheets. Nothing changes on the site until you press Save.
             </p>
             <p className="flex items-start gap-1.5">

@@ -13,7 +13,7 @@ import { useToast } from '../components/ui/useToast';
 // with the chosen colour using only its alpha channel, then the layers are composited
 // over the background colour. Nothing about the design is stored: every visit starts
 // from a pre-design. The "Site logos" tab (LogoStudioSiteLogos) is where a finished
-// logo, or any uploaded image, is chosen for the header, footer, admin and so on.
+// logo, or any uploaded image, is chosen for the browser tab, install icon, admin and so on.
 
 type LogoColorKey = 'background' | 'sun' | 'lettering' | 'landscape' | 'tamil';
 type LogoColors = Record<LogoColorKey, string>;

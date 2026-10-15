@@ -86,8 +86,12 @@ export function earlyBirdSeatsLeft(trip: {
 }
 
 /**
- * "3 of 5 early-bird seats left · first come, first served" for a seat-limited early bird that still has
+ * "3 of 5 seats left at early-bird price" for a seat-limited early bird that still has
  * seats, otherwise null (not seat-limited, or sold out).
+ *
+ * Worded as seats *at the early-bird price* (not "seats left") on purpose: the trip itself
+ * has more seats (e.g. 15) and only the first N get the discount, so "5 of 5 seats left"
+ * on its own reads as if the whole trip were almost full.
  */
 export function earlyBirdSeatsLabel(trip: {
   early_bird_price?: number | null;
@@ -96,12 +100,13 @@ export function earlyBirdSeatsLabel(trip: {
 }): string | null {
   const left = earlyBirdSeatsLeft(trip);
   if (left === null || left <= 0 || !trip.early_bird_seats) return null;
-  return `${left} of ${trip.early_bird_seats} early-bird ${left === 1 ? 'seat' : 'seats'} left · first come, first served`;
+  return `${left} of ${trip.early_bird_seats} seats left at early-bird price`;
 }
 
 /**
- * Friendly rule for a seat-limited early bird, e.g. "Lock in ₹1,799 — it's only
- * for the first 5 travellers. Pay your ₹499 advance to confirm your seat."
+ * Friendly rule for a seat-limited early bird, e.g. "Lock in ₹1,799 — this price is only
+ * for the first 5 travellers to pay. Remaining seats are at the regular price. Pay your
+ * ₹499 advance to confirm yours."
  * Null when there are no early-bird seats left to talk about.
  */
 export function earlyBirdRuleNote(
@@ -115,7 +120,7 @@ export function earlyBirdRuleNote(
 ): string | null {
   if (earlyBirdSeatsLabel(trip) === null || earlyPrice == null) return null;
   const advanceText = advance && advance > 0 ? `your ${formatPrice(advance)} advance` : 'your advance';
-  return `Lock in ${formatPrice(earlyPrice)} — it's only for the first ${trip.early_bird_seats} travellers. Pay ${advanceText} to confirm your seat.`;
+  return `Lock in ${formatPrice(earlyPrice)} — this price is only for the first ${trip.early_bird_seats} travellers to pay. Other seats on this trip stay open at the regular price. Pay ${advanceText} to confirm yours.`;
 }
 
 /** Format a date string to a readable format */

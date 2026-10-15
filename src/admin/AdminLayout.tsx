@@ -33,7 +33,7 @@ import ScrollToTopButton from '../components/layout/ScrollToTopButton';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { sweepAbandonedDraftUploads, discardAllDrafts, hasAnyDraft } from '../hooks/useSessionDraft';
 import type { TripHighlightIconType } from '../constants/tripHighlightIcons';
-import { useBranding } from '../hooks/useBranding';
+import { useBranding, brandingImgFallback } from '../hooks/useBranding';
 import { useConfirm } from '../components/ui/useConfirm';
 
 interface AdminNavItemDef {
@@ -426,9 +426,9 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       <div className={`relative flex items-center ${collapsed ? 'flex-col justify-center gap-2 px-2 py-3' : `${roomy ? 'h-20' : 'h-16'} justify-start pl-6 pr-16`}`}>
         <Link to="/" className="inline-block shrink-0" onClick={guardNavigate}>
           {collapsed ? (
-            <img src={brand.admin_icon} alt="Ulaa" className="h-8 w-8 object-contain" />
+            <img src={brand.admin_icon} onError={brandingImgFallback('admin_icon')} alt="Ulaa" className="h-8 w-8 object-contain" />
           ) : (
-            <img src={brand.admin_logo} alt="Ulaa" className={`${roomy ? 'h-14' : 'h-11'} max-w-full object-contain`} />
+            <img src={brand.admin_logo} onError={brandingImgFallback('admin_logo')} alt="Ulaa" className={`${roomy ? 'h-14' : 'h-11'} max-w-full object-contain`} />
           )}
         </Link>
         {/* Collapse/expand toggle — desktop only; the mobile drawer always

@@ -1,10 +1,12 @@
-import { useSyncExternalStore } from 'react';
+import { useSyncExternalStore, type SyntheticEvent } from 'react';
 import { getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { localSiteImage } from '../utils/imageUrls';
 
-// Admin-editable brand images (header logo, footer logo, favicon, ...),
-// stored as a single `site_content` row under BRANDING_KEY. Every slot is
+// Admin-editable brand images (favicon, install icon, admin logos, Travel Cards art, ...),
+// stored as a single `site_content` row under BRANDING_KEY. The public header and footer
+// logos are NOT part of this: they are fixed files in /public (see constants/site.ts).
+// Every slot is
 // optional: an empty/missing value means "use the file bundled in /public",
 // so the site looks exactly as before until an admin uploads something.
 //
@@ -17,8 +19,6 @@ import { localSiteImage } from '../utils/imageUrls';
 export const BRANDING_KEY = 'branding';
 
 export type BrandingSlot =
-  | 'header_logo'
-  | 'footer_logo'
   | 'favicon'
   | 'app_icon'
   | 'admin_logo'
@@ -31,8 +31,6 @@ export type BrandingSlot =
 export type BrandingContent = Record<BrandingSlot, string>;
 
 const BRANDING_SLOTS: BrandingSlot[] = [
-  'header_logo',
-  'footer_logo',
   'favicon',
   'app_icon',
   'admin_logo',
@@ -44,8 +42,6 @@ const BRANDING_SLOTS: BrandingSlot[] = [
 
 // Files bundled in /public that each slot falls back to.
 export const BRANDING_DEFAULTS: BrandingContent = {
-  header_logo: '/ULAA-logo-Header.png',
-  footer_logo: '/ULAA-logo-Footer.png',
   favicon: '/icons/user/favicon-32.png',
   app_icon: '/icons/user/icon-192.png',
   admin_logo: '/ULAA.svg',
@@ -56,8 +52,6 @@ export const BRANDING_DEFAULTS: BrandingContent = {
 };
 
 export const EMPTY_BRANDING: BrandingContent = {
-  header_logo: '',
-  footer_logo: '',
   favicon: '',
   app_icon: '',
   admin_logo: '',
@@ -160,6 +154,21 @@ function subscribe(listener: () => void) {
 }
 
 const getSnapshot = () => state;
+
+/**
+ * onError handler for an <img> showing a branding slot. If the admin-uploaded
+ * file is missing or broken (for example it was never copied to storage), swap
+ * once to the bundled default in /public instead of showing a broken image.
+ * Use together with key={url} so the one-shot guard resets when the URL changes.
+ */
+export function brandingImgFallback(slot: BrandingSlot) {
+  return (e: SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    if (img.dataset.brandFallback === '1') return;
+    img.dataset.brandFallback = '1';
+    img.src = BRANDING_DEFAULTS[slot];
+  };
+}
 
 /**
  * `custom` is what the admin has uploaded (empty string = nothing uploaded);

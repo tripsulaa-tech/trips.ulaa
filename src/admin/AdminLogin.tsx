@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/useAuth';
-import { useBranding } from '../hooks/useBranding';
+import { useBranding, brandingImgFallback } from '../hooks/useBranding';
 import Button from '../components/ui/Button';
 import AdminMfaStep from './AdminMfaStep';
 import { getEmailDomainSuggestions } from '../constants/emailDomains';
@@ -89,7 +89,7 @@ export default function AdminLogin() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <img src={brand.admin_logo} alt="Ulaa" className="h-28 mx-auto mb-4" />
+          <img src={brand.admin_logo} onError={brandingImgFallback('admin_logo')} alt="Ulaa" className="h-28 mx-auto mb-4" />
           <h1 className="font-display text-3xl font-bold text-dark">Admin Panel</h1>
           <p className="text-dark-muted text-sm mt-1">Sign in to manage Ulaa trips and enquiries.</p>
         </div>

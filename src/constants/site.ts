@@ -13,6 +13,10 @@ export const WHATSAPP_NUMBER = CONTACT_PHONE_E164.replace(/\D/g, '');
 export const INSTAGRAM_HANDLE = 'ulaa.trips';
 export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_HANDLE}`;
 export const LOGO_URL = `${SITE_ORIGIN}/ULAA-logo.png`;
+/** Header and footer logos are fixed files in /public. They are not stored in the database and
+ *  cannot be changed from the admin: to change them, replace the files and redeploy. */
+export const HEADER_LOGO_SRC = '/ULAA-logo-Header.png';
+export const FOOTER_LOGO_SRC = '/ULAA-logo-Footer.png';
 export const BRAND_TAGLINE = 'Girls-Only Travel Community';
 
 /** Brand copy used in page titles, meta tags, alt text and the footer. Change it here only.

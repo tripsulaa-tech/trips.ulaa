@@ -171,9 +171,6 @@ export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advance
             Grab my early-bird seat
             <ArrowRight size={18} weight="bold" className="transition-transform group-hover/cta:translate-x-1" />
           </button>
-          <p className="mt-2 text-center text-2xs text-dark-muted">
-            {hasAdvance ? `Pay ${formatPrice(advanceAmount as number)}` : 'Pay your advance'} to lock your {formatPrice(price)} seat — first {totalSeats} to pay only
-          </p>
           <button
             type="button"
             onClick={onClose}
