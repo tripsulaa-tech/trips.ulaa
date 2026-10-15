@@ -42,11 +42,11 @@ const CRAWLER_UA =
 const runtimeEnv =
   (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
 const SUPABASE_URL =
-  runtimeEnv.SUPABASE_URL ?? runtimeEnv.VITE_SUPABASE_URL ?? 'https://wephglgonrmtcmhfbjqe.supabase.co';
+  runtimeEnv.SUPABASE_URL ?? runtimeEnv.VITE_SUPABASE_URL ?? 'https://xoeqzwpcpnzghdmafoyt.supabase.co';
 const SUPABASE_ANON_KEY =
   runtimeEnv.SUPABASE_ANON_KEY ??
   runtimeEnv.VITE_SUPABASE_ANON_KEY ??
-  'sb_publishable_ryp0WUqL5_dg5v6gpo_zqw__Ibz6M5O';
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvZXF6d3BjcG56Z2hkbWFmb3l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIwMzYxNTcsImV4cCI6MjEwNzYxMjE1N30.Iec2TjmcOwwHplqj_y2V1J_tulq5fE4C9Ovm1EIN9mM';
 const SITE_URL = SITE_ORIGIN;
 const DEFAULT_IMAGE = `${SITE_URL}/ULAA-logo.png`;
 const DEFAULT_DESCRIPTION = SITE_DESCRIPTION;
