@@ -6,6 +6,7 @@ import PagedCarousel from './PagedCarousel';
 import { useResponsiveItemsPerView } from './useResponsiveItemsPerView';
 import GalleryViewer from './GalleryViewer';
 import { PLACEHOLDER_IMAGE } from '../../utils/utils-index';
+import { thumbImgProps } from '../../utils/imageUrls';
 
 interface GalleryCarouselItem {
   photo: string;
@@ -42,7 +43,9 @@ export default function GalleryCarousel({ items, fallbackLocation }: GalleryCaro
           >
             <div className="aspect-[4/3] overflow-hidden relative">
               <img
-                src={item.photo || PLACEHOLDER_IMAGE}
+                {...thumbImgProps(item.photo || PLACEHOLDER_IMAGE)}
+                loading="lazy"
+                decoding="async"
                 alt={item.description || `Gallery image ${i + 1}`}
                 draggable={false}
                 className="w-full h-full object-cover group-hover:scale-[1.07] transition-transform duration-600 ease-out"

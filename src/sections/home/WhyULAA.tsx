@@ -4,6 +4,7 @@ import SectionTitle from '../../components/ui/SectionTitle';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_WHY_ULAA } from '../../constants/why-ulaa';
 import type { WhyUlaaContent } from '../../types/types-index';
+import { localSiteImage } from '../../utils/imageUrls';
 
 export default function WhyULAA() {
   const [content, setContent] = useState<WhyUlaaContent>(DEFAULT_WHY_ULAA);
@@ -39,7 +40,7 @@ export default function WhyULAA() {
               className="relative aspect-[4/3] rounded-lg sm:rounded-xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 group"
             >
               <img
-                src={image}
+                src={localSiteImage(image)}
                 alt={title}
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"

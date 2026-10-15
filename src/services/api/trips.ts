@@ -1,6 +1,7 @@
 import { supabase } from '../supabase';
 import type { UpcomingTrip, CompletedTrip, TripFinanceSnapshot } from '../../types/types-index';
 import { getStoragePathFromUrl, deleteImageByUrl } from './shared';
+import { thumbPath } from '../../utils/imageUrls';
 
 import { STORAGE_BUCKET } from '../../constants/storage';
 
@@ -71,6 +72,9 @@ async function moveImage(url: string, destFolder: string, fileNamePrefix?: strin
   const newPath = `${destFolder}/${filename}`;
   const { error } = await supabase.storage.from(STORAGE_BUCKET).move(path, newPath);
   if (error) return null;
+  // Keep the small copy next to the moved original (best effort; if it is
+  // missing the pages simply fall back to the original).
+  await supabase.storage.from(STORAGE_BUCKET).move(thumbPath(path), thumbPath(newPath));
   const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(newPath);
   return data.publicUrl;
 }

@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import type { CompletedTrip } from '../../types/types-index';
 import { formatMonthYear, formatBatchLabel, PLACEHOLDER_IMAGE } from '../../utils/utils-index';
 import Button from './Button';
+import { thumbImgProps } from '../../utils/imageUrls';
 
 interface AlbumCardProps {
   trip: CompletedTrip;
@@ -37,7 +38,7 @@ export default function AlbumCard({ trip, index = 0 }: AlbumCardProps) {
         className="relative h-56 md:h-64 overflow-hidden rounded-t-xl block"
       >
         <img
-          src={trip.cover_image || PLACEHOLDER_IMAGE}
+          {...thumbImgProps(trip.cover_image || PLACEHOLDER_IMAGE)}
           alt={trip.destination}
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import { getSiteContent } from '../../services/api';
 import { DEFAULT_CTA_BANNER, mergeWithDefaults } from '../../constants/cta-banner';
 import type { CtaBannerContent } from '../../types/types-index';
+import { localSiteImage } from '../../utils/imageUrls';
 
 export default function CTASection() {
   const [content, setContent] = useState<CtaBannerContent>(DEFAULT_CTA_BANNER);
@@ -24,7 +25,7 @@ export default function CTASection() {
     <section data-header-theme="dark" className="relative py-20 sm:py-32 px-4 sm:px-6 lg:px-8 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0">
-        <img src={image} alt="Adventure awaits" className="w-full h-full object-cover" />
+        <img src={localSiteImage(image)} alt="Adventure awaits" loading="lazy" decoding="async" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-dark/90 via-dark/70 to-dark/50" />
       </div>
 

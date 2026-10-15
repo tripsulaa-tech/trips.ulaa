@@ -5,6 +5,7 @@ import {
 } from '@phosphor-icons/react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import GalleryViewer from '../../components/ui/GalleryViewer';
+import { thumbImgProps } from '../../utils/imageUrls';
 import { getGalleryImages } from '../../services/api';
 import { DEMO_GALLERY_IMAGES } from '../../dev/demoData';
 
@@ -70,7 +71,7 @@ export default function GalleryPreview() {
             >
               <motion.img
                 layoutId={`home-gallery-${i}`}
-                src={img}
+                {...thumbImgProps(img)}
                 alt={`Ulaa Gallery ${i + 1}`}
                 loading="lazy"
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"

@@ -9,6 +9,7 @@ import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../../constants/found
 import { getSocialIcon, getSocialBrandClasses, getSocialHref } from '../../utils/socialIcons';
 import { fadeUp } from '../../utils/animation';
 import type { FounderContent } from '../../types/types-index';
+import { localSiteImage } from '../../utils/imageUrls';
 
 interface MeetTheFounderProps {
   // Hides the "About" CTA (which links to the About page) when this
@@ -53,8 +54,9 @@ export default function MeetTheFounder({ showAboutLink = true }: MeetTheFounderP
           <div className="w-64 h-72 sm:w-80 sm:h-96 md:w-[22rem] md:h-[26rem] rounded-[2.5rem] border-4 border-primary overflow-hidden -rotate-6 shadow-warm-lg">
             {founder.photo ? (
               <img
-                src={founder.photo}
+                src={localSiteImage(founder.photo)}
                 alt={founder.name}
+                loading="lazy" decoding="async"
                 className="w-full h-full object-cover"
               />
             ) : (

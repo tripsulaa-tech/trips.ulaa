@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { getSiteContent } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
+import { localSiteImage } from '../utils/imageUrls';
 
 // Admin-editable brand images (header logo, footer logo, favicon, ...),
 // stored as a single `site_content` row under BRANDING_KEY. Every slot is
@@ -168,6 +169,7 @@ const getSnapshot = () => state;
 export function useBranding() {
   const custom = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   const urls: BrandingContent = { ...BRANDING_DEFAULTS };
-  for (const slot of BRANDING_SLOTS) if (custom[slot]) urls[slot] = custom[slot];
+  // `custom` stays untouched (the admin saves it back to the database); only the render URL is localised.
+  for (const slot of BRANDING_SLOTS) if (custom[slot]) urls[slot] = localSiteImage(custom[slot]);
   return { custom, urls };
 }

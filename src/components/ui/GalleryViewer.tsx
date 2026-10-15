@@ -29,6 +29,7 @@ import {
   MagnifyingGlassPlus as ZoomIn,
   ArrowCounterClockwise as RotateCcw,
 } from '@phosphor-icons/react';
+import { thumbImgProps, thumbUrl } from '../../utils/imageUrls';
 
 // =============================================================================
 // GalleryViewer — ultra-premium fullscreen photo viewer for the whole app.
@@ -109,6 +110,11 @@ function extractDominantColor(src: string): Promise<string> {
   const cached = dominantColorCache.get(src);
   if (cached) return Promise.resolve(cached);
 
+  // Only a 12x12 sample is needed, so read the small thumbnail instead of
+  // downloading the full photo a second time (this request is made with CORS,
+  // so the browser cannot reuse the copy the viewer's <img> already loaded).
+  const sampleSrc = thumbUrl(src);
+
   return new Promise(resolve => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -136,13 +142,24 @@ function extractDominantColor(src: string): Promise<string> {
         resolve('rgb(18, 14, 10)');
       }
     };
-    img.onerror = () => resolve('rgb(18, 14, 10)');
-    img.src = src;
+    img.onerror = () => resolve('rgb(18, 14, 10)'); // thumbnail missing: keep the neutral default
+    img.src = sampleSrc;
   });
 }
 
 // ─── Prefetching ──────────────────────────────────────────────────────────────
 const prefetchedSrcs = new Set<string>();
+// Pre-loading the next/previous FULL-size photo is a nice touch on desktop but
+// wasteful on phones (most swipes never happen) and on slow / data-saver
+// connections, and every prefetched photo counts toward Supabase egress.
+function shouldPrefetch(): boolean {
+  if (typeof window === 'undefined') return false;
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  if (conn?.saveData) return false;
+  if (conn?.effectiveType && /(^|-)2g$/.test(conn.effectiveType)) return false;
+  return !window.matchMedia('(max-width: 767px), (pointer: coarse)').matches;
+}
+
 function prefetchImage(src: string | undefined) {
   if (!src || prefetchedSrcs.has(src)) return;
   prefetchedSrcs.add(src);
@@ -515,7 +532,7 @@ export default function GalleryViewer({
 
   // Prefetch neighboring photos
   useEffect(() => {
-    if (!isOpen || items.length < 2) return;
+    if (!isOpen || items.length < 2 || !shouldPrefetch()) return;
     prefetchImage(items[(index + 1) % items.length]?.src);
     prefetchImage(items[(index - 1 + items.length) % items.length]?.src);
   }, [isOpen, index, items]);
@@ -732,7 +749,7 @@ export default function GalleryViewer({
                           i === index ? 'border-white scale-108 shadow-lg' : 'border-white/20 opacity-60 hover:opacity-100'
                         }`}
                       >
-                        <img src={img.src} alt="" loading="lazy" className="w-full h-full object-cover" />
+                        <img {...thumbImgProps(img.src)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover" />
                       </button>
                     );
                   })}
@@ -768,7 +785,7 @@ interface GalleryThumbProps {
 function GalleryThumb({ src, alt, layoutId, onClick, className, imgClassName }: GalleryThumbProps) {
   return (
     <button type="button" onClick={onClick} className={className} aria-label={alt || 'View photo'}>
-      <motion.img layoutId={layoutId} src={src} alt={alt || ''} loading="lazy" className={imgClassName} />
+      <motion.img layoutId={layoutId} {...thumbImgProps(src)} alt={alt || ''} loading="lazy" decoding="async" className={imgClassName} />
     </button>
   );
 }

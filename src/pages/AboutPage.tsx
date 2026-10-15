@@ -42,6 +42,7 @@ import type {
 } from '../types/types-index';
 
 import { BRAND_MOTTO, SITE_SHORT_NAME, pageTitle } from '../constants/site';
+import { localSiteImage } from '../utils/imageUrls';
 const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
 
 // "have_you_ever" items store an icon-library key chosen in the admin
@@ -211,14 +212,14 @@ export default function AboutPage() {
             {(hero.image || hero.mobile_image) ? (
               <>
                 <img
-                  src={hero.mobile_image || hero.image}
+                  src={localSiteImage(hero.mobile_image || hero.image)}
                   alt={hero.heading}
                   className="w-full h-full object-cover md:hidden"
                   loading="eager"
                   fetchPriority="high"
                 />
                 <img
-                  src={hero.image || hero.mobile_image}
+                  src={localSiteImage(hero.image || hero.mobile_image)}
                   alt={hero.heading}
                   className="w-full h-full object-cover hidden md:block"
                   loading="eager"
@@ -312,7 +313,7 @@ export default function AboutPage() {
           <motion.div {...fadeUp()}>
             {our_story.image ? (
               <img
-                src={our_story.image}
+                src={localSiteImage(our_story.image)}
                 alt={our_story.heading}
                 className="rounded-2xl shadow-warm-lg w-full h-80 md:h-[440px] object-cover"
                 loading="lazy"
@@ -489,7 +490,7 @@ export default function AboutPage() {
               >
                 {card.image ? (
                   <img
-                    src={card.image}
+                    src={localSiteImage(card.image)}
                     alt={card.heading}
                     loading="lazy"
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
@@ -554,7 +555,7 @@ export default function AboutPage() {
                       className="flex-1 aspect-[4/3] lg:aspect-auto rounded-2xl overflow-hidden group"
                     >
                       <img
-                        src={community.photos[0]}
+                        src={localSiteImage(community.photos[0])}
                         alt="Our community"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
@@ -576,7 +577,7 @@ export default function AboutPage() {
                           className="relative aspect-square lg:aspect-auto rounded-2xl overflow-hidden group"
                         >
                           <img
-                            src={photo}
+                            src={localSiteImage(photo)}
                             alt={`Community photo ${i + 2}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"

@@ -1,5 +1,6 @@
 import type { CoverImageCrop } from '../../types/types-index';
 import { getCoverImageStyle } from '../../utils/utils-index';
+import { thumbImgProps } from '../../utils/imageUrls';
 
 interface TripCardCoverProps {
   src: string;
@@ -22,23 +23,26 @@ interface TripCardCoverProps {
  * Parent must be a sized, overflow-hidden box.
  */
 export default function TripCardCover({ src, alt, crop, loading = 'lazy' }: TripCardCoverProps) {
+  // The card shows the photo at ~450px wide, so the small copy is plenty - unless
+  // the admin zoomed in (crop.zoom), which magnifies the image and would look soft.
+  const imgSrc = !crop || crop.zoom <= 1.25 ? thumbImgProps(src) : { src };
   if (crop?.fit === 'contain') {
     return (
       <div className="relative w-full h-full overflow-hidden bg-dark/5">
         <img
-          src={src}
+          {...imgSrc}
           alt=""
           aria-hidden="true"
           loading={loading}
           className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-80"
         />
-        <img src={src} alt={alt} loading={loading} className="relative w-full h-full object-contain" />
+        <img {...imgSrc} alt={alt} loading={loading} className="relative w-full h-full object-contain" />
       </div>
     );
   }
   return (
     <img
-      src={src}
+      {...imgSrc}
       alt={alt}
       loading={loading}
       className="w-full h-full object-cover"

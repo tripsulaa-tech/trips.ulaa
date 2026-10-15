@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { TripSearchFilterBar } from './TripSearchFilterBar';
 import { SkeletonGrid } from './Skeletons';
+import { localSiteImage } from '../../utils/imageUrls';
 
 // Single source of truth for the sticky filter bar's offset — it needs to
 // sit exactly below the fixed navbar (Navbar.tsx's `h-20`), on both pages
@@ -84,7 +85,7 @@ export default function BrowseShell<T>({
       {/* Hero */}
       <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
       <div className="relative h-80 md:h-96 overflow-hidden rounded-lg">
-        <img src={hero.image} alt={hero.imageAlt} className="w-full h-full object-cover" loading="eager" fetchPriority="high" />
+        <img src={localSiteImage(hero.image)} alt={hero.imageAlt} className="w-full h-full object-cover" loading="eager" fetchPriority="high" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/60 to-dark/80" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>

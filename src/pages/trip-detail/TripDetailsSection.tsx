@@ -125,6 +125,7 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
               <img
                 src={leader!.photo}
                 alt={leader!.name}
+                loading="lazy" decoding="async"
                 className="w-40 h-40 sm:w-44 sm:h-44 rounded-full object-cover border-4 border-primary/30 flex-shrink-0"
               />
             ) : (

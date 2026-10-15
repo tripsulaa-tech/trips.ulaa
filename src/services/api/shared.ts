@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import { thumbPath } from '../../utils/imageUrls';
 
 // =============================================
 // Image compression (client-side, before upload)
@@ -18,13 +19,14 @@ import { supabase } from '../supabase';
 // the new, smaller size (which affords a *higher* quality per pass than
 // the previous size did). This repeats until we're at/under target or we
 // hit MIN_RESIZE_ATTEMPTS, so a busy/detailed photo ends up smaller but
-// crisp rather than full-size and blocky. Animated GIFs and files already
-// under the target are left untouched (nothing to gain, and canvas
-// re-encoding would kill the animation).
+// crisp rather than full-size and blocky. Files already under the target are
+// ALSO converted to WebP, but the WebP is kept only if it is at least 20%
+// smaller than the original (otherwise the original is uploaded untouched).
+// Animated GIFs, SVGs and files that are already WebP are never re-encoded.
 // 500KB ceiling for EVERY admin image upload (trip covers, gallery, album photos,
 // home sections, etc.). It is a ceiling, not a fixed output size: a photo that is
-// already <= 500KB is uploaded untouched (zero quality loss), and a bigger one is
-// only squeezed as far as needed to land under 500KB. A 1920px WebP at quality
+// already <= 500KB is only converted to WebP when that makes it clearly smaller,
+// and a bigger one is only squeezed as far as needed to land under 500KB. A 1920px WebP at quality
 // ~0.75-0.85 is visually indistinguishable from the original for photos, and it
 // keeps Supabase cached egress (5GB/month on the free plan) under control.
 // Call sites that pass their own limit (e.g. logos) keep it.
@@ -37,10 +39,15 @@ const MIN_QUALITY = 0.5; // quality floor for any single pass; resize instead of
 const QUALITY_STEP = 0.05; // fine-grained steps so we don't overshoot past a good size/quality tradeoff
 const MAX_RESIZE_ATTEMPTS = 8; // each pass shrinks by 10%, so 8 passes ≈ 43% of original linear size at most
 const RESIZE_FACTOR = 0.9;
+const SMALL_FILE_QUALITY = 0.92; // starting quality for files already under the size limit
+const SMALL_FILE_MAX_RATIO = 0.8; // convert a small file only if the WebP is >=20% smaller
 
 async function compressImage(file: File, targetSizeBytes: number = TARGET_SIZE_BYTES): Promise<File> {
-  if (!file.type.startsWith('image/') || file.type === 'image/gif') return file;
-  if (file.size <= targetSizeBytes) return file;
+  // Never touch non-images, animated GIFs or SVGs (vector: canvas would rasterise them).
+  if (!file.type.startsWith('image/') || file.type === 'image/gif' || file.type === 'image/svg+xml') return file;
+  const isSmall = file.size <= targetSizeBytes;
+  // A WebP that is already within the limit gains nothing from another lossy pass.
+  if (isSmall && file.type === 'image/webp') return file;
 
   let bitmap: ImageBitmap;
   try {
@@ -79,7 +86,9 @@ async function compressImage(file: File, targetSizeBytes: number = TARGET_SIZE_B
   // current canvas size is. Returns the best (smallest-over-target-or-best-
   // available) blob for that size.
   const searchQuality = async (): Promise<Blob | null> => {
-    let quality = 0.85;
+    // Files already under the limit get a higher starting quality: we are only
+    // converting format, not trying to hit a size, so keep them as crisp as possible.
+    let quality = isSmall ? SMALL_FILE_QUALITY : 0.85;
     let best = await toBlob(quality);
     while (best && best.size > targetSizeBytes && quality > MIN_QUALITY) {
       quality = Math.max(quality - QUALITY_STEP, MIN_QUALITY);
@@ -105,8 +114,40 @@ async function compressImage(file: File, targetSizeBytes: number = TARGET_SIZE_B
 
   if (!blob) return file; // encoding failed for some reason — fall back to the original
 
+  // Already within the size limit: only swap in the WebP when it is clearly
+  // smaller. Otherwise keep the original bytes (no pointless quality loss).
+  if (isSmall && blob.size > file.size * SMALL_FILE_MAX_RATIO) return file;
+
   const newName = file.name.replace(/\.[^./]+$/, '') + '.webp';
   return new File([blob], newName, { type: 'image/webp' });
+}
+
+// Small copy used by grids, filmstrips and cards (see utils/imageUrls.ts).
+// 720px-wide WebP is roughly 30-60KB versus 0.3-2MB for the original.
+const THUMB_WIDTH = 720;
+const THUMB_QUALITY = 0.72;
+
+async function makeThumbnail(source: Blob): Promise<Blob | null> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(source, { imageOrientation: 'from-image' });
+  } catch {
+    return null;
+  }
+  const scale = Math.min(1, THUMB_WIDTH / bitmap.width);
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    bitmap.close();
+    return null;
+  }
+  ctx.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/webp', THUMB_QUALITY));
 }
 
 export async function uploadImage(bucket: string, file: File, path: string, targetSizeBytes?: number): Promise<string> {
@@ -125,6 +166,28 @@ export async function uploadImage(bucket: string, file: File, path: string, targ
   // (counted as Cached Egress) at least once an hour, on every repeat view.
   const { error } = await supabase.storage.from(bucket).upload(finalPath, compressed, { upsert: true, cacheControl: '31536000' });
   if (error) throw error;
+
+  // Best-effort small copy for grids/cards. A failure here must never fail the
+  // upload: pages fall back to the original if no thumbnail exists.
+  try {
+    const isRaster = compressed.type.startsWith('image/') && compressed.type !== 'image/gif' && compressed.type !== 'image/svg+xml';
+    if (isRaster) {
+      const thumb = await makeThumbnail(compressed);
+      if (thumb) {
+        // Never store a thumbnail bigger than the original: for already-small
+        // photos, reuse the original bytes at the thumbnail path.
+        const useOriginal = thumb.size >= compressed.size;
+        await supabase.storage.from(bucket).upload(thumbPath(finalPath), useOriginal ? compressed : thumb, {
+          upsert: true,
+          cacheControl: '31536000',
+          contentType: useOriginal ? compressed.type : 'image/webp',
+        });
+      }
+    }
+  } catch (err) {
+    console.warn('Thumbnail upload skipped:', err);
+  }
+
   const { data } = supabase.storage.from(bucket).getPublicUrl(finalPath);
   return data.publicUrl;
 }
@@ -150,7 +213,9 @@ export async function uploadImageFromUrl(bucket: string, sourceUrl: string, path
 }
 
 export async function deleteImage(bucket: string, path: string): Promise<void> {
-  const { error } = await supabase.storage.from(bucket).remove([path]);
+  // Also remove the small copy (if any) so thumbnails don't pile up as orphans.
+  const paths = path.startsWith('thumbs/') ? [path] : [path, thumbPath(path)];
+  const { error } = await supabase.storage.from(bucket).remove(paths);
   if (error) throw error;
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import GalleryViewer from '../../components/ui/GalleryViewer';
 import SectionTitle from '../../components/ui/SectionTitle';
+import { thumbImgProps } from '../../utils/imageUrls';
 
 interface TripFashionSectionProps {
   photos: string[];
@@ -84,8 +85,9 @@ export default function TripFashionSection({ photos, description, tripTitle }: T
                       portrait, landscape, and square photos all show in full. */}
                   <motion.img
                     layoutId={`fashion-gallery-${i}`}
-                    src={photo}
+                    {...thumbImgProps(photo)}
                     alt={`Fashion ${i + 1}`}
+                    loading="lazy" decoding="async"
                     className="w-full h-auto block group-hover:scale-105 transition-transform duration-500"
                   />
                   {isLastVisible && remaining > 0 && (

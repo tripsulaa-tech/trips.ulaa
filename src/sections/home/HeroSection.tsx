@@ -12,6 +12,7 @@ import { subscribeToTable } from '../../services/realtime';
 import { DEFAULT_HOME_HERO, mergeWithDefaults } from '../../constants/home-hero';
 import type { HomeHeroContent } from '../../types/types-index';
 import heroImg from '../../assets/hero.webp';
+import { localSiteImage } from '../../utils/imageUrls';
 
 export default function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -166,10 +167,10 @@ export default function HeroSection() {
             >
               <picture>
                 {currentSlide.mobile_image && (
-                  <source media="(max-width: 639px)" srcSet={currentSlide.mobile_image} />
+                  <source media="(max-width: 639px)" srcSet={localSiteImage(currentSlide.mobile_image)} />
                 )}
                 <img
-                  src={currentSlide.image}
+                  src={localSiteImage(currentSlide.image)}
                   alt="Ulaa — Girls-only travel experiences"
                   className="w-full h-full object-cover"
                   fetchPriority={index === 0 ? 'high' : 'auto'}

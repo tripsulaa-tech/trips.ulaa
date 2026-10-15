@@ -77,6 +77,7 @@ export default function TestimonialCard({ testimonial, index = 0, animateEntranc
         <img
           src={testimonial.photo || PLACEHOLDER_IMAGE}
           alt={testimonial.name}
+          loading="lazy" decoding="async"
           className="w-12 h-12 rounded-full object-cover border-2 border-background-warm"
         />
         <div>

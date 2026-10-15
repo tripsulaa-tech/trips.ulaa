@@ -4,6 +4,7 @@ import { useResponsiveItemsPerView } from '../../components/ui/useResponsiveItem
 import SectionTitle from '../../components/ui/SectionTitle';
 import { ArrowRight } from '@phosphor-icons/react';
 import { ONE_DAY_STAY_TEXT } from '../../utils/utils-index';
+import { thumbImgProps } from '../../utils/imageUrls';
 
 interface TripAccommodationSectionProps {
   description?: string | null;
@@ -36,7 +37,7 @@ export default function TripAccommodationSection({ description, photos, carousel
             keyExtractor={(_photo, i) => i}
             renderItem={(photo, i) => (
               <div className="aspect-video overflow-hidden rounded-lg">
-                <img src={photo} alt={`Accommodation ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
+                <img {...thumbImgProps(photo)} alt={`Accommodation ${i + 1}`} loading="lazy" decoding="async" className="w-full h-full object-cover hover:scale-105 transition-transform duration-500" />
               </div>
             )}
           />
