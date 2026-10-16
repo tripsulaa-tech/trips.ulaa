@@ -61,6 +61,7 @@ function tripToForm(trip: UpcomingTrip): TripForm {
     special_offer_end_date: trip.special_offer_end_date || '',
     card_feature_tags: trip.card_feature_tags || [],
     trip_type: trip.trip_type || '',
+    travel_mode: trip.travel_mode || '',
     cover_image: trip.cover_image || '',
     cover_image_crop: trip.cover_image_crop || null,
     hero_mobile_image: trip.hero_mobile_image || '',
@@ -468,6 +469,8 @@ export function useTripFormModal(load: () => void) {
         special_offer_date: form.special_offer_date || null,
         special_offer_end_date: form.special_offer_end_date || null,
         trip_type: form.trip_type === '' ? null : form.trip_type,
+        // Train / Bus only applies to domestic trips; anything else falls back to the default.
+        travel_mode: form.trip_type === 'domestic' && form.travel_mode ? form.travel_mode : null,
         min_age: form.min_age === '' ? null : form.min_age,
         max_age: form.max_age === '' ? null : form.max_age,
         trip_leader_id: form.trip_leader_id === '' ? null : form.trip_leader_id,

@@ -167,6 +167,8 @@ create table public.upcoming_trips (
   meeting_point_map_url   text,
   terms_and_conditions    text,
   trip_type               text,
+  -- Domestic only: 'train' or 'bus' (Bus / Van) for the countdown route. See add_trip_travel_mode.sql.
+  travel_mode             text,
   cancellation_policy     jsonb,
   -- Independent "was ₹X" marketing price — shown crossed out next to
   -- whichever price (regular or early-bird) is currently active, instead of

@@ -140,7 +140,7 @@ const PUBLIC_UPCOMING_TRIP_COLUMNS = [
   'meeting_address', 'end_banner', 'things_to_carry_items', 'fashion_description',
   'gallery_description', 'cover_image_crop', 'status', 'hide_pdf_download', 'banner_has_text',
   'hide_special_offer_promo', 'sort_order', 'special_offer_date', 'special_offer_end_date',
-  'special_offer_name', 'special_offer_price', 'trip_options', 'hero_mobile_image',
+  'special_offer_name', 'special_offer_price', 'trip_options', 'hero_mobile_image', 'travel_mode',
 ].join(', ');
 
 const PUBLIC_UPCOMING_TRIP_SELECT = `${PUBLIC_UPCOMING_TRIP_COLUMNS}, trip_leader:trip_leaders(*)`;

@@ -347,6 +347,24 @@ export default function AdminTripFormModal({
                   Sets the default cancellation rules.
                 </p>
               </div>
+              {form.trip_type === 'domestic' && (
+                <div>
+                  <label htmlFor="trip-travel-mode" className="block text-sm font-medium text-dark mb-1">Travel Mode</label>
+                  <Select
+                    inputId="trip-travel-mode"
+                    value={form.travel_mode ?? ''}
+                    onChange={val => setForm(f => ({ ...f, travel_mode: val as 'train' | 'bus' | '' }))}
+                    options={[
+                      { value: '', label: 'Bus / Van (default)' },
+                      { value: 'train', label: 'Train' },
+                      { value: 'bus', label: 'Bus / Van' },
+                    ]}
+                  />
+                  <p className="text-xs text-dark-muted mt-1">
+                    The vehicle on the trip page's countdown route.
+                  </p>
+                </div>
+              )}
               <div>
                 <label htmlFor="trip-early-bird-deadline" className="block text-sm font-medium text-dark mb-1">
                   <ShortLabel full="Early-Bird Deadline" short="Early-Bird Till" />

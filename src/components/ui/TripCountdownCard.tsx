@@ -5,7 +5,12 @@ import { ArrowRight, Fire, Seat, User } from '@phosphor-icons/react';
 import Plane3D from './Plane3D';
 import { isPlane3DSupported } from './plane3DRenderer';
 
+/** Vehicle on the route: 'flight' (plane), 'train', or 'bus' (Bus / Van). */
+export type TravelMode = 'flight' | 'train' | 'bus';
+
 interface TripCountdownCardProps {
+  /** Defaults to the plane. Domestic trips pass 'train' or 'bus'. */
+  travelMode?: TravelMode;
   startDate: string | null | undefined;
   /** Comma-separated stops, e.g. "Mirissa, Galle, Ella, Colombo" */
   destination: string;
@@ -114,6 +119,121 @@ function FlatPlaneSvg({ size }: { size: number }) {
   );
 }
 
+/* ───────────────────────── Train / Bus ───────────────────────── */
+
+const GOLD_STOPS = (
+  <>
+    <stop offset="0" stopColor="#FBEFD3" />
+    <stop offset="0.55" stopColor="#E9C77B" />
+    <stop offset="1" stopColor="#C8962A" />
+  </>
+);
+
+/** Flat gold train: a long engine plus two coaches, side view, nose pointing right.
+ *  About 2.9x as long as it is tall, so it reads as a train at a glance. */
+function TrainSvg({ size }: { size: number }) {
+  const uid = useId().replace(/:/g, '');
+  const w = size * 2.1;
+  const h = (w * 32) / 92;
+  const fill = `url(#${uid}-body)`;
+  const coach = (x: number) => (
+    <g key={x}>
+      <rect x={x} y="3" width="26" height="21" rx="3" fill={fill} />
+      {[3, 10.5, 18].map((dx) => (
+        <rect key={dx} x={x + dx} y="8" width="5" height="6" rx="1" fill="#6B3A12" opacity="0.55" />
+      ))}
+      <rect x={x} y="18" width="26" height="2" fill="#B8741E" opacity="0.55" />
+    </g>
+  );
+  return (
+    <svg width={w} height={h} viewBox="0 0 92 32" aria-hidden="true" className="relative shrink-0 drop-shadow-[0_2px_8px_rgba(233,199,123,0.6)]">
+      <defs>
+        <linearGradient id={`${uid}-body`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="92" y2="32">
+          {GOLD_STOPS}
+        </linearGradient>
+      </defs>
+      <path d="M0 30.5 H92" stroke="#E9C77B" strokeOpacity="0.5" strokeWidth="1.2" strokeLinecap="round" />
+      {coach(0)}
+      {coach(28)}
+      {/* couplers */}
+      <rect x="26" y="17" width="2" height="2" fill="#B8741E" />
+      <rect x="54" y="17" width="2" height="2" fill="#B8741E" />
+      {/* engine */}
+      <path d="M56 6 Q56 3 59 3 H78 Q86 3 91 15 V22 Q91 24 89 24 H58 Q56 24 56 22 Z" fill={fill} />
+      <rect x="59" y="8" width="10" height="6" rx="1" fill="#6B3A12" opacity="0.55" />
+      <path d="M72 8 H77 Q81 9 83 14 H72 Z" fill="#6B3A12" opacity="0.55" />
+      <rect x="56" y="18" width="35" height="2" fill="#B8741E" opacity="0.55" />
+      <circle cx="89.5" cy="19" r="1.3" fill="#FFFFFF" />
+      {/* wheels */}
+      {[8, 19, 36, 47, 64, 82].map((cx) => (
+        <circle key={cx} cx={cx} cy="27" r="2.6" fill="#6B3A12" />
+      ))}
+    </svg>
+  );
+}
+
+/** Flat gold van: short and compact with a sloped bonnet, side view, front pointing right. */
+function BusSvg({ size }: { size: number }) {
+  const uid = useId().replace(/:/g, '');
+  const w = size * 0.85;
+  const h = (w * 28) / 34;
+  const fill = `url(#${uid}-body)`;
+  return (
+    <svg width={w} height={h} viewBox="0 0 34 28" aria-hidden="true" className="relative shrink-0 drop-shadow-[0_2px_8px_rgba(233,199,123,0.6)]">
+      <defs>
+        <linearGradient id={`${uid}-body`} gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="34" y2="28">
+          {GOLD_STOPS}
+        </linearGradient>
+      </defs>
+      <path d="M2 8 Q2 5 5 5 H20 Q24 5 27 11 L31 15 Q33 16.5 33 19 V22 Q33 24 31 24 H4 Q2 24 2 22 Z" fill={fill} />
+      <rect x="5" y="8" width="6" height="6" rx="1" fill="#6B3A12" opacity="0.55" />
+      <rect x="12.5" y="8" width="5" height="6" rx="1" fill="#6B3A12" opacity="0.55" />
+      <path d="M20 8 H21 Q23 8 25 12 L26 14 H20 Z" fill="#6B3A12" opacity="0.55" />
+      <rect x="2" y="18" width="31" height="1.6" fill="#B8741E" opacity="0.55" />
+      <circle cx="31.5" cy="20.5" r="1.1" fill="#FFFFFF" />
+      <circle cx="9" cy="24.5" r="3.2" fill="#6B3A12" />
+      <circle cx="9" cy="24.5" r="1.2" fill="#FBEFD3" />
+      <circle cx="25" cy="24.5" r="3.2" fill="#6B3A12" />
+      <circle cx="25" cy="24.5" r="1.2" fill="#FBEFD3" />
+    </svg>
+  );
+}
+
+/** The vehicle on the route: the 3D plane, or a flat train / van for domestic trips. */
+function PremiumVehicle({ mode, size = 40 }: { mode: TravelMode; size?: number }) {
+  if (mode === 'flight') return <PremiumPlane size={size} />;
+  return (
+    <span className="relative flex items-center shrink-0">
+      {mode === 'train' ? <TrainSvg size={size} /> : <BusSvg size={size} />}
+    </span>
+  );
+}
+
+// Words that change with the vehicle.
+const VEHICLE_COPY: Record<TravelMode, { start: string; bubble: string; heading: string; again: string; aria: string }> = {
+  flight: {
+    start: 'Catch the plane if you can',
+    bubble: 'Think you can catch me? Tap the plane!',
+    heading: 'Want to catch the flight?',
+    again: 'Chase the plane again',
+    aria: 'Catch the plane',
+  },
+  train: {
+    start: 'Catch the train if you can',
+    bubble: 'Think you can catch me? Tap the train!',
+    heading: 'Want to catch the train?',
+    again: 'Chase the train again',
+    aria: 'Catch the train',
+  },
+  bus: {
+    start: 'Catch the bus if you can',
+    bubble: 'Think you can catch me? Tap the bus!',
+    heading: 'Want to catch the bus?',
+    again: 'Chase the bus again',
+    aria: 'Catch the bus',
+  },
+};
+
 /* ───────────────────────── Game ───────────────────────── */
 
 const GOAL = 4; // catches the visitor can actually make
@@ -153,7 +273,7 @@ function nextPos(prev: PlanePos, count: number): PlanePos {
  * Taking longer than 15 seconds ends the same way. With reduced motion on,
  * the plane never hops by itself (nothing chases the visitor).
  */
-function usePlaneGame(stopCount: number, reduceMotion: boolean | null) {
+function usePlaneGame(stopCount: number, reduceMotion: boolean | null, startHint: string) {
   const last = Math.max(0, stopCount - 1);
   const [introDone, setIntroDone] = useState(false);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -210,7 +330,7 @@ function usePlaneGame(stopCount: number, reduceMotion: boolean | null) {
     setPos({ idx: last, facing: 1 });
   };
 
-  let hint = 'Catch the plane if you can';
+  let hint = startHint;
   if (phase === 'playing') {
     hint = ['', 'Got one! 1 of 4', 'Faster now. 2 of 4', 'Three down. 3 of 4'][runCatches] ?? '';
   } else if (phase === 'teasing') {
@@ -317,6 +437,7 @@ function buildFlight(waypoints: Pt[]): FlyPath {
  * they are not repeated here.
  */
 export default function TripCountdownCard({
+  travelMode = 'flight',
   startDate,
   destination,
   ctaLabel,
@@ -337,7 +458,9 @@ export default function TripCountdownCard({
         .filter(Boolean),
     [destination],
   );
-  const game = usePlaneGame(stops.length, reduceMotion);
+  const vehicle = travelMode;
+  const copy = VEHICLE_COPY[vehicle];
+  const game = usePlaneGame(stops.length, reduceMotion, copy.start);
   const isDesktop = useIsDesktop();
   const planeRef = useRef<HTMLButtonElement>(null);
   const [fly, setFly] = useState<FlyPath | null>(null);
@@ -583,7 +706,7 @@ export default function TripCountdownCard({
                   y: reduceMotion ? { duration: 0 } : { duration: 1.6, ease: 'easeInOut', repeat: Infinity, delay: 0.5 },
                 }}
               >
-                Think you can catch me? Tap the plane!
+                {copy.bubble}
                 <span aria-hidden="true" className="absolute -bottom-1 right-6 h-3 w-3 rotate-45 bg-[#F3E2BC]" />
               </motion.button>
             )}
@@ -620,7 +743,7 @@ export default function TripCountdownCard({
               transition={{ duration: 0.4, delay: 0.3, ease: 'easeOut' }}
             >
               {/* Script carries the feeling, sans carries the instruction */}
-              <p className="font-script text-2xl sm:text-3xl leading-tight text-[#E9C77B]">Want to catch the flight?</p>
+              <p className="font-script text-2xl sm:text-3xl leading-tight text-[#E9C77B]">{copy.heading}</p>
               <p className="mt-1.5 max-w-xl text-base sm:text-lg leading-relaxed text-white/90">
                 Pack your bags and catch it with <strong className="font-semibold text-white">Ulaa</strong>. Book your
                 seats soon.
@@ -630,7 +753,7 @@ export default function TripCountdownCard({
                 onClick={game.chaseAgain}
                 className="mt-3 text-sm text-white/70 underline underline-offset-4 decoration-white/30 hover:text-white cursor-pointer"
               >
-                Chase the plane again
+                {copy.again}
               </button>
             </motion.div>
           )}
@@ -671,7 +794,7 @@ export default function TripCountdownCard({
               <motion.button
                 ref={planeRef}
                 type="button"
-                aria-label="Catch the plane"
+                aria-label={copy.aria}
                 onClick={game.onClick}
                 disabled={game.phase === 'teasing' || departed}
                 className="absolute top-[5px] -ml-[24px] -mt-[24px] z-10 flex h-12 w-12 items-center justify-center rounded-full touch-manipulation cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9C77B]"
@@ -713,7 +836,7 @@ export default function TripCountdownCard({
                         : { duration: 0.2 },
                   }}
                 >
-                  <PremiumPlane size={40} />
+                  <PremiumVehicle mode={vehicle} size={40} />
                 </motion.span>
 
                 {/* Every catch throws a little burst of gold */}
@@ -852,7 +975,7 @@ export default function TripCountdownCard({
                     animate={{ left: '102%', opacity: [0, 1, 1, 1] }}
                     transition={{ duration: 0.9, delay: 0.7, ease: 'easeIn' }}
                   >
-                    <PremiumPlane size={26} />
+                    <PremiumVehicle mode={vehicle} size={26} />
                   </motion.span>
                 )}
                 <motion.span
@@ -908,7 +1031,7 @@ export default function TripCountdownCard({
             }}
             onAnimationComplete={onLanded}
           >
-            <PremiumPlane size={40} />
+            <PremiumVehicle mode={vehicle} size={40} />
           </motion.div>,
           document.body,
         )}

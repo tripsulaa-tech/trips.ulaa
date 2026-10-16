@@ -303,6 +303,9 @@ export interface UpcomingTrip {
   // leaves enquiries.trip_type null too, so set it for accurate refund
   // suggestions.
   trip_type?: 'domestic' | 'international' | null;
+  /** Vehicle shown on the countdown card's route. Domestic trips only: 'train' or 'bus'
+   *  (Bus / Van). Null = default (Bus for domestic, plane otherwise). See add_trip_travel_mode.sql. */
+  travel_mode?: 'train' | 'bus' | null;
   // Optional age eligibility range for this trip. Either side can be left
   // unset (no restriction on that side); if both are unset, the public
   // forms fall back to the app's default 18-65 rule — see validateAge in

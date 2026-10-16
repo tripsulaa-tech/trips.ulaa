@@ -59,6 +59,8 @@ export interface TripForm {
   // '' means "not set" (stored as null) — see UpcomingTrip.trip_type in
   // types-index.ts for why this matters to the DB's refund logic.
   trip_type: 'domestic' | 'international' | '';
+  /** Domestic only: vehicle on the countdown route. '' = default (Bus / Van). */
+  travel_mode?: 'train' | 'bus' | '';
   cover_image: string;
   // Saved position/zoom for cover_image (see CoverImageCrop in
   // types-index.ts). null means "no crop saved" — every layout falls back
@@ -109,7 +111,7 @@ export const emptyForm: TripForm = {
   min_age: '', max_age: '', price: '',
   early_bird_price: '', early_bird_deadline: '', early_bird_seats: '', strike_through_price: '', advance_amount: '',
   special_offer_name: '', special_offer_price: '', special_offer_date: '', special_offer_end_date: '',
-  card_feature_tags: [], trip_type: '',
+  card_feature_tags: [], trip_type: '', travel_mode: '',
   cover_image: '', cover_image_crop: null, hero_mobile_image: '', terms_and_conditions: DEFAULT_TERMS_AND_CONDITIONS,
   cancellation_policy: DEFAULT_CANCELLATION_POLICY, status: 'draft',
   // Extended

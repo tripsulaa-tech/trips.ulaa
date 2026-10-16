@@ -451,6 +451,11 @@ export default function TripDetailPage() {
               left, seat map + booking button on the stub. Stacks on mobile.
               Renders nothing once the trip has started. */}
           <TripCountdownCard
+            travelMode={
+              trip.travel_mode === 'train' || trip.travel_mode === 'bus'
+                ? trip.travel_mode
+                : trip.trip_type === 'domestic' ? 'bus' : 'flight'
+            }
             startDate={trip.start_date}
             destination={trip.destination}
             totalSeats={trip.total_seats}
