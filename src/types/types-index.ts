@@ -213,6 +213,15 @@ export interface CoverImageCrop {
   fit?: 'cover' | 'contain';
 }
 
+/** One tab of the mobile bottom nav as edited in the admin "Bottom Nav Bar" section. */
+export interface BottomNavItemConfig {
+  id: string;
+  label: string;
+  to: string;
+  /** Icon key picked in the admin editor. */
+  icon: string;
+}
+
 export interface UpcomingTrip {
   id: string;
   title: string;
