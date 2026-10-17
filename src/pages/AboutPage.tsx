@@ -2,14 +2,8 @@ import { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import type { PanInfo } from 'framer-motion';
 import {
-  X,
-  ShieldCheck,
-  Question as HelpCircle,
   Heart,
-  Users,
-  Sparkle as Sparkles,
   ArrowRight,
-  ArrowDown,
   CaretLeft as ChevronLeft,
   CaretRight as ChevronRight,
   Compass,
@@ -18,11 +12,11 @@ import {
   Airplane as Plane,
   Image as ImageIcon,
   Play,
-  SmileySad as Frown,
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
+import MobileMemoryWall from '../sections/about/MobileMemoryWall';
 import TestimonialCard from '../components/ui/TestimonialCard';
 import { getSiteContent, getTestimonials, getCompletedTrips } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
@@ -33,8 +27,6 @@ import { getTripHighlightIcon } from '../constants/tripHighlightIcons';
 import { fadeUp } from '../utils/animation';
 import type {
   AboutContent,
-  AboutHaveYouEverItem,
-  AboutWelcomeItem,
   AboutWhyDifferentCard,
   AboutJourneyStep,
   Testimonial,
@@ -45,27 +37,9 @@ import { BRAND_MOTTO, SITE_SHORT_NAME, pageTitle } from '../constants/site';
 import { localSiteImage } from '../utils/imageUrls';
 const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
 
-// "have_you_ever" items store an icon-library key chosen in the admin
-// (AboutHaveYouEverItem.icon, see constants/tripHighlightIcons.ts). This
-// fallback set is only used for legacy items saved before the picker
-// existed, so they still render something instead of a blank slot.
-const HAVE_YOU_EVER_ICONS = [X, ShieldCheck, HelpCircle, Frown];
-
-// "welcome_to_ulaa" items likewise store an icon-library key
-// (AboutWelcomeItem.icon). This fallback set covers legacy items saved
-// before the picker existed (e.g. rows that still hold a raw emoji string).
-const WELCOME_ICONS = [Heart, Users, ShieldCheck, Sparkles];
-
 // "journey" steps likewise store an icon-library key (AboutJourneyStep.icon).
 // This fallback set covers legacy steps saved before the picker existed.
 const JOURNEY_ICONS = [Compass, Ticket, Backpack, Plane, Heart];
-
-// Have You Ever / Welcome to Ulaa icon circles: every icon on the "Have You
-// Ever" side is a muted, premium red, and every icon on the "Welcome to
-// Ulaa" side is a muted, premium green — both subtler than a pure/saturated
-// red or green so they sit quietly alongside the rest of the palette.
-const HAVE_YOU_EVER_FILL = '#B0524F';
-const WELCOME_FILL = '#4C8368';
 
 export default function AboutPage() {
   // Remember and restore scroll position when leaving/returning via the
@@ -171,7 +145,6 @@ export default function AboutPage() {
     testimonials: testimonialsContent,
     journey,
   } = content;
-  const { have_you_ever, welcome_to_ulaa } = journey_intro;
 
   // Live stats derived from real completed trips — same three numbers,
   // same order, as the Completed Trips page (Girls Travelled, Trips
@@ -342,125 +315,16 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           3 & 4. HAVE YOU EVER... / WELCOME TO Ulaa (merged split card)
       ══════════════════════════════════════════════════════════════ */}
-      <section className="pt-12 pb-12 px-4 sm:px-6 lg:px-8 bg-background">
-        <div className="max-w-[1344px] mx-auto">
-          <motion.div {...fadeUp()} className="text-center mb-6 sm:mb-12">
-            {journey_intro.sub_heading && (
-              <p className="font-script font-normal text-3xl md:text-4xl text-primary mb-2 whitespace-pre-line">
-                {journey_intro.sub_heading}
-              </p>
-            )}
-            <h2 className="font-display text-4xl md:text-5xl font-bold text-dark leading-tight mb-4 whitespace-pre-line">
-              {journey_intro.heading}
-            </h2>
-            {journey_intro.description && (
-              <p className="text-dark-muted text-lg whitespace-pre-line">
-                {(() => {
-                  // Highlight "beautiful experiences" in the same color as
-                  // the "From Worries" script heading above it, matching
-                  // everything else exactly as admin-configured.
-                  const phrase = 'beautiful experiences';
-                  const idx = journey_intro.description.toLowerCase().indexOf(phrase);
-                  if (idx === -1) return journey_intro.description;
-                  const before = journey_intro.description.slice(0, idx);
-                  const match = journey_intro.description.slice(idx, idx + phrase.length);
-                  const after = journey_intro.description.slice(idx + phrase.length);
-                  return (
-                    <>
-                      {before}
-                      <span className="text-primary">{match}</span>
-                      {after}
-                    </>
-                  );
-                })()}
-              </p>
-            )}
-          </motion.div>
-          <div className="relative rounded-3xl bg-gradient-to-br from-background-warm to-primary/10 px-6 py-12">
-            {/* Center connector arrow — purely decorative */}
-            <div className="hidden md:flex absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex-col items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-warm-lg"
-              >
-                <ArrowRight size={22} className="text-white" />
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-0 md:divide-x md:divide-dashed md:divide-dark/20">
-              {/* Have You Ever... */}
-              <div className="md:pr-20 text-center">
-                <motion.h2
-                  {...fadeUp()}
-                  className="font-display text-2xl md:text-3xl font-bold text-dark mb-2 whitespace-pre-line"
-                >
-                  {have_you_ever.heading}
-                </motion.h2>
-                <span className="inline-block h-1 w-16 bg-primary rounded-full mb-8" />
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-6">
-                  {have_you_ever.items.map((item: AboutHaveYouEverItem, i: number) => {
-                    const meta = getTripHighlightIcon(item.icon);
-                    const Icon = meta ? meta.Icon : HAVE_YOU_EVER_ICONS[i % HAVE_YOU_EVER_ICONS.length];
-                    return (
-                      <motion.div
-                        key={i}
-                        {...fadeUp(i * 0.08)}
-                        className="flex flex-col items-center text-center gap-3"
-                      >
-                        <div className="relative w-16 h-16 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: HAVE_YOU_EVER_FILL }}>
-                          <Icon size={28} color="#fff" strokeWidth={1.75} />
-                        </div>
-                        <span className="text-dark-muted text-sm leading-snug">{item.text}</span>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Welcome to Ulaa */}
-              <div className="md:pl-20 text-center">
-                <div className="md:hidden flex flex-col items-center gap-1.5 -mt-2 mb-6">
-                  <div className="relative w-full flex items-center justify-center">
-                    <span className="absolute left-0 right-0 border-t border-dashed border-dark/20" />
-                    <span
-                      aria-hidden="true"
-                      className="relative z-10 w-12 h-12 rounded-full bg-primary flex items-center justify-center shadow-warm-lg"
-                    >
-                      <ArrowDown size={18} className="text-white" />
-                    </span>
-                  </div>
-                </div>
-                <motion.h2
-                  {...fadeUp()}
-                  className="font-display text-2xl md:text-3xl font-bold text-dark mb-2 whitespace-pre-line"
-                >
-                  {welcome_to_ulaa.heading}
-                </motion.h2>
-                <span className="inline-block h-1 w-16 bg-primary rounded-full mb-8" />
-                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-6">
-                  {welcome_to_ulaa.items.map((item: AboutWelcomeItem, i: number) => {
-                    const meta = getTripHighlightIcon(item.icon);
-                    const Icon = meta ? meta.Icon : WELCOME_ICONS[i % WELCOME_ICONS.length];
-                    return (
-                      <motion.div
-                        key={i}
-                        {...fadeUp(i * 0.1)}
-                        className="flex flex-col items-center text-center gap-3"
-                      >
-                        <div className="relative w-16 h-16 rounded-full flex-shrink-0 flex items-center justify-center" style={{ backgroundColor: WELCOME_FILL }}>
-                          <Icon size={28} color="#fff" strokeWidth={1.75} />
-                        </div>
-                        <span className="text-dark-muted text-sm leading-snug">{item.title}</span>
-                      </motion.div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+      <MobileMemoryWall
+        intro={journey_intro}
+        photos={[
+          ...community.photos,
+          ...why_different.cards.map(card => card.image || ''),
+          ...completedTrips.map(trip => trip.cover_image || ''),
+          our_story.image,
+          hero.mobile_image || hero.image,
+        ].filter(Boolean)}
+      />
       {/* ══════════════════════════════════════════════════════════════
           5. WHY Ulaa IS DIFFERENT
       ══════════════════════════════════════════════════════════════ */}

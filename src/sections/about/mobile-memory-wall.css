@@ -1,0 +1,124 @@
+/* Responsive About journey intro. All colours/fonts come from the app theme. */
+  .ulaa-mobile-memories { display: block; padding: 40px 20px 36px; background: var(--color-background); color: var(--color-dark); font-family: var(--font-body); overflow: clip; }
+  .ulaa-memory-intro { text-align: center; margin-bottom: 32px; }
+  .ulaa-memory-eyebrow { color: var(--color-primary); font-family: var(--font-script); font-size: 30px; font-weight: 400; line-height: 1.35; margin-bottom: 10px; }
+  .ulaa-memory-intro h2 { font-family: var(--font-display); font-size: clamp(28px, 7.4vw, 40px); font-weight: 700; line-height: 1.2; letter-spacing: -.035em; white-space: pre-line; }
+  .ulaa-memory-description { font-size: 16px; line-height: 1.65; color: var(--color-dark-muted); margin: 16px auto 0; max-width: 34em; white-space: pre-line; }
+  .ulaa-memory-description span { color: var(--color-primary); }
+  .ulaa-memory-section-heading { text-align: center; }
+  .ulaa-memory-section-heading h3 { font-family: var(--font-display); font-size: 24px; font-weight: 700; line-height: 1.3; white-space: pre-line; }
+  .ulaa-memory-section-heading > span { display: block; width: 40px; height: 3px; border-radius: 4px; background: var(--color-primary); margin: 12px auto; }
+  .ulaa-memory-hint { text-align: center; color: var(--color-dark-muted); font-size: 13px; line-height: 1.6; margin: 12px 0 24px; }
+  .ulaa-memory-wall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 14px; padding: 8px 4px 16px; }
+  .ulaa-memory-card { position: relative; min-width: 0; display: flex; }
+  .ulaa-memory-print { width: 100%; background: var(--color-neutral-50); border: 1px solid var(--color-neutral-300); border-radius: 10px; padding: 6px 6px 0; box-shadow: var(--shadow-warm); display: flex; flex-direction: column; }
+  .ulaa-memory-tilt-0 { rotate: -2deg; } .ulaa-memory-tilt-1 { rotate: 2deg; }
+  .ulaa-memory-tilt-2 { rotate: 1.5deg; } .ulaa-memory-tilt-3 { rotate: -1.5deg; }
+  .ulaa-memory-photo { position: relative; aspect-ratio: 4 / 5; border-radius: 6px; overflow: hidden; background: var(--color-background-warm); }
+  .ulaa-memory-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .ulaa-memory-open, .ulaa-memory-close { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--color-primary); color: var(--color-white); border: 2px solid var(--color-background); cursor: pointer; }
+  .ulaa-memory-open { position: absolute; top: 5px; right: 5px; }
+  .ulaa-memory-caption { font-size: 14px; line-height: 1.5; font-weight: 500; padding: 12px 5px 0; text-align: center; overflow-wrap: anywhere; white-space: pre-line; flex: 1; }
+  .ulaa-memory-drag { min-height: 44px; display: flex; gap: 5px; align-items: center; justify-content: center; font-size: 11px; color: var(--color-dark-muted); touch-action: none; cursor: grab; user-select: none; }
+  .ulaa-memory-drag:active { cursor: grabbing; }
+  .ulaa-memory-shuffle { display: flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 10px 17px; border: 1px solid var(--color-primary); border-radius: 999px; margin: 10px auto 30px; color: var(--color-primary); background: var(--color-background); font-size: 13px; font-weight: 500; cursor: pointer; }
+  .ulaa-memory-welcome { border-top: 1px solid var(--color-neutral-300); padding-top: 28px; }
+  .ulaa-memory-benefits { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 12px; margin: 24px 0 30px; }
+  .ulaa-memory-benefit { display: flex; align-items: center; flex-direction: column; gap: 10px; text-align: center; }
+  .ulaa-memory-benefit svg { color: var(--color-primary); }
+  .ulaa-memory-benefit p { font-size: 14px; font-weight: 500; line-height: 1.5; }
+  .ulaa-memory-footer { text-align: center; border-top: 1px solid var(--color-neutral-300); padding-top: 24px; }
+  .ulaa-memory-footer > p { font-size: 15px; margin-bottom: 16px; }
+  /* Same compact primary treatment as Button size="sm" in the home hero. */
+  .ulaa-memory-cta { min-height: 44px; display: inline-flex; justify-content: center; align-items: center; gap: 8px; padding: 10px 16px; border: 2px solid var(--color-primary); background: var(--color-primary); color: var(--color-white); border-radius: 6px; box-shadow: var(--shadow-warm); font-family: var(--font-button); font-size: 14px; font-weight: 600; letter-spacing: .025em; text-align: center; transition: background-color .2s, box-shadow .2s; }
+  .ulaa-memory-cta:hover { box-shadow: var(--shadow-warm-lg); }
+  .ulaa-memory-cta:hover, .ulaa-memory-open:hover, .ulaa-memory-close:hover { background: var(--color-primary-dark); }
+  .ulaa-mobile-memories button:focus-visible, .ulaa-mobile-memories a:focus-visible, .ulaa-memory-dialog :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+  .ulaa-memory-dialog { margin: auto; width: calc(100% - 32px); max-width: 480px; max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--color-neutral-300); border-radius: 20px; padding: 0; background: var(--color-background); color: var(--color-dark); font-family: var(--font-body); }
+  .ulaa-memory-dialog::backdrop { background: color-mix(in srgb, var(--color-dark) 65%, transparent); }
+  .ulaa-memory-close { position: absolute; top: 12px; right: 12px; z-index: 1; }
+  .ulaa-memory-detail-photo { aspect-ratio: 4 / 3; background: var(--color-background-warm); }
+  .ulaa-memory-detail-photo img { width: 100%; height: 100%; object-fit: cover; }
+  .ulaa-memory-detail-copy { padding: 24px; }
+  .ulaa-memory-detail-question { color: var(--color-dark-muted); font-size: 14px; line-height: 1.6; margin-bottom: 8px; }
+  .ulaa-memory-detail-copy h3 { font-family: var(--font-display); font-size: 25px; line-height: 1.3; font-weight: 700; margin-bottom: 12px; }
+  #memory-detail-description { font-size: 15px; line-height: 1.7; white-space: pre-line; }
+  #memory-detail-description p { margin-bottom: 12px; }
+  .ulaa-memory-detail-copy .ulaa-memory-cta { margin-top: 24px; }
+@media (max-width: 359px) {
+  .ulaa-memory-wall { grid-template-columns: 1fr; max-width: 270px; margin-inline: auto; }
+  .ulaa-memory-photo { aspect-ratio: 4 / 3; }
+  .ulaa-memory-caption { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ulaa-mobile-memories *, .ulaa-memory-dialog * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+}
+
+/* Tablet retains two comfortable columns; desktop opens into a wide photo wall. */
+@media (min-width: 768px) {
+  .ulaa-mobile-memories { padding: 56px max(32px, calc((100% - 1200px) / 2)) 56px; }
+  .ulaa-memory-intro { margin: 0 auto 40px; max-width: 900px; }
+  .ulaa-memory-eyebrow { font-size: 36px; }
+  .ulaa-memory-intro h2 { font-size: clamp(36px, 4vw, 52px); }
+  .ulaa-memory-description { font-size: 18px; }
+  .ulaa-memory-section-heading h3 { font-size: 30px; }
+  .ulaa-memory-hint { font-size: 14px; }
+  .ulaa-memory-wall { gap: 32px 24px; padding: 16px 12px 24px; }
+  .ulaa-memory-photo { aspect-ratio: 4 / 3; }
+  .ulaa-memory-caption { font-size: 16px; padding: 16px 12px 4px; }
+  .ulaa-memory-benefits { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 30px 0; gap: 24px; }
+  .ulaa-memory-benefit p { font-size: 16px; }
+  .ulaa-memory-dialog { max-width: 860px; }
+  .ulaa-memory-dialog[open] { display: grid; grid-template-columns: 1fr 1fr; }
+  .ulaa-memory-detail-photo { aspect-ratio: auto; min-height: 360px; }
+  .ulaa-memory-detail-copy { padding: 64px 32px 32px; align-self: center; }
+}
+@media (min-width: 1024px) {
+  .ulaa-memory-wall { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; }
+  .ulaa-memory-photo { aspect-ratio: 4 / 5; }
+  .ulaa-memory-card:nth-child(even) { top: 10px; }
+  .ulaa-memory-shuffle { margin-top: 20px; }
+  .ulaa-memory-benefit + .ulaa-memory-benefit { border-left: 1px solid var(--color-neutral-300); }
+}
+
+/* Compact photo wall: keep the worries and answers close without shrinking copy. */
+.ulaa-memory-print { position: relative; padding-bottom: 12px; }
+.ulaa-memory-drag { position: absolute; top: 10px; left: 10px; width: 44px; height: 44px; min-height: 44px; border-radius: 50%; background: var(--color-background); color: var(--color-dark); border: 1px solid var(--color-neutral-300); z-index: 1; }
+.ulaa-memory-drag span { display: none; }
+.ulaa-memory-drag svg { width: 18px; height: 18px; }
+@media (max-width: 767px) {
+  .ulaa-mobile-memories { padding-top: 28px; padding-bottom: 28px; }
+  .ulaa-memory-intro { margin-bottom: 22px; }
+  .ulaa-memory-description { margin-top: 10px; }
+  .ulaa-memory-hint { margin: 8px 0 16px; }
+  .ulaa-memory-wall { gap: 20px 14px; padding-top: 4px; padding-bottom: 10px; }
+  .ulaa-memory-photo { aspect-ratio: 4 / 3; }
+  .ulaa-memory-caption { padding-top: 10px; }
+  .ulaa-memory-shuffle { margin: 12px auto 22px; }
+  .ulaa-memory-welcome { padding-top: 22px; }
+  .ulaa-memory-benefits { margin: 20px 0 24px; gap: 20px 12px; }
+}
+@media (min-width: 1024px) {
+  .ulaa-mobile-memories { padding-top: 20px; padding-bottom: 20px; scroll-margin-top: 96px; }
+  .ulaa-memory-intro { margin-bottom: 14px; }
+  .ulaa-memory-eyebrow { font-size: 30px; line-height: 1.2; margin-bottom: 4px; }
+  .ulaa-memory-intro h2 { font-size: clamp(32px, 2.7vw, 40px); line-height: 1.15; }
+  .ulaa-memory-description { font-size: 16px; line-height: 1.5; margin-top: 8px; }
+  .ulaa-memory-section-heading h3 { font-size: 24px; }
+  .ulaa-memory-section-heading > span { margin: 6px auto; }
+  .ulaa-memory-hint { font-size: 13px; line-height: 1.5; margin: 6px 0 10px; }
+  .ulaa-memory-wall { padding: 6px 10px 12px; gap: 20px; }
+  .ulaa-memory-photo { aspect-ratio: auto; height: clamp(110px, 18vh, 150px); }
+  .ulaa-memory-card:nth-child(even) { top: 4px; }
+  .ulaa-memory-caption { font-size: 15px; line-height: 1.4; padding: 10px 8px 0; }
+  .ulaa-memory-shuffle { margin: 4px auto 12px; }
+  .ulaa-memory-welcome { display: grid; grid-template-columns: minmax(200px, 1fr) 3fr; column-gap: 24px; padding-top: 14px; align-items: center; }
+  .ulaa-memory-welcome .ulaa-memory-section-heading { text-align: left; }
+  .ulaa-memory-welcome .ulaa-memory-section-heading > span { display: none; }
+  .ulaa-memory-welcome .ulaa-memory-hint { grid-column: 1; text-align: left; margin: 4px 0 0; }
+  .ulaa-memory-benefits { grid-column: 2; grid-row: 1 / span 2; margin: 0; gap: 10px; }
+  .ulaa-memory-benefit { gap: 6px; padding-inline: 8px; }
+  .ulaa-memory-benefit p { font-size: 14px; }
+  .ulaa-memory-footer { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px 20px; margin-top: 14px; padding-top: 12px; }
+  .ulaa-memory-footer > p { margin-bottom: 0; }
+}
