@@ -1,298 +1,223 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
-import type { PanInfo } from 'framer-motion';
-import {
-  ArrowRight,
-  Play,
-} from '@phosphor-icons/react';
+import { useRef, useState, useEffect, useMemo } from 'react';
+import { ArrowRight, Pause, Play } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
-import Button from '../../components/ui/Button';
 import { getSiteContent } from '../../services/api';
 import { subscribeToTable } from '../../services/realtime';
 import { DEFAULT_HOME_HERO, mergeWithDefaults } from '../../constants/home-hero';
 import type { HomeHeroContent } from '../../types/types-index';
-import heroImg from '../../assets/hero.webp';
-import { localSiteImage } from '../../utils/imageUrls';
+import { BUNDLED_HERO_MEDIA, resolveHeroClips } from '../../constants/home-hero-media';
+import './home-hero.css';
+
+type Connection = EventTarget & { saveData?: boolean };
 
 export default function HeroSection() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ['start start', 'end start'],
-  });
-
-  const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
-
-  const textVariants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: (i: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: i * 0.15, duration: 0.7, ease: 'easeOut' as const },
-    }),
-  };
-
-  // ── Admin-controlled carousel content ──────────────────────────────────
-  // Loaded from the 'home_hero' site_content row (see AdminHomeHero.tsx),
-  // with live updates pushed the instant an admin saves changes, matching
-  // the pattern used by AboutPage.tsx. Falls back to DEFAULT_HOME_HERO
-  // (zero slides) until it loads, which in turn falls back to the bundled
-  // static hero.webp image below — so the banner is never blank.
+  const sectionRef = useRef<HTMLElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [hero, setHero] = useState<HomeHeroContent>(DEFAULT_HOME_HERO);
+  const [settingsReady, setSettingsReady] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [posterFailed, setPosterFailed] = useState(false);
+  const clips = useMemo(() => resolveHeroClips(hero), [hero]);
+  const clipsKey = clips.map(c => `${c.desktopFilm}|${c.mobileFilm}`).join('~');
+  const [clipIndex, setClipIndex] = useState(0);
+  const [failedClips, setFailedClips] = useState<number[]>([]);
+  const activeIndex = Math.min(clipIndex, clips.length - 1);
+  const media = clips[activeIndex];
+  const multiple = clips.length > 1;
+  const film = mobile ? media.mobileFilm : media.desktopFilm;
+  const [allowAutomaticMotion, setAllowAutomaticMotion] = useState(false);
+  const [requestedPlayback, setRequestedPlayback] = useState<boolean | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [inView, setInView] = useState(true);
+  const [pageVisible, setPageVisible] = useState(true);
+  const [playing, setPlaying] = useState(false);
+  const [hasFrame, setHasFrame] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    getSiteContent<Partial<HomeHeroContent>>('home_hero')
-      .then(data => setHero(mergeWithDefaults(data)))
-      .catch(() => {});
+    let cancelled = false;
+    const refresh = () => {
+      getSiteContent<Partial<HomeHeroContent>>('home_hero')
+        .then(data => { if (!cancelled) setHero(mergeWithDefaults(data)); })
+        .catch(() => {})
+        .finally(() => { if (!cancelled) setSettingsReady(true); });
+    };
+    refresh();
+    const unsubscribe = subscribeToTable('site_content', refresh, 'key=eq.home_hero');
+    return () => { cancelled = true; unsubscribe(); };
   }, []);
 
   useEffect(() => {
-    const unsubscribe = subscribeToTable(
-      'site_content',
-      () => {
-        getSiteContent<Partial<HomeHeroContent>>('home_hero')
-          .then(data => setHero(mergeWithDefaults(data)))
-          .catch(() => {});
-      },
-      'key=eq.home_hero'
+    // Choose one download per visit. Resizing never downloads a second film.
+    setMobile(window.matchMedia('(max-width: 639px)').matches);
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const connection = (navigator as Navigator & { connection?: Connection }).connection;
+    const update = () => {
+      setAllowAutomaticMotion(!motion.matches && !connection?.saveData);
+      setRequestedPlayback(null);
+    };
+    update();
+    motion.addEventListener('change', update);
+    connection?.addEventListener('change', update);
+    return () => {
+      motion.removeEventListener('change', update);
+      connection?.removeEventListener('change', update);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateVisibility = () => setPageVisible(!document.hidden);
+    updateVisibility();
+    document.addEventListener('visibilitychange', updateVisibility);
+    const observer = typeof IntersectionObserver === 'undefined' ? null : new IntersectionObserver(
+      entries => setInView(entries[0].isIntersecting),
+      { rootMargin: '-80px 0px 0px 0px' },
     );
-    return unsubscribe;
+    if (sectionRef.current) observer?.observe(sectionRef.current);
+    return () => {
+      observer?.disconnect();
+      document.removeEventListener('visibilitychange', updateVisibility);
+    };
   }, []);
 
-  const activeSlides = hero.slides.filter(s => s.active && s.image);
-  // Resolved slide list actually shown — falls back to a single static
-  // slide (the original hard-coded hero.webp image) whenever the admin
-  // hasn't added any photos yet, so nothing about the visual layout
-  // changes for sites that haven't touched the new admin page.
-  const slides = activeSlides.length > 0
-    ? activeSlides
-    : [{
-        id: '__default',
-        image: heroImg,
-        mobile_image: '',
-        active: true,
-        heading_line1: hero.heading_line1,
-        heading_highlight: hero.heading_highlight,
-        heading_line2: hero.heading_line2,
-        subheading: hero.subheading,
-      }];
-  const isCarousel = slides.length > 1;
-
-  const [rawIndex, setIndex] = useState(0);
-  // Clamp in case the admin removes slides while a visitor is mid-session,
-  // computed at render time (not via a setState-in-effect) so it never
-  // triggers an extra cascading render.
-  const index = rawIndex >= slides.length ? 0 : rawIndex;
-
-  // Direction of travel (1 = forward/next, -1 = backward/prev), driving
-  // which side the incoming slide enters from — this is what makes it read
-  // as a real sliding carousel (Swiper/Embla-style) instead of a fade.
-  const [direction, setDirection] = useState(1);
-
-  const goTo = useCallback((next: number, dir: number = 1) => {
-    setDirection(dir);
-    setIndex(((next % slides.length) + slides.length) % slides.length);
-  }, [slides.length]);
-
-  const goNext = useCallback(() => goTo(index + 1, 1), [goTo, index]);
-  const goPrev = useCallback(() => goTo(index - 1, -1), [goTo, index]);
-
-  // Autoplay — pauses while the visitor is actively dragging/hovering so a
-  // swipe-in-progress or a deliberate "let me look at this one" hover isn't
-  // yanked away mid-interaction, and resets its timer after every manual
-  // navigation so the next auto-advance is a full interval away.
-  // Faster default cadence for a snappier, more "alive" hero.
-  const [paused, setPaused] = useState(false);
+  // The video list or the on/off switch changed: start again from video 1.
   useEffect(() => {
-    if (!isCarousel || !hero.autoplay || paused) return;
-    const ms = Math.max(2, hero.interval_seconds || 4.5) * 1000;
-    const id = setInterval(() => goTo(index + 1, 1), ms);
-    return () => clearInterval(id);
-  }, [isCarousel, hero.autoplay, hero.interval_seconds, paused, index, goTo]);
+    setClipIndex(0);
+    setFailedClips([]);
+    setHasFrame(false);
+    setPlaying(false);
+    setFailed(false);
+    setEnabled(false);
+    setRequestedPlayback(null);
+  }, [clipsKey, hero.video_enabled]);
 
-  // Swipe — left/right drag on the slide itself. Lower thresholds than
-  // before so a quick flick registers immediately, matching the feel of
-  // native mobile carousels.
-  const SWIPE_DISTANCE = 40;
-  const SWIPE_VELOCITY = 300;
-  const handleDragEnd = (_e: unknown, info: PanInfo) => {
-    if (info.offset.x < -SWIPE_DISTANCE || info.velocity.x < -SWIPE_VELOCITY) goNext();
-    else if (info.offset.x > SWIPE_DISTANCE || info.velocity.x > SWIPE_VELOCITY) goPrev();
-  };
+  // Moving to the next video fades it in over its still image. A pause or
+  // play the visitor chose stays in force.
+  useEffect(() => {
+    setHasFrame(false);
+    setPlaying(false);
+  }, [film]);
 
-  // Directional slide — the incoming slide enters from the side it's
-  // travelling from and the outgoing slide exits the opposite side, the
-  // way modern hero carousels (Swiper, Embla, most agency sites) move,
-  // rather than a plain crossfade.
-  const slideVariants = {
-    enter: (dir: number) => ({ x: dir > 0 ? '100%' : '-100%' }),
-    center: { x: '0%' },
-    exit: (dir: number) => ({ x: dir > 0 ? '-100%' : '100%' }),
-  };
+  useEffect(() => { setPosterFailed(false); }, [media.desktopPoster, media.mobilePoster]);
 
-  const currentSlide = slides[index] ?? slides[0];
+  function goToClip(index: number) {
+    setClipIndex(index);
+  }
+
+  function handleEnded() {
+    setPlaying(false);
+    if (!multiple) return;
+    const next = activeIndex + 1;
+    if (next < clips.length) goToClip(next);
+    else if (hero.loop) goToClip(0);
+  }
+
+  function handleError() {
+    setPlaying(false);
+    const failedNow = [...failedClips, activeIndex];
+    setFailedClips(failedNow);
+    // Skip a video that cannot load and carry on with the next working one.
+    for (let step = 1; step < clips.length; step++) {
+      const candidate = (activeIndex + step) % clips.length;
+      if (!failedNow.includes(candidate)) { goToClip(candidate); return; }
+    }
+    setFailed(true);
+  }
+
+  const wantsPlayback = requestedPlayback ?? (allowAutomaticMotion && hero.autoplay);
+  const shouldPlay = settingsReady && hero.video_enabled && wantsPlayback && inView && pageVisible && !failed;
+
+  useEffect(() => {
+    if (shouldPlay && film && !enabled) setEnabled(true);
+    const video = videoRef.current;
+    if (!video || !enabled) return;
+    if (!shouldPlay) {
+      video.pause();
+      return;
+    }
+    // Muting before play is required by mobile autoplay policies.
+    video.muted = true;
+    void video.play().catch(() => {
+      // Autoplay may be blocked (e.g. iOS Low Power Mode). The poster and
+      // explicit Play control remain available; never hide the hero copy.
+    });
+    return () => video.pause();
+  }, [shouldPlay, film, enabled]);
+
+  function togglePlayback() {
+    if (playing) {
+      setRequestedPlayback(false);
+      videoRef.current?.pause();
+    } else {
+      setRequestedPlayback(true);
+      // Repeat play directly in the gesture if the browser blocked autoplay.
+      if (enabled && videoRef.current) {
+        videoRef.current.muted = true;
+        void videoRef.current.play().catch(() => {});
+      }
+    }
+  }
 
   return (
-    // Framed hero: the page background shows around a rounded photo card, and
-    // the navbar sits on that same background above it (header + card fill
-    // exactly one screen). The card keeps every behaviour it had before.
-    <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
-    <section
-      ref={containerRef}
-      className="relative isolate transform-gpu overflow-hidden rounded-lg h-[calc(100svh-10.6rem)] min-h-[440px] sm:h-[calc(100svh-5.4rem)] sm:min-h-[520px]"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-    >
-      {/* Background (static inside the frame, no scroll parallax) — carousel when the admin has added 2+ active
-          photos (AdminHomeHero.tsx), otherwise a single static image. */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden">
-          <AnimatePresence initial={false} custom={direction} mode="sync">
-            <motion.div
-              key={currentSlide.id}
-              custom={direction}
-              variants={slideVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.55, ease: [0.32, 0.72, 0, 1] }}
-              className="absolute inset-0"
-              drag={isCarousel ? 'x' : false}
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={1}
-              dragMomentum={false}
-              style={{ touchAction: 'pan-y' }}
-              onDragStart={() => setPaused(true)}
-              onDragEnd={(e, info) => { handleDragEnd(e, info); setPaused(false); }}
-            >
-              <picture>
-                {currentSlide.mobile_image && (
-                  <source media="(max-width: 639px)" srcSet={localSiteImage(currentSlide.mobile_image)} />
-                )}
-                <img
-                  src={localSiteImage(currentSlide.image)}
-                  alt="Ulaa — Girls-only travel experiences"
-                  className="w-full h-full object-cover"
-                  fetchPriority={index === 0 ? 'high' : 'auto'}
-                  draggable={false}
-                />
-              </picture>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Gradient overlay — dark fade for text legibility. Shown on every
-            slide now that the headline/subheading render on all of them,
-            not just the first. */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute inset-0 bg-gradient-to-b from-dark/60 via-dark/40 to-dark/80" />
-          <div className="absolute inset-0 bg-gradient-to-r from-dark/40 via-transparent to-transparent" />
-        </div>
-      </div>
-
-      {/* Content — anchored to the bottom of the hero at every breakpoint,
-          so the subheading + buttons land in the lower portion of the image
-          (next to the women) with consistent breathing room above the
-          section's bottom edge, instead of being pinned near the top. */}
-      <motion.div
-        style={{ opacity }}
-        className="absolute inset-x-0 bottom-0 z-10 px-4 sm:px-6 lg:px-8 pb-8 sm:pb-14 lg:pb-20 text-white pointer-events-none"
-      >
-        <div className="max-w-[1344px] mx-auto pointer-events-none">
-        <div className="max-w-3xl pointer-events-none">
-          {/* Headline + subheading — each slide carries its own copy
-              (admin-editable per photo via /admin/home-hero, see
-              AdminHomeHero.tsx), so this is keyed to currentSlide.id to
-              re-animate in whenever the slide (and therefore the text)
-              changes, rather than only on first mount. */}
-          <AnimatePresence mode="wait">
-            <motion.div key={currentSlide.id}>
-              <motion.h1
-                custom={1}
-                initial="hidden"
-                animate="visible"
-                variants={textVariants}
-                className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.15] mb-6"
-              >
-                {currentSlide.heading_line1}
-                <br />
-                <span className="text-secondary italic">{currentSlide.heading_highlight}</span> {currentSlide.heading_line2}
-              </motion.h1>
-
-              <motion.p
-                custom={2}
-                initial="hidden"
-                animate="visible"
-                variants={textVariants}
-                className="text-base sm:text-lg text-white/85 leading-relaxed mb-3 sm:mb-8 max-w-xl"
-              >
-                {currentSlide.subheading}
-              </motion.p>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Buttons — shown on every slide. */}
-          <motion.div
-            custom={3}
-            initial="hidden"
-            animate="visible"
-            variants={textVariants}
-            className="flex flex-row flex-wrap gap-3 sm:gap-4 pointer-events-auto"
-          >
-            <Link to="/trips">
-              <Button
-                variant="primary"
-                size="sm"
-                className="group/btn whitespace-nowrap sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
-              >
-                Explore Trips
-                <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1 sm:w-[18px] sm:h-[18px]" />
-              </Button>
-            </Link>
-            <Link to="/completed-trips">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="whitespace-nowrap text-white border-white/40 hover:border-white hover:bg-white/10 sm:px-8 sm:py-4 sm:text-lg sm:rounded-lg"
-              >
-                <Play size={14} className="fill-white sm:w-4 sm:h-4" />
-                View Gallery
-              </Button>
-            </Link>
-          </motion.div>
-
-          {/* Dot indicators — only shown once there's a real carousel. */}
-          {isCarousel && (
-            <div className="flex items-center gap-2 mt-6 sm:mt-10 pointer-events-auto">
-              {slides.map((slide, i) => (
-                <button
-                  key={slide.id}
-                  type="button"
-                  onClick={() => goTo(i, i > index ? 1 : -1)}
-                  aria-label={`Go to slide ${i + 1}`}
-                  aria-current={i === index}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    i === index ? 'w-7 bg-white' : 'w-1.5 bg-white/40 hover:bg-white/70'
-                  }`}
-                />
-              ))}
+    <div className="ulaa-hero-frame">
+      <section ref={sectionRef} data-home-hero className="ulaa-home-hero" aria-label="The ULAA experience">
+        <picture className="ulaa-hero-poster" aria-hidden="true">
+          <source media="(max-width: 639px)" srcSet={posterFailed ? BUNDLED_HERO_MEDIA.mobilePoster : media.mobilePoster} />
+          <img src={posterFailed ? BUNDLED_HERO_MEDIA.desktopPoster : media.desktopPoster} alt="" onError={() => setPosterFailed(true)} fetchPriority="high" width={1280} height={720} />
+        </picture>
+        {hero.video_enabled && enabled && !failed && (
+          <video
+            key={film}
+            ref={videoRef}
+            className={`ulaa-hero-film${hasFrame ? ' is-visible' : ''}`}
+            src={film}
+            muted loop={hero.loop && !multiple} playsInline preload="auto"
+            aria-hidden="true" tabIndex={-1}
+            onPlaying={() => { setHasFrame(true); setPlaying(true); }}
+            onPause={() => setPlaying(false)}
+            onEnded={handleEnded}
+            onError={handleError}
+          />
+        )}
+        <div className="ulaa-hero-shade" aria-hidden="true" />
+        <div className="ulaa-hero-content">
+          <div className="ulaa-hero-copy">
+            {hero.eyebrow && <p className="ulaa-hero-eyebrow">{hero.eyebrow}</p>}
+            <h1 className="ulaa-hero-heading">
+              <span>{hero.heading_line1}</span>
+              {(hero.heading_highlight || hero.heading_line2) && <span>
+                {hero.heading_highlight && <em className="ulaa-hero-highlight">{hero.heading_highlight}</em>}
+                {hero.heading_highlight && hero.heading_line2 ? ' ' : ''}{hero.heading_line2}
+              </span>}
+            </h1>
+            {hero.subheading && <p className="ulaa-hero-description">{hero.subheading}</p>}
+            <div className="ulaa-hero-actions">
+              <Link to="/trips" className="ulaa-hero-explore">{hero.cta_label} <ArrowRight size={18} aria-hidden="true" /></Link>
+              {hero.gallery_enabled && <Link to="/completed-trips" className="ulaa-hero-gallery"><Play size={16} aria-hidden="true" />{hero.gallery_label}</Link>}
             </div>
-          )}
+          </div>
         </div>
+        <div className="ulaa-hero-toolbar">
+          <p>{hero.footer_text}</p>
+          <div className="ulaa-hero-controls">
+            {multiple && (
+              <div className="ulaa-hero-dots" role="group" aria-label="Background videos">
+                {clips.map((_, index) => (
+                  <button key={index} type="button" className="ulaa-hero-dot" onClick={() => goToClip(index)}
+                    aria-label={`Show video ${index + 1} of ${clips.length}`} aria-current={index === activeIndex ? 'true' : undefined}>
+                    <span />
+                  </button>
+                ))}
+              </div>
+            )}
+            {hero.video_enabled && !failed && (
+              <button type="button" onClick={togglePlayback} aria-label={playing ? 'Pause background video' : 'Play background video'} title={playing ? 'Pause video' : 'Play video'}>
+                {playing ? <Pause size={16} weight="fill" aria-hidden="true" /> : <Play size={16} weight="fill" aria-hidden="true" />}
+              </button>
+            )}
+          </div>
         </div>
-      </motion.div>
-
-      {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.2, repeat: Infinity, repeatType: 'reverse', duration: 1 }}
-        className="hidden sm:flex absolute bottom-24 left-1/2 -translate-x-1/2 flex-col items-center gap-2 text-white/60"
-      >
-        <span className="text-xs font-button tracking-widest uppercase">Scroll</span>
-        <div className="w-px h-10 bg-gradient-to-b from-white/60 to-transparent" />
-      </motion.div>
-    </section>
+      </section>
     </div>
   );
 }

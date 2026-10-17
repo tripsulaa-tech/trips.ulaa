@@ -7,7 +7,7 @@ import {
 } from '../services/api';
 import { collectStorageUrls } from '../utils/utils-index';
 import { lookupDraft, stableStringify, useDraftKeeper, discardDraft } from '../hooks/useSessionDraft';
-import { DEFAULT_HOME_HERO, mergeWithDefaults as mergeHero } from '../constants/home-hero';
+import { DEFAULT_HOME_HERO, mergeWithDefaults as mergeHero, validateHomeHero } from '../constants/home-hero';
 import { DEFAULT_WHY_ULAA } from '../constants/why-ulaa';
 import { DEFAULT_FOUNDER, mergeFounderWithDefaults } from '../constants/founder';
 import { DEFAULT_CTA_BANNER, mergeWithDefaults as mergeCta } from '../constants/cta-banner';
@@ -175,7 +175,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   const [heldDraft, setHeldDraft] = useState<HomeState | null>(null);
 
   const applyState = (st: HomeState) => {
-    setHeroContent(st.hero);
+    setHeroContent(mergeHero(st.hero));
     setWhyContent(st.why);
     setFounderContent(st.founder);
     setCtaContent(st.cta);
@@ -197,7 +197,6 @@ export function useAdminHomePage(): UseAdminHomePageResult {
       originalGalleryRef.current = saved.gallery;
       originalTestimonialsRef.current = saved.items;
       savedUrlsRef.current = new Set([
-        ...collectStorageUrls(saved.hero, STORAGE_BUCKET),
         ...collectStorageUrls(saved.why, STORAGE_BUCKET),
         ...collectStorageUrls(saved.founder, STORAGE_BUCKET),
         ...collectStorageUrls(saved.cta, STORAGE_BUCKET),
@@ -220,7 +219,10 @@ export function useAdminHomePage(): UseAdminHomePageResult {
   }), [heroContent, whyContent, founderContent, ctaContent, testimonialsSectionContent, galleryImages, testimonials, buttonLabels]);
 
   // Keep the unsaved edits while they differ from what is saved (paused while a draft is on hold).
-  useDraftKeeper({ key: DRAFT_KEY, value: workingState, base: heldDraft ? null : draftBase, bucket: STORAGE_BUCKET });
+  // Hero media URLs are references, not uploads owned by this editor. Never
+  // delete those files when a draft is discarded or a URL is replaced.
+  const uploadedState = useMemo(() => ({ ...workingState, hero: null }), [workingState]);
+  useDraftKeeper({ key: DRAFT_KEY, value: workingState, uploadValue: uploadedState, base: heldDraft ? null : draftBase, bucket: STORAGE_BUCKET });
 
   const restoreHeldDraft = () => {
     if (!heldDraft) return;
@@ -240,6 +242,8 @@ export function useAdminHomePage(): UseAdminHomePageResult {
       toast.info('No changes to save.');
       return;
     }
+    const heroError = validateHomeHero(heroContent);
+    if (heroError) { toast.error(heroError); return; }
     if (!buttonLabels.primaryCta.trim() || !buttonLabels.waitlistCta.trim()) {
       alert('Both button names (in Button Naming) are required.');
       return;
@@ -264,16 +268,16 @@ export function useAdminHomePage(): UseAdminHomePageResult {
       ]);
 
       // Clean up any image swapped out of the single-blob sections
-      // (hero/why/founder/cta) since the last save — same pattern as
+      // (why/founder/cta) since the last save — same pattern as
       // useContentEditorPage.handleSave.
       const newUrls = new Set([
-        ...collectStorageUrls(heroContent, STORAGE_BUCKET),
         ...collectStorageUrls(whyContent, STORAGE_BUCKET),
         ...collectStorageUrls(founderContent, STORAGE_BUCKET),
         ...collectStorageUrls(ctaContent, STORAGE_BUCKET),
       ]);
+      const retainedUrls = new Set([...newUrls, ...collectStorageUrls(heroContent, STORAGE_BUCKET)]);
       for (const url of savedUrlsRef.current) {
-        if (!newUrls.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
+        if (!retainedUrls.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
       }
       savedUrlsRef.current = newUrls;
 
@@ -370,7 +374,7 @@ export function useAdminHomePage(): UseAdminHomePageResult {
     const s = savedStateRef.current;
     if (!s) return;
     const keep = collectStorageUrls(s, STORAGE_BUCKET);
-    for (const url of collectStorageUrls(workingState, STORAGE_BUCKET)) {
+    for (const url of collectStorageUrls(uploadedState, STORAGE_BUCKET)) {
       if (!keep.has(url)) deleteImageByUrl(STORAGE_BUCKET, url).catch(() => {});
     }
     applyState(JSON.parse(JSON.stringify(s)) as HomeState);

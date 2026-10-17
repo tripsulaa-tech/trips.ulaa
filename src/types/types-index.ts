@@ -963,45 +963,40 @@ export interface AboutFounderSocialLink {
 }
 
 // =============================================
-// Home Page Hero Carousel (editable via its own Admin tab, stored under the
-// 'home_hero' site_content key). Each slide is an admin-uploaded photo;
-// order in the `slides` array is the display/rotation order, controlled by
-// the admin's Move Up/Down buttons in AdminHomeHero.tsx.
+// Cinematic home hero, stored under the existing home_hero content key.
+// Legacy carousel records are migrated by constants/home-hero.ts.
 // =============================================
-export interface HomeHeroSlide {
-  /** Stable id (not the array index) so React keys survive reordering. */
-  id: string;
-  image: string;
-  /** Optional tall crop for phone screens; falls back to `image` if empty. */
-  mobile_image: string;
-  /** Inactive slides are kept (not deleted) but skipped on the live site. */
-  active: boolean;
-  // Headline is split into 3 parts rather than one free-text field so the
-  // middle segment can always render in the accent color + italic (e.g.
-  // "Girls-only" / "travel" / "experiences.") without the admin needing to
-  // hand-write markup. Each slide carries its own copy so the headline can
-  // change alongside the photo as the carousel rotates — see
-  // HeroSection.tsx and AdminHomeHero.tsx.
-  heading_line1: string;
-  heading_highlight: string;
-  heading_line2: string;
-  subheading: string;
+/** Extra hero film (videos 2 to 4). Same fields as the first video. */
+export interface HomeHeroClip {
+  video_url: string;
+  mobile_video_url: string;
+  poster_url: string;
+  mobile_poster_url: string;
 }
 
 export interface HomeHeroContent {
-  slides: HomeHeroSlide[];
+  schema_version: 3;
+  video_enabled: boolean;
   autoplay: boolean;
-  /** Seconds between automatic slide changes. */
-  interval_seconds: number;
-  // Fallback headline used only when there are zero active slides (the
-  // hard-coded static hero image case — see heroImg in HeroSection.tsx) and
-  // as the starting text pre-filled onto newly added slides in
-  // AdminHomeHero.tsx. Not directly editable in the admin UI; per-slide
-  // headline text above is what admins actually manage.
+  loop: boolean;
+  /** How many videos play one after another (1–4). */
+  video_count: 1 | 2 | 3 | 4;
+  /** Videos 2 to 4 (video 1 uses the fields below). */
+  extra_clips: [HomeHeroClip, HomeHeroClip, HomeHeroClip];
+  media_source: 'assets' | 'url';
+  video_url: string;
+  mobile_video_url: string;
+  poster_url: string;
+  mobile_poster_url: string;
+  eyebrow: string;
   heading_line1: string;
   heading_highlight: string;
   heading_line2: string;
   subheading: string;
+  cta_label: string;
+  gallery_enabled: boolean;
+  gallery_label: string;
+  footer_text: string;
 }
 
 export interface AboutContent {

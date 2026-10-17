@@ -1,0 +1,15 @@
+ULAA cinematic homepage footage
+
+Source: Mixkit, "Turquoise blue water bay from above" (item 5008)
+https://mixkit.co/free-stock-video/turquoise-blue-water-bay-from-above-5008/
+License: Mixkit Stock Video Free License
+https://mixkit.co/license/
+The item page explicitly permits commercial and personal use.
+Retrieved: 17 October 2026.
+
+Adaptations: silent 13-second looping edit, desktop encode, portrait crop,
+and still posters extracted from the footage. Illustrative travel scenery;
+not a claim that this location is a currently bookable ULAA destination.
+
+Both MP4 files are served locally by the application build. No stock-site
+hotlinks, external player, API key, or new runtime dependency is required.

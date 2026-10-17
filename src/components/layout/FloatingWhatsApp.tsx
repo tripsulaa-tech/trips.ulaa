@@ -1,14 +1,30 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { WHATSAPP_NUMBER } from '../../constants/site';
 
 export default function FloatingWhatsApp() {
   const [hovered, setHovered] = useState(false);
+  const { pathname } = useLocation();
+  const [heroVisible, setHeroVisible] = useState(true);
+
+  useEffect(() => {
+    if (pathname !== '/') return;
+    const hero = document.querySelector('[data-home-hero]');
+    if (!hero) return;
+    // Keep mobile hero actions clear; restore chat once the hero leaves
+    // the usable viewport beneath the fixed 80px header.
+    const observer = new IntersectionObserver(([entry]) => {
+      setHeroVisible(entry.isIntersecting);
+    }, { rootMargin: '-80px 0px 0px 0px' });
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, [pathname]);
 
   return (
-    <div className="fixed bottom-28 lg:bottom-6 right-4 lg:right-6 z-50 flex items-center gap-3 [body.fullscreen-modal-open_&]:hidden">
+    <div className={`fixed bottom-28 lg:bottom-6 right-4 lg:right-6 z-50 flex items-center gap-3 [body.fullscreen-modal-open_&]:hidden ${pathname === '/' && heroVisible ? 'max-lg:invisible max-lg:pointer-events-none' : ''}`}>
       <AnimatePresence>
         {hovered && (
           <motion.div

@@ -1,342 +1,210 @@
-import { useRef, useState } from 'react';
-import {
-  Plus,
-  Trash as Trash2,
-  ImageSquare as ImagePlus,
-  CircleNotch as Loader2,
-  CaretUp as ChevronUp,
-  CaretDown as ChevronDown,
-  Eye,
-  EyeSlash as EyeOff,
-  Images,
-  DeviceMobile,
-} from '@phosphor-icons/react';
-import ImageUploadField from '../../components/ui/ImageUploadField';
-import { useReorder, moveItem } from '../../components/ui/reorderUtils';
-import { ReorderGrip } from '../../components/ui/Reorder';
-import { uploadImage, deleteImageByUrl } from '../../services/api';
-import { DEFAULT_HOME_HERO } from '../../constants/home-hero';
-import type { HomeHeroContent, HomeHeroSlide } from '../../types/types-index';
+import { useState } from 'react';
+import type { HomeHeroClip, HomeHeroContent } from '../../types/types-index';
 import { FORM_INPUT_CLASS as inputClass } from '../../constants/formStyles';
-import { STORAGE_BUCKET } from '../../constants/storage';
-import { useToast } from '../../components/ui/useToast';
+import Select from '../../components/ui/Select';
+import { DEFAULT_HOME_HERO } from '../../constants/home-hero';
+import { resolveHeroClips } from '../../constants/home-hero-media';
 
-
-export default function HeroBannerSection({
-  content,
-  setContent,
-  sectionRef,
-}: {
+export default function HeroBannerSection({ content, setContent, sectionRef }: {
   content: HomeHeroContent;
   setContent: React.Dispatch<React.SetStateAction<HomeHeroContent>>;
   sectionRef: (el: HTMLDivElement | null) => void;
 }) {
-  const toast = useToast();
-  const [uploading, setUploading] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const handleAddPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    try {
-      setUploading(true);
-      const template = content.slides[content.slides.length - 1] ?? DEFAULT_HOME_HERO;
-      const newSlides: HomeHeroSlide[] = [];
-      for (const file of files) {
-        const path = `home-hero/${Date.now()}-${file.name}`;
-        const url = await uploadImage(STORAGE_BUCKET, file, path);
-        newSlides.push({
-          id: crypto.randomUUID(),
-          image: url,
-          mobile_image: '',
-          active: true,
-          heading_line1: template.heading_line1,
-          heading_highlight: template.heading_highlight,
-          heading_line2: template.heading_line2,
-          subheading: template.subheading,
-        });
-      }
-      setContent(c => ({ ...c, slides: [...c.slides, ...newSlides] }));
-    } catch {
-      toast.error('Failed to upload one or more photos. Please try again.');
-    } finally {
-      setUploading(false);
-      if (fileRef.current) fileRef.current.value = '';
-    }
+  const [mobilePreview, setMobilePreview] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const clips = resolveHeroClips(content);
+  const media = clips[Math.min(previewIndex, clips.length - 1)];
+  const film = mobilePreview ? media.mobileFilm : media.desktopFilm;
+  const poster = mobilePreview ? media.mobilePoster : media.desktopPoster;
+  const update = <K extends keyof HomeHeroContent>(key: K, value: HomeHeroContent[K]) => {
+    setContent(current => ({ ...current, [key]: value }));
+    setPreviewError(false);
   };
-
-  const updateSlide = (id: string, patch: Partial<HomeHeroSlide>) => {
-    setContent(c => ({ ...c, slides: c.slides.map(s => (s.id === id ? { ...s, ...patch } : s)) }));
-  };
-
-  const removeSlide = async (id: string) => {
-    const slide = content.slides.find(s => s.id === id);
-    setContent(c => ({ ...c, slides: c.slides.filter(s => s.id !== id) }));
-    if (slide?.image.includes(`/${STORAGE_BUCKET}/`)) {
-      deleteImageByUrl(STORAGE_BUCKET, slide.image).catch(() => {});
-    }
-  };
-
-  const moveSlide = (id: string, direction: -1 | 1) => {
-    setContent(c => {
-      const arr = [...c.slides];
-      const from = arr.findIndex(s => s.id === id);
-      const to = from + direction;
-      if (from === -1 || to < 0 || to >= arr.length) return c;
-      [arr[from], arr[to]] = [arr[to], arr[from]];
-      return { ...c, slides: arr };
+  const updateExtra = (index: 0 | 1 | 2, key: keyof HomeHeroClip, value: string) => {
+    setContent(current => {
+      const extra = [...current.extra_clips] as HomeHeroContent['extra_clips'];
+      extra[index] = { ...extra[index], [key]: value };
+      return { ...current, extra_clips: extra };
     });
+    setPreviewError(false);
   };
-
-  // Drag a slide's grip (desktop) to reorder; the arrows below still work on touch.
-  const slideDrag = useReorder((from, to) => setContent(c => ({ ...c, slides: moveItem(c.slides, from, to) })));
+  const field = (key: 'eyebrow' | 'heading_line1' | 'heading_line2' | 'heading_highlight' | 'gallery_label' | 'cta_label' | 'footer_text', label: string, max: number) => (
+    <div key={key}>
+      <label htmlFor={`hero-${key}`} className="block text-sm font-medium text-dark mb-1">{label}</label>
+      <input id={`hero-${key}`} value={content[key]} onChange={event => update(key, event.target.value)} maxLength={max} className={inputClass} />
+    </div>
+  );
 
   return (
     <div ref={sectionRef} data-section={1} className="scroll-mt-4 space-y-8">
-      <div className="space-y-4">
-        <h2 className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">
-          Carousel Settings
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="flex items-center gap-2 text-sm font-medium text-dark">
-            <input
-              type="checkbox"
-              checked={content.autoplay}
-              onChange={e => setContent(c => ({ ...c, autoplay: e.target.checked }))}
-              className="w-4 h-4 accent-primary"
-            />
-            Auto-rotate slides
-          </label>
-          <div>
-            <label htmlFor="home-hero-interval" className="block text-sm font-medium text-dark mb-1">Seconds between slides</label>
-            <input
-              id="home-hero-interval"
-              type="number"
-              min={2}
-              max={30}
-              value={content.interval_seconds}
-              onChange={e => setContent(c => ({ ...c, interval_seconds: Math.max(2, Number(e.target.value) || 6) }))}
-              disabled={!content.autoplay}
-              className={`${inputClass} disabled:opacity-50`}
-            />
+      <section className="space-y-4" aria-labelledby="hero-motion-title">
+        <h2 id="hero-motion-title" className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Video hero</h2>
+        <p className="text-sm text-dark-muted">Up to four films play one after another, each with a still-image fallback. Changes go live when you save this page.</p>
+        <div>
+          <label htmlFor="hero-video-count" className="block text-sm font-medium text-dark mb-1">Number of videos</label>
+          <Select inputId="hero-video-count" value={content.video_count}
+            onChange={count => { update('video_count', count as 1 | 2 | 3 | 4); setPreviewIndex(0); }}
+            options={[
+              { value: 1, label: '1 video' },
+              { value: 2, label: '2 videos — play one after another' },
+              { value: 3, label: '3 videos — play one after another' },
+              { value: 4, label: '4 videos — play one after another' },
+            ]} />
+          {content.video_count > 1 && <p className="text-xs text-dark-muted mt-1">Each video plays to the end, then the next one fades in. “Loop video” repeats the whole set. Visitors get dots to jump between videos.</p>}
+        </div>
+        <div className="flex flex-wrap gap-x-8 gap-y-4">
+          {([
+            ['video_enabled', 'Show video background'],
+            ['autoplay', 'Play automatically'],
+            ['loop', 'Loop video'],
+          ] as const).map(([key, label]) => (
+            <label key={key} className="flex items-center gap-2 text-sm font-medium text-dark">
+              <input type="checkbox" checked={content[key]} disabled={key !== 'video_enabled' && !content.video_enabled}
+                onChange={event => update(key, event.target.checked)} className="w-4 h-4 accent-primary" />
+              {label}
+            </label>
+          ))}
+        </div>
+        <p className="text-xs text-dark-muted">Turning video off shows the still image. Reduced-motion and data-saving preferences prevent autoplay; visitors can choose Play.</p>
+      </section>
+
+      <section className="space-y-4" aria-labelledby="hero-media-title">
+        <h2 id="hero-media-title" className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Video and still images</h2>
+        <div>
+          <label htmlFor="hero-media-source" className="block text-sm font-medium text-dark mb-1">Media source</label>
+          <Select inputId="hero-media-source" value={content.media_source}
+            onChange={source => update('media_source', source as 'assets' | 'url')}
+            options={[
+              { value: 'assets', label: 'Bundled website assets' },
+              { value: 'url', label: 'Hosted video and image URLs' },
+            ]} />
+        </div>
+        {content.media_source === 'assets' ? (
+          <div className="rounded-lg bg-background-warm/60 p-4 text-sm text-dark space-y-2">
+            <p>The homepage uses the desktop and mobile videos included with your website.</p>
+            <p>To change video 1, replace the two MP4s and matching JPG stills in <code className="break-all">src/assets/home-hero/</code>, keeping their filenames, then rebuild and deploy.</p>
+            {content.video_count > 1 && (
+              <p>For video 2{content.video_count > 3 ? ', 3 and 4' : content.video_count > 2 ? ' and 3' : ''}, add <code className="break-all">hero-2-desktop.mp4</code>, <code className="break-all">hero-2-mobile.mp4</code>, <code className="break-all">hero-2-desktop.jpg</code>, <code className="break-all">hero-2-mobile.jpg</code>{content.video_count > 2 ? ` (and the same four files named hero-3-…${content.video_count > 3 ? ' and hero-4-…' : ''})` : ''} to that folder, then rebuild and deploy. A video without its desktop MP4 is skipped.</p>
+            )}
           </div>
-        </div>
-        {content.slides.length === 0 && (
-          <p className="text-xs text-dark-muted flex items-center gap-1.5 bg-background-warm/60 rounded-md px-3 py-2">
-            <Images size={14} className="flex-shrink-0" aria-hidden="true" />
-            No photos yet. The homepage keeps its default hero image until you add some.
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2 pb-3 border-b border-background-warm flex-wrap">
-          <h2 className="font-display text-lg font-bold text-dark">
-            Photos ({content.slides.length})
-          </h2>
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {uploading ? <Loader2 size={13} className="animate-spin" aria-hidden="true" /> : <ImagePlus size={13} aria-hidden="true" />}
-            {uploading ? 'Uploading...' : 'Add Photos'}
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleAddPhotos}
-            className="hidden"
-          />
-        </div>
-        <p className="text-xs text-dark-muted -mt-2">
-          Wide landscape, min 1920×1080px. Slides play in order; use the arrows to reorder and the eye icon to hide a photo.
-        </p>
-
-        {content.slides.length === 0 ? (
-          <button
-            type="button"
-            onClick={() => fileRef.current?.click()}
-            disabled={uploading}
-            className="w-full flex flex-col items-center justify-center gap-2 py-12 rounded-lg border-2 border-dashed border-background-warm text-dark-muted hover:border-primary hover:text-primary transition-colors"
-          >
-            <Plus size={22} aria-hidden="true" />
-            <span className="text-sm font-medium">Add your first banner photo</span>
-          </button>
         ) : (
           <div className="space-y-4">
-            {content.slides.map((slide, i) => (
-              <div
-                key={slide.id}
-                {...slideDrag.itemProps(i)}
-                className={`rounded-xl border-2 overflow-hidden transition-colors ${
-                  slide.active ? 'border-background-warm bg-white' : 'border-background-warm bg-background-warm/50 opacity-70'
-                } ${slideDrag.itemClass(i)}`}
-              >
-                {/* Header bar: number + status on the left, reorder/visibility/delete actions on the right.
-                    Kept on its own full-width row (not squeezed next to the thumbnail) so it never wraps
-                    awkwardly on narrow phone screens. */}
-                <div className="flex items-center justify-between gap-2 px-3 py-2 bg-background-warm/40 border-b border-background-warm">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <ReorderGrip drag={slideDrag} index={i} count={content.slides.length} className="-ml-1" />
-                    <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-2xs font-bold flex-shrink-0">
-                      {i + 1}
-                    </span>
-                    <span className="text-sm font-semibold text-dark whitespace-nowrap">Slide {i + 1}</span>
-                    {!slide.active && (
-                      <span className="text-2xs font-medium text-dark-muted bg-background-warm rounded-md px-2 py-0.5 whitespace-nowrap">
-                        Hidden
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-0.5 rounded-full bg-white border border-background-warm p-0.5 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => moveSlide(slide.id, -1)}
-                      disabled={i === 0}
-                      title="Move up"
-                      aria-label={`Move slide ${i + 1} up`}
-                      className="p-1.5 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronUp size={15} aria-hidden="true" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveSlide(slide.id, 1)}
-                      disabled={i === content.slides.length - 1}
-                      title="Move down"
-                      aria-label={`Move slide ${i + 1} down`}
-                      className="p-1.5 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <ChevronDown size={15} aria-hidden="true" />
-                    </button>
-                    <span className="w-px h-4 bg-background-warm" aria-hidden="true" />
-                    <button
-                      type="button"
-                      onClick={() => updateSlide(slide.id, { active: !slide.active })}
-                      title={slide.active ? 'Hide from homepage' : 'Show on homepage'}
-                      aria-label={slide.active ? `Hide slide ${i + 1} from homepage` : `Show slide ${i + 1} on homepage`}
-                      aria-pressed={slide.active}
-                      className="p-1.5 rounded-full text-dark-muted hover:text-dark hover:bg-background-warm transition-colors"
-                    >
-                      {slide.active ? <Eye size={15} aria-hidden="true" /> : <EyeOff size={15} aria-hidden="true" />}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => removeSlide(slide.id)}
-                      title="Remove"
-                      aria-label={`Remove slide ${i + 1}`}
-                      className="p-1.5 rounded-full text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"
-                    >
-                      <Trash2 size={15} aria-hidden="true" />
-                    </button>
-                  </div>
+            <p className="text-sm text-dark-muted">Paste direct HTTPS file URLs or paths from your website. Use MP4 (H.264) for broad device support. YouTube and Vimeo page links are not video files.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {([
+                ['video_url', 'Desktop video URL', 'Required when video is on. Landscape 16:9.'],
+                ['mobile_video_url', 'Mobile video URL', 'Optional portrait 9:16. Blank uses the desktop video.'],
+                ['poster_url', 'Desktop still-image URL', 'Required. Use a frame matching the video, in JPG or WebP.'],
+                ['mobile_poster_url', 'Mobile still-image URL', 'Optional portrait crop. Blank uses the desktop still.'],
+              ] as const).map(([key, label, hint]) => (
+                <div key={key}>
+                  <label htmlFor={`hero-${key}`} className="block text-sm font-medium text-dark mb-1">{label}</label>
+                  <input id={`hero-${key}`} type="text" inputMode="url" value={content[key]} placeholder="https://… or /media/…"
+                    onChange={event => update(key, event.target.value)} className={inputClass} />
+                  <p className="text-xs text-dark-muted mt-1">{hint}</p>
                 </div>
-
-                {/* Body: image stacks above the fields on phones, and sits beside them from sm
-                    upward — avoids the cramped side-by-side squeeze on small screens. */}
-                <div className="p-3 sm:p-4 flex flex-col sm:flex-row gap-4">
-                  <div className="sm:w-40 flex-shrink-0">
-                    <ImageUploadField
-                      label=""
-                      value={slide.image}
-                      onChange={url => updateSlide(slide.id, { image: url })}
-                      bucket={STORAGE_BUCKET}
-                      pathPrefix="home-hero"
-                      aspectRatio="3/2"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0 space-y-3">
-                    <details className="group text-xs">
-                      <summary className="flex items-center gap-1.5 cursor-pointer text-dark-muted hover:text-dark select-none list-none">
-                        <span className="transition-transform group-open:rotate-90">▶</span>
-                        <DeviceMobile size={13} className="flex-shrink-0" aria-hidden="true" />
-                        Optional: different photo for phone screens
-                      </summary>
-                      <div className="mt-2 pl-4">
-                        <ImageUploadField
-                          label="Mobile Image"
-                          value={slide.mobile_image}
-                          onChange={url => updateSlide(slide.id, { mobile_image: url })}
-                          bucket={STORAGE_BUCKET}
-                          pathPrefix="home-hero-mobile"
-                          hint="Portrait, min 1080×1350px. Falls back to the main photo if empty."
-                        />
-                      </div>
-                    </details>
-
-                    <details className="group text-xs" open>
-                      <summary className="flex items-center gap-1.5 cursor-pointer text-dark-muted hover:text-dark select-none font-medium list-none">
-                        <span className="transition-transform group-open:rotate-90">▶</span>
-                        Headline text for this slide
-                      </summary>
-                      <div className="mt-2 pl-4 space-y-2">
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                          <div>
-                            <label htmlFor={`home-hero-heading-1-${slide.id}`} className="block text-2xs font-medium text-dark mb-1">Line 1</label>
-                            <input
-                              id={`home-hero-heading-1-${slide.id}`}
-                              type="text"
-                              value={slide.heading_line1}
-                              onChange={e => updateSlide(slide.id, { heading_line1: e.target.value })}
-                              className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor={`home-hero-heading-highlight-${slide.id}`} className="block text-2xs font-medium text-dark mb-1">Highlighted word</label>
-                            <input
-                              id={`home-hero-heading-highlight-${slide.id}`}
-                              type="text"
-                              value={slide.heading_highlight}
-                              onChange={e => updateSlide(slide.id, { heading_highlight: e.target.value })}
-                              className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor={`home-hero-heading-2-${slide.id}`} className="block text-2xs font-medium text-dark mb-1">Line 1 continued</label>
-                            <input
-                              id={`home-hero-heading-2-${slide.id}`}
-                              type="text"
-                              value={slide.heading_line2}
-                              onChange={e => updateSlide(slide.id, { heading_line2: e.target.value })}
-                              className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label htmlFor={`home-hero-subheading-${slide.id}`} className="block text-2xs font-medium text-dark mb-1">Supporting Text</label>
-                          <p className="text-2xs text-dark-muted leading-snug mb-1">Paragraph shown below the heading.</p>
-                          <textarea
-                            id={`home-hero-subheading-${slide.id}`}
-                            rows={2}
-                            value={slide.subheading}
-                            onChange={e => updateSlide(slide.id, { subheading: e.target.value })}
-                            className="w-full px-2.5 py-1.5 rounded-md border-2 border-background-warm bg-background font-body text-dark text-xs focus:border-primary outline-none transition-colors resize-none"
-                          />
-                        </div>
-                        <div>
-                          <p className="text-2xs font-medium text-dark-muted uppercase tracking-wide mb-1.5">Live preview</p>
-                          <div className="rounded-lg bg-dark px-4 py-4">
-                            <p className="font-display text-base sm:text-lg font-bold leading-[1.15] text-white mb-1.5">
-                              {slide.heading_line1}
-                              <br />
-                              <span className="text-secondary italic">{slide.heading_highlight}</span> {slide.heading_line2}
-                            </p>
-                            <p className="text-2xs text-white/85">{slide.subheading}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </details>
-                  </div>
+              ))}
+            </div>
+            {content.extra_clips.slice(0, content.video_count - 1).map((extra, index) => (
+              <div key={index} className="space-y-3 pt-2">
+                <h3 className="font-display text-base font-bold text-dark">Video {index + 2}</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {([
+                    ['video_url', 'Desktop video URL', 'Required. Landscape 16:9. Blank skips this video.'],
+                    ['mobile_video_url', 'Mobile video URL', 'Optional portrait 9:16. Blank uses the desktop video.'],
+                    ['poster_url', 'Desktop still-image URL', 'Required. Use a frame matching the video.'],
+                    ['mobile_poster_url', 'Mobile still-image URL', 'Optional portrait crop. Blank uses the desktop still.'],
+                  ] as const).map(([key, label, hint]) => (
+                    <div key={key}>
+                      <label htmlFor={`hero-extra${index}-${key}`} className="block text-sm font-medium text-dark mb-1">{label}</label>
+                      <input id={`hero-extra${index}-${key}`} type="text" inputMode="url" value={extra[key]} placeholder="https://… or /media/…"
+                        onChange={event => updateExtra(index as 0 | 1 | 2, key, event.target.value)} className={inputClass} />
+                      <p className="text-xs text-dark-muted mt-1">{hint}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
+            <p className="text-xs text-dark-muted">Use a short, silent 10–15 second clip. Aim for under 5 MB on desktop and under 2 MB on mobile. Preview both before saving.</p>
           </div>
         )}
-      </div>
+      </section>
+
+      <section className="space-y-4" aria-labelledby="hero-copy-title">
+        <h2 id="hero-copy-title" className="font-display text-lg font-bold text-dark pb-3 border-b border-background-warm">Hero text</h2>
+        <button type="button" className="text-sm font-medium text-primary underline underline-offset-4" onClick={() => setContent(current => ({
+          ...current,
+          eyebrow: DEFAULT_HOME_HERO.eyebrow,
+          heading_line1: DEFAULT_HOME_HERO.heading_line1,
+          heading_highlight: DEFAULT_HOME_HERO.heading_highlight,
+          heading_line2: DEFAULT_HOME_HERO.heading_line2,
+          subheading: DEFAULT_HOME_HERO.subheading,
+          cta_label: DEFAULT_HOME_HERO.cta_label,
+          gallery_enabled: DEFAULT_HOME_HERO.gallery_enabled,
+          gallery_label: DEFAULT_HOME_HERO.gallery_label,
+          footer_text: DEFAULT_HOME_HERO.footer_text,
+        }))}>Restore original hero text and buttons</button>
+        {field('eyebrow', 'Small introduction (optional)', 70)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {field('heading_line1', 'Headline — first line', 80)}
+          {field('heading_highlight', 'Orange italic word (optional)', 40)}
+          {field('heading_line2', 'Second line — after the orange word', 80)}
+        </div>
+        <div>
+          <label htmlFor="hero-subheading" className="block text-sm font-medium text-dark mb-1">Supporting text (optional)</label>
+          <textarea id="hero-subheading" value={content.subheading} rows={2} maxLength={220} onChange={event => update('subheading', event.target.value)} className={inputClass} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {field('cta_label', 'Explore button label', 32)}
+          {field('gallery_label', 'Gallery button label', 32)}
+          {field('footer_text', 'Bottom caption (optional)', 80)}
+        </div>
+        <label className="flex items-center gap-2 text-sm font-medium text-dark"><input type="checkbox" checked={content.gallery_enabled} onChange={event => update('gallery_enabled', event.target.checked)} className="w-4 h-4 accent-primary" />Show View Gallery button</label>
+        <p className="text-xs text-dark-muted">Explore opens Upcoming Trips; View Gallery opens Completed Trips. Short headlines give the scenery more space, especially on mobile.</p>
+      </section>
+
+      <section className="space-y-3" aria-labelledby="hero-preview-title">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 id="hero-preview-title" className="font-display text-lg font-bold text-dark">Preview</h2>
+          <div className="flex gap-2" role="group" aria-label="Preview screen size">
+            {[false, true].map(mobile => (
+              <button key={String(mobile)} type="button" aria-pressed={mobilePreview === mobile}
+                onClick={() => { setMobilePreview(mobile); setPreviewError(false); }}
+                className={`px-3 py-2 text-sm rounded-md border ${mobilePreview === mobile ? 'bg-primary text-white border-primary' : 'border-background-warm text-dark'}`}>
+                {mobile ? 'Mobile' : 'Desktop'}
+              </button>
+            ))}
+          </div>
+        </div>
+        {clips.length > 1 && (
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Preview video">
+            {clips.map((_, index) => (
+              <button key={index} type="button" aria-pressed={previewIndex === index}
+                onClick={() => { setPreviewIndex(index); setPreviewError(false); }}
+                className={`px-3 py-2 text-sm rounded-md border ${previewIndex === index ? 'bg-primary text-white border-primary' : 'border-background-warm text-dark'}`}>
+                Video {index + 1}
+              </button>
+            ))}
+          </div>
+        )}
+        <div className={`relative overflow-hidden rounded-lg bg-dark mx-auto ${mobilePreview ? 'max-w-sm aspect-[9/16]' : 'w-full aspect-video'}`}>
+          {content.video_enabled ? (
+            <video key={film} src={film} poster={poster} controls muted playsInline loop={content.loop && clips.length === 1} preload="none"
+              onError={() => setPreviewError(true)} aria-label={`${mobilePreview ? 'Mobile' : 'Desktop'} hero video preview`}
+              className="absolute inset-0 w-full h-full object-cover" />
+          ) : <img src={poster} alt="Hero still-image preview" onError={() => setPreviewError(true)} className="absolute inset-0 w-full h-full object-cover" />}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent pointer-events-none" />
+          <div className={`absolute left-5 right-5 bottom-16 text-white pointer-events-none ${mobilePreview ? '' : 'sm:left-8 sm:right-8'}`}>
+            {content.eyebrow && <p className="text-2xs uppercase tracking-widest mb-3">{content.eyebrow}</p>}
+            <p className="font-display text-xl sm:text-3xl font-bold leading-[1.15] break-words"><span className="block">{content.heading_line1}</span><span className="block"><em className="text-secondary italic">{content.heading_highlight}</em>{content.heading_highlight && content.heading_line2 ? ' ' : ''}{content.heading_line2}</span></p>
+            {content.subheading && <p className="text-xs mt-3 max-w-md">{content.subheading}</p>}
+            <div className="flex flex-wrap gap-3 mt-4 font-button font-semibold text-xs"><span className="inline-block bg-primary text-white rounded-md px-4 py-2">{content.cta_label} →</span>{content.gallery_enabled && <span className="inline-block border border-white/40 rounded-md px-4 py-2">▷ {content.gallery_label}</span>}</div>
+          </div>
+        </div>
+        {previewError && <p role="alert" className="text-sm text-danger-fg">This media could not load. Check that its URL opens a public video or image file.</p>}
+        <p className="text-xs text-dark-muted">Press Play to check the footage. This scaled preview shows your unsaved text; the homepage adapts spacing to the visitor’s screen.</p>
+      </section>
     </div>
   );
 }

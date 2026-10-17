@@ -161,9 +161,10 @@ export function lookupDraft<T>(key: string, savedBase: string): DraftLookup<T> {
 }
 
 /** Keeps `key`'s draft in step with `value` while it differs from the saved version `base`
- *  (a stableStringify of that saved version). Pass base = null while still loading. */
-export function useDraftKeeper(opts: { key: string; value: unknown; base: string | null; enabled?: boolean; bucket?: string }) {
-  const { key, value, base, enabled = true, bucket = DEFAULT_BUCKET } = opts;
+ *  (a stableStringify of that saved version). Pass base = null while still loading.
+ *  uploadValue can exclude pasted media references from uploaded-file cleanup. */
+export function useDraftKeeper(opts: { key: string; value: unknown; base: string | null; enabled?: boolean; bucket?: string; uploadValue?: unknown }) {
+  const { key, value, base, enabled = true, bucket = DEFAULT_BUCKET, uploadValue = value } = opts;
   useEffect(() => {
     if (!enabled || base === null) return;
     if (stableStringify(value) === base) {
@@ -188,8 +189,8 @@ export function useDraftKeeper(opts: { key: string; value: unknown; base: string
       /* base unreadable: treat every URL as new, which only ever errs towards keeping files */
       baseUrls = new Set<string>();
     }
-    noteUploads(key, bucket, [...collectStorageUrls(value, bucket)].filter(u => !baseUrls.has(u)));
-  }, [key, value, base, enabled, bucket]);
+    noteUploads(key, bucket, [...collectStorageUrls(uploadValue, bucket)].filter(u => !baseUrls.has(u)));
+  }, [key, value, base, enabled, bucket, uploadValue]);
 }
 
 // ---- Cleanup ----------------------------------------------------------------------------------

@@ -11,44 +11,46 @@ import {
 import type { UpcomingTrip } from '../../types/types-index';
 import SpecialOfferPopupCard from './SpecialOfferPopupCard';
 
-// How long the homepage sits quietly before the offer surfaces. Long enough
-// that it never feels like it's blocking the very first paint (people get a
-// beat to actually see the page they landed on first), short enough that
-// almost nobody has scrolled past the hero before it appears.
-//
-// This runs in *parallel* with the trips fetch (see the effect below), not
-// stacked after it — so the real worst-case wait is max(fetchTime,
-// REVEAL_DELAY_MS), not fetchTime + REVEAL_DELAY_MS. On a slow connection
-// the homepage's ~15 parallel Supabase calls can themselves take several
-// seconds; stacking a fixed delay on top of that would mean the popup can
-// interrupt someone who's already scrolled deep into the page, which feels
-// random rather than intentional.
-const REVEAL_DELAY_MS = 1800;
+// Give visitors time to see the hero. A dismissal lasts for this tab's
+// session, including navigation back to Home and page reloads.
+const REVEAL_DELAY_MS = 8000;
+const DISMISSED_KEY = 'ulaa:home-offer-dismissed:v1';
+let dismissedInMemory = false;
 
-/**
- * A single, tastefully-timed popup that surfaces the best currently-live
- * special offer every time someone lands on the homepage, and gets them
- * straight to booking it. Dismissing it (X, "Maybe later", or the backdrop)
- * only closes *this* visit — since HomePage remounts fresh on every
- * navigation to "/", leaving this page and coming back always shows it
- * again for as long as a real, currently-active offer exists on a trip
- * that isn't already sold out. It never pitches something the visitor
- * can't actually book.
- */
+function wasDismissed() {
+  try {
+    return dismissedInMemory || sessionStorage.getItem(DISMISSED_KEY) === '1';
+  } catch {
+    return dismissedInMemory;
+  }
+}
+
 export default function SpecialOfferPopup() {
   const navigate = useNavigate();
   const [trip, setTrip] = useState<UpcomingTrip | null>(null);
   const [dataReady, setDataReady] = useState(false);
   const [delayElapsed, setDelayElapsed] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(wasDismissed);
+  const [pastHero, setPastHero] = useState(false);
+  useEffect(() => {
+    const hero = document.querySelector('[data-home-hero]');
+    if (!hero) return;
+    // Let visitors finish exploring the landscape before an offer appears.
+    const observer = new IntersectionObserver(([entry]) => {
+      setPastHero(entry.boundingClientRect.bottom <= 80);
+    }, { rootMargin: '-80px 0px 0px 0px' });
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
   // Derived, not stored: reveals the instant both the fetch and the minimum
   // delay have settled (whichever finishes last), with no extra render lag
   // from bouncing the result through its own effect + state.
-  const visible = !!trip && dataReady && delayElapsed && !dismissed;
+  const visible = !!trip && dataReady && delayElapsed && pastHero && !dismissed;
 
   // Fetch and the reveal delay run side by side, not one after the other —
   // see the REVEAL_DELAY_MS comment above.
   useEffect(() => {
+    if (dismissed) return;
     let cancelled = false;
 
     const timer = setTimeout(() => {
@@ -90,7 +92,7 @@ export default function SpecialOfferPopup() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, []);
+  }, [dismissed]);
 
   if (!trip) return null;
 
@@ -109,6 +111,8 @@ export default function SpecialOfferPopup() {
   const isAlmostFull = remaining > 0 && remaining <= 5;
 
   const dismiss = () => {
+    dismissedInMemory = true;
+    try { sessionStorage.setItem(DISMISSED_KEY, '1'); } catch { /* Storage may be disabled. */ }
     setDismissed(true);
   };
 
