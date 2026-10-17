@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useMemo } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import { ArrowRight, Pause, Play } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { getSiteContent } from '../../services/api';
@@ -104,6 +105,29 @@ export default function HeroSection() {
     setClipIndex(index);
   }
 
+  // Finger swipe: left = next video, right = previous. Failed clips are skipped.
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  function stepClip(direction: 1 | -1) {
+    if (!multiple) return;
+    for (let step = 1; step < clips.length; step++) {
+      const candidate = (activeIndex + direction * step + clips.length * step) % clips.length;
+      if (!failedClips.includes(candidate)) { goToClip(candidate); return; }
+    }
+  }
+  function onSwipeStart(e: ReactPointerEvent) {
+    if (e.pointerType === 'mouse') return;
+    swipeStart.current = { x: e.clientX, y: e.clientY };
+  }
+  function onSwipeEnd(e: ReactPointerEvent) {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!start) return;
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+    stepClip(dx < 0 ? 1 : -1);
+  }
+
   function handleEnded() {
     setPlaying(false);
     if (!multiple) return;
@@ -160,7 +184,8 @@ export default function HeroSection() {
 
   return (
     <div className="ulaa-hero-frame">
-      <section ref={sectionRef} data-home-hero className="ulaa-home-hero" aria-label="The ULAA experience">
+      <section ref={sectionRef} data-home-hero className="ulaa-home-hero" aria-label="The ULAA experience"
+        onPointerDown={onSwipeStart} onPointerUp={onSwipeEnd} onPointerCancel={() => { swipeStart.current = null; }}>
         <picture className="ulaa-hero-poster" aria-hidden="true">
           <source media="(max-width: 639px)" srcSet={posterFailed ? BUNDLED_HERO_MEDIA.mobilePoster : media.mobilePoster} />
           <img src={posterFailed ? BUNDLED_HERO_MEDIA.desktopPoster : media.desktopPoster} alt="" onError={() => setPosterFailed(true)} fetchPriority="high" width={1280} height={720} />
@@ -192,8 +217,8 @@ export default function HeroSection() {
             </h1>
             {hero.subheading && <p className="ulaa-hero-description">{hero.subheading}</p>}
             <div className="ulaa-hero-actions">
-              <Link to="/trips" className="ulaa-hero-explore">{hero.cta_label} <ArrowRight size={18} aria-hidden="true" /></Link>
-              {hero.gallery_enabled && <Link to="/completed-trips" className="ulaa-hero-gallery"><Play size={16} aria-hidden="true" />{hero.gallery_label}</Link>}
+              <Link to="/trips" className="ulaa-hero-explore">{hero.cta_label} <ArrowRight size={16} aria-hidden="true" /></Link>
+              {hero.gallery_enabled && <Link to="/completed-trips" className="ulaa-hero-gallery"><Play size={14} aria-hidden="true" />{hero.gallery_label}</Link>}
             </div>
           </div>
         </div>
