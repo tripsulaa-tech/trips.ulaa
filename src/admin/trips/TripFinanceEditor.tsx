@@ -44,8 +44,8 @@ interface TripFinanceEditorProps {
 export default function TripFinanceEditor({ finance, onChange, options, revenue, estimate }: TripFinanceEditorProps) {
   return (
     <>
-      <div className="md:col-span-2 bg-amber-50 border border-amber-200 rounded-md p-3">
-        <p className="text-xs text-amber-800">
+      <div className="md:col-span-2 bg-warning-bg border border-warning-border rounded-md p-3">
+        <p className="text-xs text-warning-fg">
           Internal record only — none of this is ever shown on the public site. Use it to track what this trip costs to run and what it earns.
         </p>
       </div>
@@ -257,7 +257,7 @@ export default function TripFinanceEditor({ finance, onChange, options, revenue,
               <div key={c.id} className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">{c.name || 'Unnamed expense'}</span><span className="text-dark-muted">{formatPrice(c.amount)}</span></div>
             ))}
             <div className="flex justify-between border-t border-background-warm pt-1.5"><span className="text-dark-muted">Total Costs</span><span className="text-dark font-medium">{formatPrice(s.totalCosts)}</span></div>
-            <div className="flex justify-between border-t-2 border-primary/30 pt-1.5 text-base"><span className="font-semibold text-dark">Net Profit</span><span className={`font-bold ${s.netProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{formatPrice(s.netProfit)}</span></div>
+            <div className="flex justify-between border-t-2 border-primary/30 pt-1.5 text-base"><span className="font-semibold text-dark">Net Profit</span><span className={`font-bold ${s.netProfit >= 0 ? 'text-success-fg' : 'text-danger-fg'}`}>{formatPrice(s.netProfit)}</span></div>
             <div className="flex justify-between text-xs"><span className="text-dark-muted">Profit per Traveler</span><span className="text-dark-muted">{formatPrice(Math.round(s.profitPerPerson))}</span></div>
           </div>
         );

@@ -133,7 +133,7 @@ function TripItem({ trip }: { trip: ProfileTrip }) {
           <span className="inline-flex items-center gap-1">
             <Users size={12} aria-hidden="true" /> {trip.seats} {trip.seats === 1 ? 'seat' : 'seats'}
           </span>
-          {trip.earlyBird && <Pill className="bg-amber-100 text-amber-800">Early bird</Pill>}
+          {trip.earlyBird && <Pill className="bg-warning-bg text-warning-fg">Early bird</Pill>}
           {trip.child && <Pill className="bg-sky-100 text-sky-800">Child fare</Pill>}
         </div>
 
@@ -159,8 +159,8 @@ function TripItem({ trip }: { trip: ProfileTrip }) {
               </span>
               {trip.outcome === 'joined' && (
                 trip.balance > 0
-                  ? <span className="font-semibold text-amber-700">{formatPrice(trip.balance)} due</span>
-                  : <span className="font-semibold text-green-700">Paid in full</span>
+                  ? <span className="font-semibold text-warning-fg">{formatPrice(trip.balance)} due</span>
+                  : <span className="font-semibold text-success-fg">Paid in full</span>
               )}
             </div>
           </div>
@@ -333,7 +333,7 @@ export default function AdminTravellerProfilePanel({
                   </div>
                   <div className="px-3.5 py-3">
                     <dt className="text-2xs text-dark-muted">Balance due</dt>
-                    <dd className={`mt-0.5 text-base font-semibold tabular-nums ${profile.summary.balanceDue > 0 ? 'text-amber-700' : 'text-dark'}`}>
+                    <dd className={`mt-0.5 text-base font-semibold tabular-nums ${profile.summary.balanceDue > 0 ? 'text-warning-fg' : 'text-dark'}`}>
                       {formatPrice(profile.summary.balanceDue)}
                     </dd>
                   </div>
@@ -362,17 +362,17 @@ export default function AdminTravellerProfilePanel({
                 <SectionHeading title="Contact" />
                 <dl className="divide-y divide-background-warm border-y border-background-warm">
                   <ContactRow label="Phone" copy={contact.phone ? { value: contact.phone, label: 'Phone number' } : undefined}>
-                    {contact.phone || <span className="text-dark-muted/60">Not on file</span>}
+                    {contact.phone || <span className="text-dark-muted/75">Not on file</span>}
                   </ContactRow>
                   {contact.phones.slice(1).map(ph => (
                     <ContactRow key={ph} label="Emergency" copy={{ value: ph, label: 'Emergency number' }}>
                       <span className="inline-flex items-center gap-1.5">
-                        <Siren size={13} weight="fill" className="text-red-500 shrink-0" aria-hidden="true" /> {ph}
+                        <Siren size={13} weight="fill" className="text-danger-fg shrink-0" aria-hidden="true" /> {ph}
                       </span>
                     </ContactRow>
                   ))}
                   <ContactRow label="Email" copy={contact.email ? { value: contact.email, label: 'Email' } : undefined}>
-                    {contact.email ? <span className="break-all">{contact.email}</span> : <span className="text-dark-muted/60">Not on file</span>}
+                    {contact.email ? <span className="break-all">{contact.email}</span> : <span className="text-dark-muted/75">Not on file</span>}
                   </ContactRow>
                 </dl>
                 {/* Secondary facts as a compact three-up row, so the trip
@@ -380,7 +380,7 @@ export default function AdminTravellerProfilePanel({
                 <dl className="mt-3 grid grid-cols-3 gap-3">
                   <div>
                     <dt className="text-2xs text-dark-muted">Age</dt>
-                    <dd className="mt-0.5 text-sm text-dark">{profile.age ?? <span className="text-dark-muted/60">Not on file</span>}</dd>
+                    <dd className="mt-0.5 text-sm text-dark">{profile.age ?? <span className="text-dark-muted/75">Not on file</span>}</dd>
                   </div>
                   <div>
                     <dt className="text-2xs text-dark-muted">Food</dt>
@@ -404,7 +404,7 @@ export default function AdminTravellerProfilePanel({
                   <div>
                     <dt className="text-2xs text-dark-muted">First source</dt>
                     <dd className="mt-0.5 text-sm text-dark">
-                      {profile.firstSource ? (SOURCE_CONFIG[profile.firstSource]?.label ?? profile.firstSource) : <span className="text-dark-muted/60">Not on file</span>}
+                      {profile.firstSource ? (SOURCE_CONFIG[profile.firstSource]?.label ?? profile.firstSource) : <span className="text-dark-muted/75">Not on file</span>}
                     </dd>
                   </div>
                 </dl>
@@ -431,7 +431,7 @@ export default function AdminTravellerProfilePanel({
                   </div>
                 )}
                 {waitlist.status === 'error' && (
-                  <div className="flex items-center justify-between gap-3 rounded-lg bg-amber-50 border border-amber-200 px-3.5 py-3 text-sm text-amber-900">
+                  <div className="flex items-center justify-between gap-3 rounded-lg bg-warning-bg border border-warning-border px-3.5 py-3 text-sm text-warning-fg">
                     <span className="inline-flex items-center gap-2"><Warning size={16} aria-hidden="true" /> Couldn&apos;t load the waitlist.</span>
                     <button type="button" onClick={onRetryWaitlist} className="font-button font-semibold text-xs text-primary hover:underline">Try again</button>
                   </div>

@@ -108,7 +108,7 @@ export default function BottomNavSection({
                 type="button"
                 onClick={() => removeTab(index)}
                 aria-label={`Remove ${item.label} tab`}
-                className="mt-5 p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+                className="mt-5 p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"
                 title="Remove tab"
               >
                 <Trash2 size={15} aria-hidden="true" />
@@ -201,7 +201,7 @@ export default function BottomNavSection({
               type="button"
               onClick={() => removeTab(index)}
               aria-label={`Remove ${item.label} tab`}
-              className="mt-5 p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+              className="mt-5 p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"
               title="Remove tab"
             >
               <Trash2 size={15} aria-hidden="true" />

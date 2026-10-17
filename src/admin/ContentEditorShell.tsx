@@ -189,7 +189,7 @@ export default function ContentEditorShell({
           </div>
 
           {pageSearchNoMatch && (
-            <p role="alert" className="text-xs text-red-500 px-4 sm:px-6 pt-3 sm:pt-4">No matching field found for "{pageSearch}".</p>
+            <p role="alert" className="text-xs text-danger-fg px-4 sm:px-6 pt-3 sm:pt-4">No matching field found for "{pageSearch}".</p>
           )}
           {notice && <div className="px-4 sm:px-6 pt-3 sm:pt-4">{notice}</div>}
           <div className={bodyClassName}>

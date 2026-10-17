@@ -82,10 +82,10 @@ export default function AdminWaitlist() {
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3"
+            className="flex items-center gap-3 bg-success-bg border border-success-border rounded-lg px-4 py-3"
           >
-            <PartyPopper size={18} className="text-green-600 shrink-0" aria-hidden="true" />
-            <p className="text-sm text-green-800">
+            <PartyPopper size={18} className="text-success-fg shrink-0" aria-hidden="true" />
+            <p className="text-sm text-success-fg">
               <span className="font-semibold">
                 {seatOpenCount} {seatOpenCount === 1 ? 'person is' : 'people are'} waiting
               </span>{' '}

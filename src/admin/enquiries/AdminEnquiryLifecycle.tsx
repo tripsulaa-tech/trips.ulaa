@@ -63,7 +63,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
 
   if (enquiry.booking_status === 'cancelled') {
     return (
-      <div className="flex items-center gap-1.5 bg-red-50 text-red-700 rounded-md px-3 py-2 text-xs font-button font-semibold">
+      <div className="flex items-center gap-1.5 bg-danger-bg text-danger-fg rounded-md px-3 py-2 text-xs font-button font-semibold">
         <XCircle size={14} className="shrink-0" aria-hidden="true" /> Booking Cancelled
       </div>
     );
@@ -120,7 +120,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
         <div className="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-primary/5 blur-2xl" aria-hidden="true" />
       </div>
       {isCancelled && (
-        <div className={`relative flex items-center gap-1.5 mb-3 rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold ${isNoShow ? 'bg-orange-50 text-orange-700' : 'bg-red-50 text-red-700'}`}>
+        <div className={`relative flex items-center gap-1.5 mb-3 rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold ${isNoShow ? 'bg-orange-50 text-orange-700' : 'bg-danger-bg text-danger-fg'}`}>
           <XCircle size={12} className="shrink-0" aria-hidden="true" /> {isNoShow
             ? 'No Show — did not report on the trip day. Seat released, no refund.'
             : 'Cancelled — progress below is where it stood before cancellation'}
@@ -145,9 +145,9 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
           style={{ left: `${barPercent}%` }}
           aria-hidden="true"
         >
-          <div className={`relative text-white text-xs font-button font-bold px-2.5 py-1 rounded-lg shadow-md whitespace-nowrap ${isNoShow ? 'bg-orange-600' : isCancelled ? 'bg-dark-muted' : 'bg-gradient-to-br from-primary-dark to-primary'}`}>
+          <div className={`relative text-white text-xs font-button font-bold px-2.5 py-1 rounded-lg shadow-md whitespace-nowrap ${isNoShow ? 'bg-orange-700' : isCancelled ? 'bg-dark-muted' : 'bg-gradient-to-br from-primary-dark to-primary'}`}>
             {displayPercent}%
-            <div className={`absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 rotate-45 ${isNoShow ? 'bg-orange-600' : isCancelled ? 'bg-dark-muted' : 'bg-primary'}`} />
+            <div className={`absolute left-1/2 -bottom-1 -translate-x-1/2 w-2 h-2 rotate-45 ${isNoShow ? 'bg-orange-700' : isCancelled ? 'bg-dark-muted' : 'bg-primary'}`} />
           </div>
         </div>
       </div>
@@ -169,7 +169,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
               <span
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full inline-flex items-center justify-center shrink-0 transition-all ${
                   isActive && isCancelled
-                    ? (isNoShow ? 'bg-orange-600 text-white' : 'bg-dark-muted text-white')
+                    ? (isNoShow ? 'bg-orange-700 text-white' : 'bg-dark-muted text-white')
                     : isDone || isActive
                     ? 'bg-gradient-to-br from-primary-dark to-primary text-white shadow-[0_3px_10px_-2px_rgba(168,90,42,0.5)]'
                     : 'bg-dark/5 text-dark-muted'
@@ -179,7 +179,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
                   ? <XCircle size={15} weight="bold" aria-hidden="true" />
                   : <Icon size={15} weight={isDone || isActive ? 'bold' : 'regular'} aria-hidden="true" />}
               </span>
-              <span className={`text-2xs sm:text-2xs font-button font-bold uppercase tracking-wide text-center leading-tight ${isDone ? 'text-dark' : isActive && isCancelled ? (isNoShow ? 'text-orange-700' : 'text-dark-muted') : isActive || isNext ? 'text-primary' : 'text-dark-muted/60'}`}>
+              <span className={`text-2xs sm:text-2xs font-button font-bold uppercase tracking-wide text-center leading-tight ${isDone ? 'text-dark' : isActive && isCancelled ? (isNoShow ? 'text-orange-700' : 'text-dark-muted') : isActive || isNext ? 'text-primary' : 'text-dark-muted/75'}`}>
                 {step.label}
               </span>
               <span className="text-dark-muted text-2xs sm:text-2xs whitespace-nowrap">
@@ -191,7 +191,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
       </div>
 
       {enquiry.booking_status === 'balance_pending' && !isCancelled && (
-        <div className="relative flex items-center gap-1.5 mt-3 bg-amber-50 text-amber-700 rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold">
+        <div className="relative flex items-center gap-1.5 mt-3 bg-warning-bg text-warning-fg rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold">
           <AlertTriangle size={12} className="shrink-0" aria-hidden="true" />
           Balance overdue{enquiry.balance_due_date ? ` — due ${formatDate(enquiry.balance_due_date, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
         </div>
@@ -237,7 +237,7 @@ export function JourneyLifecycleLegend() {
             </div>
           );
         })}
-        <span className="text-dark-muted/60 text-2xs mx-1 shrink-0 whitespace-nowrap">or, at any point —</span>
+        <span className="text-dark-muted/75 text-2xs mx-1 shrink-0 whitespace-nowrap">or, at any point —</span>
         <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.not_interested.color}`}>
           <UserMinus size={11} className="shrink-0" aria-hidden="true" /> Not Interested
         </span>

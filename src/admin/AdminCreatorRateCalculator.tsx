@@ -915,7 +915,7 @@ export default function AdminCreatorRateCalculator() {
                         <button
                           type="button"
                           onClick={addVariant}
-                          className="inline-flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+                          className="inline-flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary-dark transition-colors"
                         >
                           <Plus size={14} aria-hidden="true" /> Add Variant
                         </button>
@@ -974,7 +974,7 @@ export default function AdminCreatorRateCalculator() {
                                 <button type="button" onClick={() => moveVariant(index, 1)} disabled={index === templateVariants.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down" aria-label={`Move "${variant.name}" down`}>
                                   <ChevronDown size={14} aria-hidden="true" />
                                 </button>
-                                <button type="button" onClick={() => removeVariant(variant.id)} disabled={templateVariants.length <= 1} className="p-1 rounded-md hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent text-dark-muted hover:text-red-600 transition-colors" title="Remove variant" aria-label={`Remove "${variant.name}"`}>
+                                <button type="button" onClick={() => removeVariant(variant.id)} disabled={templateVariants.length <= 1} className="p-1 rounded-md hover:bg-danger-bg disabled:opacity-30 disabled:hover:bg-transparent text-dark-muted hover:text-red-600 transition-colors" title="Remove variant" aria-label={`Remove "${variant.name}"`}>
                                   <X size={14} aria-hidden="true" />
                                 </button>
                               </>
@@ -1235,7 +1235,7 @@ export default function AdminCreatorRateCalculator() {
                                 type="button"
                                 onClick={() => handleDelete(h.id)}
                                 disabled={deletingId === h.id}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-transparent hover:border-red-200 hover:bg-red-50 px-3 py-1.5 text-xs font-button font-semibold text-dark-muted hover:text-red-600 transition-colors disabled:opacity-50"
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-transparent hover:border-red-200 hover:bg-danger-bg px-3 py-1.5 text-xs font-button font-semibold text-dark-muted hover:text-red-600 transition-colors disabled:opacity-50"
                               >
                                 <Trash2 size={14} aria-hidden="true" /> Delete
                               </button>

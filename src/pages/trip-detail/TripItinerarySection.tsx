@@ -53,7 +53,7 @@ export default function TripItinerarySection({
                 onClick={() => hasDetails && toggleItineraryDay(i)}
                 aria-expanded={isDayOpen}
                 aria-label={hasDetails ? `${day.title} — tap for highlights` : day.title}
-                className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-md ring-4 ring-white font-button font-bold text-sm text-white focus:outline-none focus-visible:ring-primary/50 ${hasDetails ? 'cursor-pointer' : 'cursor-default'} ${hasDetails && !isDayOpen ? 'itinerary-icon-glow' : ''}`}
+                className={`absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 w-12 h-12 rounded-full flex items-center justify-center shadow-md ring-4 ring-white font-button font-bold text-sm text-white focus:outline-none focus-visible:ring-dark ${hasDetails ? 'cursor-pointer' : 'cursor-default'} ${hasDetails && !isDayOpen ? 'itinerary-icon-glow' : ''}`}
                 style={{ backgroundColor: palette.fg }}
               >
                 {meta ? <meta.Icon size={20} color="#fff" strokeWidth={2.25} /> : day.day}

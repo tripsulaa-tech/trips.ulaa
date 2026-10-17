@@ -148,7 +148,7 @@ export default function NotificationsPanel() {
                     <div className="min-w-0 flex-1">
                       <p className={`text-sm truncate ${n.is_read ? 'text-dark-muted' : 'font-semibold text-dark'}`}>{n.title}</p>
                       {n.body && <p className="text-xs text-dark-muted truncate mt-0.5">{n.body}</p>}
-                      <p className="text-2xs text-dark-muted/70 mt-1">{timeAgo(n.created_at)}</p>
+                      <p className="text-2xs text-dark-muted/75 mt-1">{timeAgo(n.created_at)}</p>
                     </div>
                   </button>
                 ))

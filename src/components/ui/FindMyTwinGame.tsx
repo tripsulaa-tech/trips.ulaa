@@ -67,7 +67,7 @@ export default function FindMyTwinGame({ tripTitle = 'Ulaa', className = '', com
       />
 
       <Modal isOpen={open} onClose={close} ariaLabel="Find My Twin group game" size="sm" flush fullScreen>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
             <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
             <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -76,14 +76,14 @@ export default function FindMyTwinGame({ tripTitle = 'Ulaa', className = '', com
               <div className="relative text-center pt-3 md:pt-0 md:grid md:grid-cols-[1fr_1.15fr] md:gap-12 lg:gap-16 md:items-center">
                 <div>
                 <motion.div
-                  className="w-20 h-20 md:w-28 md:h-28 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
+                  className="w-20 h-20 md:w-28 md:h-28 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                   animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                   aria-hidden="true"
                 >
                   <Users size={46} weight="duotone" />
                 </motion.div>
-                <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · 2 to 24 players</span>
+                <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · 2 to 24 players</span>
                 <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white leading-tight">Find My Twin</h2>
                 <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Answer {QUESTIONS.length} quick travel questions. ULAA secretly matches you with a travel twin. Then you have to find them!</p>
                 </div>
@@ -91,9 +91,9 @@ export default function FindMyTwinGame({ tripTitle = 'Ulaa', className = '', com
 
                 <ul className={`${glass} text-left divide-y divide-white/10 mb-4`}>
                   {[
-                    { I: Heart, c: 'bg-primary/25 text-[#F4B183]', t: <>Pick <strong className="text-white">{QUESTIONS[0].left.label} or {QUESTIONS[0].right.label}, {QUESTIONS[1].left.label} or {QUESTIONS[1].right.label}</strong> and {QUESTIONS.length - 2} more.</> },
-                    { I: MagnifyingGlass, c: 'bg-gold/20 text-[#F0CE7A]', t: <>ULAA says <strong className="text-white">"You + Ulaa, 92% match. Find Ulaa!"</strong></> },
-                    { I: ChatCircleDots, c: 'bg-secondary/25 text-[#F4B183]', t: <>Meet, answer a question together, and <strong className="text-white">unlock the next round</strong>.</> },
+                    { I: Heart, c: 'bg-primary/25 text-peach', t: <>Pick <strong className="text-white">{QUESTIONS[0].left.label} or {QUESTIONS[0].right.label}, {QUESTIONS[1].left.label} or {QUESTIONS[1].right.label}</strong> and {QUESTIONS.length - 2} more.</> },
+                    { I: MagnifyingGlass, c: 'bg-gold/20 text-gold-300', t: <>ULAA says <strong className="text-white">"You + Ulaa, 92% match. Find Ulaa!"</strong></> },
+                    { I: ChatCircleDots, c: 'bg-secondary/25 text-peach', t: <>Meet, answer a question together, and <strong className="text-white">unlock the next round</strong>.</> },
                   ].map((r, i) => (
                     <li key={i} className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
                       <span className={`w-7 h-7 shrink-0 rounded-lg flex items-center justify-center ${r.c}`}><r.I size={16} weight="duotone" /></span>
@@ -110,7 +110,7 @@ export default function FindMyTwinGame({ tripTitle = 'Ulaa', className = '', com
                     <DeviceMobile size={18} weight="duotone" /> Host or join a room
                   </button>
                 </div>
-                <p className="mt-3 text-[11px] text-cream/40 px-4">Best played together in the same place, each on their own phone.</p>
+                <p className="mt-3 text-[11px] text-cream/55 px-4">Best played together in the same place, each on their own phone.</p>
                 <button type="button" onClick={toggleMute} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                   {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />} Sound {muted ? 'off' : 'on'}
                 </button>

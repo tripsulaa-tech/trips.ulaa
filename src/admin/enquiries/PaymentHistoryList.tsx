@@ -50,12 +50,12 @@ export default function PaymentHistoryList({
       ) : (
         <div className="border border-background-warm rounded-md divide-y divide-background-warm max-h-40 overflow-y-auto">
           {hasDiscount && (
-            <div className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs bg-amber-50/60">
+            <div className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs bg-warning-bg/60">
               <div className="min-w-0">
                 <p className="text-dark font-medium truncate">Discount Applied</p>
                 <p className="text-dark-muted truncate">{discountReason || 'No reason given'}</p>
               </div>
-              <p className="shrink-0 font-semibold text-amber-700">−{formatPrice(discountAmount!)}</p>
+              <p className="shrink-0 font-semibold text-warning-fg">−{formatPrice(discountAmount!)}</p>
             </div>
           )}
           {payments.map(p => (
@@ -63,7 +63,7 @@ export default function PaymentHistoryList({
               <div className="min-w-0">
                 <p className="text-dark font-medium truncate">
                   {INVOICE_TYPE_LABEL[p.payment_type] || p.payment_type}
-                  {p.status === 'pending' && <span className="text-amber-600 font-normal"> · pending</span>}
+                  {p.status === 'pending' && <span className="text-warning-fg font-normal"> · pending</span>}
                 </p>
                 <p className="text-dark-muted">
                   {p.paid_at ? formatDate(p.paid_at, { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not yet paid'}
@@ -71,7 +71,7 @@ export default function PaymentHistoryList({
                   {showUtrNumber && p.utr_number ? ` · UTR ${p.utr_number}` : ''}
                 </p>
               </div>
-              <p className={`shrink-0 font-semibold ${p.payment_type === 'refund' ? 'text-red-600' : 'text-green-700'}`}>
+              <p className={`shrink-0 font-semibold ${p.payment_type === 'refund' ? 'text-danger-fg' : 'text-success-fg'}`}>
                 {p.payment_type === 'refund' ? '−' : ''}{formatPrice(p.amount)}
               </p>
             </div>

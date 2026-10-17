@@ -86,7 +86,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
         <button
           type="button"
           onClick={addTier}
-          className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+          className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary-dark transition-colors"
         >
           <Plus size={14} aria-hidden="true" /> Add Tier
         </button>
@@ -107,7 +107,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
                   <button type="button" onClick={() => moveTier(index, 1)} disabled={index === value.tiers.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down" aria-label={`Move tier "${tierLabel(tier, 'Set the day range below')}" down`}>
                     <ChevronDown size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => removeTier(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove tier" aria-label={`Remove tier "${tierLabel(tier, 'Set the day range below')}"`}>
+                  <button type="button" onClick={() => removeTier(index)} className="p-1 rounded-md hover:bg-danger-bg text-dark-muted hover:text-red-600 transition-colors" title="Remove tier" aria-label={`Remove tier "${tierLabel(tier, 'Set the day range below')}"`}>
                     <X size={14} aria-hidden="true" />
                   </button>
                 </div>

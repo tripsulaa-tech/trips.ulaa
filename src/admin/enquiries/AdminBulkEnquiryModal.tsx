@@ -49,7 +49,7 @@ export default function BulkEnquiryModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Bulk Enquiry" size="md">
-      <div className="flex items-start gap-2 bg-blue-50 border border-blue-200 rounded-md px-3 py-2.5 mb-4 text-sm text-blue-800">
+      <div className="flex items-start gap-2 bg-info-bg border border-info-border rounded-md px-3 py-2.5 mb-4 text-sm text-info-fg">
         <Info size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
         <p>
           Log a whole batch of leads — e.g. everyone who commented "interested" on a post, or a backlog of old

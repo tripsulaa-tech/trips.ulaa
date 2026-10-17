@@ -96,7 +96,7 @@ export default function TermsEditor({ value, onChange }: TermsEditorProps) {
         <button
           type="button"
           onClick={addSection}
-          className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+          className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary-dark transition-colors"
         >
           <Plus size={14} /> Add Section
         </button>
@@ -120,7 +120,7 @@ export default function TermsEditor({ value, onChange }: TermsEditorProps) {
                   <button type="button" onClick={() => moveSection(index, 1)} disabled={index === sections.length - 1} className="p-1 rounded-md hover:bg-white disabled:opacity-30 text-dark-muted transition-colors" title="Move down">
                     <ChevronDown size={14} />
                   </button>
-                  <button type="button" onClick={() => removeSection(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove section">
+                  <button type="button" onClick={() => removeSection(index)} className="p-1 rounded-md hover:bg-danger-bg text-dark-muted hover:text-red-600 transition-colors" title="Remove section">
                     <X size={14} />
                   </button>
                 </div>

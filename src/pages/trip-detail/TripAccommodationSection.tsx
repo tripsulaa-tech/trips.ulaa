@@ -45,7 +45,7 @@ export default function TripAccommodationSection({ description, photos, carousel
             <button
               type="button"
               onClick={() => carouselRef.current?.next()}
-              className="mt-4 inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+              className="mt-4 inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary-dark transition-colors"
             >
               View Accommodation Details <ArrowRight size={15} />
             </button>

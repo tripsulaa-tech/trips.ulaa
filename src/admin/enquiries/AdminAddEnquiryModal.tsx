@@ -53,7 +53,7 @@ export default function AddEnquiryModal({
   saving: boolean;
 }) {
   const confirm = useConfirm();
-  const errorClass = 'text-red-500 text-xs mt-1';
+  const errorClass = 'text-danger-fg text-xs mt-1';
   const isDirty = form.full_name.trim() !== '' || form.phone.trim() !== '' || (form.amount_paid !== '' && Number(form.amount_paid) > 0);
 
   // Trip-specific age eligibility for whichever trip is currently picked —
@@ -143,7 +143,7 @@ export default function AddEnquiryModal({
   return (
     <Modal isOpen={isOpen} onClose={requestClose} title={convertingWaitlist ? 'Convert Waitlist Signup' : 'Log an Enquiry'} size="md">
       {convertingWaitlist && (
-        <div className="flex items-start gap-2 bg-green-50 border border-green-200 rounded-md px-3 py-2.5 mb-4 text-sm text-green-800">
+        <div className="flex items-start gap-2 bg-success-bg border border-success-border rounded-md px-3 py-2.5 mb-4 text-sm text-success-fg">
           <PartyPopper size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
           <p>
             {convertingWaitlist.slots > 1 ? (
@@ -394,17 +394,17 @@ export default function AddEnquiryModal({
               trip, so a repeat traveller doesn't show up several times
               over. */}
           {possibleDuplicates.length > 0 && (
-            <div className="col-span-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-amber-900">
+            <div className="col-span-2 rounded-md border border-warning-border bg-warning-bg px-3 py-2.5 text-warning-fg">
               <div className="flex items-start gap-2">
-                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-amber-600" aria-hidden="true" />
+                <AlertTriangle size={16} className="shrink-0 mt-0.5 text-warning-fg" aria-hidden="true" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
                     Possible duplicate{possibleDuplicates.length > 1 ? 's' : ''} — matches this phone or email
                   </p>
-                  <p className="text-xs text-amber-700/80">Double-check this isn't the same traveler.</p>
+                  <p className="text-xs text-warning-fg/80">Double-check this isn't the same traveler.</p>
                 </div>
               </div>
-              <ul className="mt-2 border-t border-amber-200/70 divide-y divide-amber-200/70">
+              <ul className="mt-2 border-t border-warning-border/70 divide-y divide-amber-200/70">
                 {possibleDuplicates.slice(0, 5).map(contact => (
                   <li key={contact.key} className="py-1.5">
                     <div className="flex items-center justify-between gap-3">
@@ -412,14 +412,14 @@ export default function AddEnquiryModal({
                       <button
                         type="button"
                         onClick={() => applyDuplicate(contact)}
-                        className="shrink-0 text-xs font-medium text-amber-900 underline underline-offset-2 hover:text-amber-950"
+                        className="shrink-0 text-xs font-medium text-warning-fg underline underline-offset-2 hover:text-amber-950"
                       >
                         Use details
                       </button>
                     </div>
                     <ul className="mt-0.5 space-y-0.5">
                       {contact.trips.map(trip => (
-                        <li key={trip.key} className="text-xs text-amber-700/80 truncate">
+                        <li key={trip.key} className="text-xs text-warning-fg/80 truncate">
                           {trip.tripTitle} · {journeyBadge(trip.representative).label}{trip.seatCount > 1 ? ` · ${trip.seatCount} seats` : ''}
                         </li>
                       ))}
@@ -427,7 +427,7 @@ export default function AddEnquiryModal({
                   </li>
                 ))}
                 {possibleDuplicates.length > 5 && (
-                  <li className="py-1.5 text-xs text-amber-700/80">+ {possibleDuplicates.length - 5} more</li>
+                  <li className="py-1.5 text-xs text-warning-fg/80">+ {possibleDuplicates.length - 5} more</li>
                 )}
               </ul>
             </div>

@@ -368,8 +368,8 @@ export default function AdminTripFinance() {
   const kpis = [
     { label: 'Total Revenue', value: formatPrice(totals.revenue) },
     { label: 'Total Costs', value: formatPrice(totals.costs) },
-    { label: 'Net Profit', value: formatPrice(totals.profit), tone: totals.profit >= 0 ? 'text-green-700' : 'text-red-600' },
-    { label: 'Profit Margin', value: `${margin}%`, tone: totals.profit >= 0 ? 'text-green-700' : 'text-red-600' },
+    { label: 'Net Profit', value: formatPrice(totals.profit), tone: totals.profit >= 0 ? 'text-success-fg' : 'text-danger-fg' },
+    { label: 'Profit Margin', value: `${margin}%`, tone: totals.profit >= 0 ? 'text-success-fg' : 'text-danger-fg' },
   ];
 
   const filters: { id: StatusFilter; label: string }[] = [
@@ -393,7 +393,7 @@ export default function AdminTripFinance() {
       )}
       <div className="space-y-5">
         {needsMigration && (
-          <div role="alert" className="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm p-3">
+          <div role="alert" className="rounded-lg bg-warning-bg border border-warning-border text-warning-fg text-sm p-3">
             Finance is not being saved after trips complete yet. Run <span className="font-mono">supabase/migration/add_trip_finance_snapshots.sql</span> once in the Supabase SQL Editor. Until then this tab only shows trips that still exist under Upcoming Trips.
           </div>
         )}
@@ -458,7 +458,7 @@ export default function AdminTripFinance() {
             {visible.map(r => {
               const open = openId === r.id;
               const s = r.summary;
-              const profitTone = s && s.netProfit < 0 ? 'text-red-600' : 'text-green-700';
+              const profitTone = s && s.netProfit < 0 ? 'text-danger-fg' : 'text-success-fg';
               return (
                 <div key={r.id} className="bg-white rounded-lg shadow-card overflow-hidden">
                   <button
@@ -470,7 +470,7 @@ export default function AdminTripFinance() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-medium text-dark">{r.title}</span>
-                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${r.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-primary/10 text-primary'}`}>
+                        <span className={`text-[11px] font-medium px-2 py-0.5 rounded-md ${r.status === 'completed' ? 'bg-success-bg text-success-fg' : 'bg-primary/10 text-primary'}`}>
                           {r.status === 'completed' ? 'Completed' : 'Upcoming'}
                         </span>
                       </div>
@@ -500,7 +500,7 @@ export default function AdminTripFinance() {
                     <div className="border-t border-background-warm p-4 grid gap-4 lg:grid-cols-2">
                       <section>
                         <div className="flex items-center justify-between gap-2 mb-2">
-                          <h3 className="text-xs font-medium text-dark-muted">Finances & Profit <span className="text-dark-muted/70">(internal only)</span></h3>
+                          <h3 className="text-xs font-medium text-dark-muted">Finances & Profit <span className="text-dark-muted/75">(internal only)</span></h3>
                           <Button variant="outline" size="sm" onClick={() => openEdit(r)}>
                             <PencilSimple size={14} aria-hidden="true" /> {r.finance ? 'Edit finances' : 'Add finances'}
                           </Button>
@@ -568,7 +568,7 @@ export default function AdminTripFinance() {
         }
         footer={
           <div className="space-y-2">
-            {saveError && <p role="alert" className="text-xs text-red-600">{saveError}</p>}
+            {saveError && <p role="alert" className="text-xs text-danger-fg">{saveError}</p>}
             <div className="flex gap-3">
               <Button variant="outline" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={closeEdit} disabled={saving}>Cancel</Button>
               <Button variant="primary" size="md" className="flex-1 max-sm:!px-4 max-sm:!py-2.5 max-sm:!text-sm max-sm:!min-h-[44px]" onClick={saveEdit} loading={saving}>Save Changes</Button>
@@ -577,7 +577,7 @@ export default function AdminTripFinance() {
         }
       >
         {modalSearchNoMatch && (
-          <p role="status" className="text-xs text-red-500 -mt-2 mb-3">No matching field found for "{modalSearch}".</p>
+          <p role="status" className="text-xs text-danger-fg -mt-2 mb-3">No matching field found for "{modalSearch}".</p>
         )}
         {editingRow && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">

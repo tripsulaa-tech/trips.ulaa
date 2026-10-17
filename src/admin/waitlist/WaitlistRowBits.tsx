@@ -31,7 +31,7 @@ export function QueueRankBadge({ entry, queueRank }: {
         ? `First in line for this trip — ${rank!.total} waiting in total`
         : `#${rank!.rank} of ${rank!.total} waiting for this trip — ${rank!.rank - 1} waited longer`}
       className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${
-        rank!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+        rank!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-warning-bg text-warning-fg'
       }`}
     >
       #{rank!.rank} of {rank!.total} waiting
@@ -46,7 +46,7 @@ export function ConvertedProgressBadge({ entry }: { entry: WaitlistEntry }) {
   return (
     <span
       title={`${convertedCount(entry)} of ${seatsNeeded(entry)} in this group converted so far — ${seatsRemaining(entry)} left to go`}
-      className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 whitespace-nowrap"
+      className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-info-bg text-info-fg whitespace-nowrap"
     >
       <CheckCircle2 size={9} aria-hidden="true" /> {convertedCount(entry)}/{seatsNeeded(entry)} converted
     </span>
@@ -61,7 +61,7 @@ export function SeatAvailabilityBadges({ entry, seatsAvailable }: {
 }) {
   if (hasSeatOpen(entry, seatsAvailable)) {
     return (
-      <span className="mt-1 inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
+      <span className="mt-1 inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md bg-success-bg text-success-fg whitespace-nowrap">
         <PartyPopper size={10} className="shrink-0" aria-hidden="true" />
         {seatsAvailable[entry.trip_id]} seat{seatsAvailable[entry.trip_id] === 1 ? '' : 's'} open
       </span>
@@ -71,7 +71,7 @@ export function SeatAvailabilityBadges({ entry, seatsAvailable }: {
     return (
       <span
         title={`Needs ${seatsRemaining(entry)} more seats free together — only ${seatsAvailable[entry.trip_id]} open so far`}
-        className="mt-1 inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 whitespace-nowrap"
+        className="mt-1 inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md bg-warning-bg text-warning-fg whitespace-nowrap"
       >
         {seatsAvailable[entry.trip_id]}/{seatsRemaining(entry)} seats open
       </span>
@@ -92,14 +92,14 @@ export function ConvertedStatusBadges({ entry, cancelledEnquiryIds }: {
   const cancelledCount = ids.filter(id => cancelledEnquiryIds.has(id)).length;
   return (
     <>
-      <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-green-100 text-green-700 whitespace-nowrap">
+      <span className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-success-bg text-success-fg whitespace-nowrap">
         <CheckCircle2 size={12} className="shrink-0" aria-hidden="true" />
         Converted{convertedCount(entry) > 1 ? ` (${convertedCount(entry)}/${convertedCount(entry)})` : ''}
       </span>
       {cancelledCount > 0 && (
         <span
           title="At least one of this group's bookings was cancelled after converting — that seat is free again."
-          className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-red-100 text-red-700 whitespace-nowrap"
+          className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-danger-bg text-danger-fg whitespace-nowrap"
         >
           <XCircle size={12} className="shrink-0" aria-hidden="true" />
           {ids.length > 1 ? `${cancelledCount}/${ids.length} cancelled` : 'Booking cancelled'}
@@ -160,7 +160,7 @@ export function WaitlistStatusControl({ entry, idPrefix, updating, onStatusChang
       {expiry && (
         <span
           className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${expiryBadgeClassName} ${
-            expiry.overdue ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+            expiry.overdue ? 'bg-danger-bg text-danger-fg' : 'bg-info-bg text-info-fg'
           }`}
         >
           <Clock size={9} className="shrink-0" aria-hidden="true" /> {expiry.text}

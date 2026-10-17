@@ -182,8 +182,8 @@ function averageResponseTime(list: Enquiry[]): string {
 type Tone = 'primary' | 'green' | 'red';
 const TONE_STYLES: Record<Tone, { bg: string; text: string }> = {
   primary: { bg: 'bg-primary/10', text: 'text-primary' },
-  green: { bg: 'bg-green-100', text: 'text-green-700' },
-  red: { bg: 'bg-red-100', text: 'text-red-600' },
+  green: { bg: 'bg-success-bg', text: 'text-success-fg' },
+  red: { bg: 'bg-danger-bg', text: 'text-danger-fg' },
 };
 
 const cardVariants = {
@@ -216,7 +216,7 @@ function StatCard({
         <p className="font-display text-xl sm:text-2xl font-bold text-dark leading-tight truncate">{value}</p>
       </div>
       <p className="text-dark-muted text-xs font-medium truncate mt-2">{label}</p>
-      {sub && <p className="text-dark-muted/70 text-2xs mt-0.5 truncate">{sub}</p>}
+      {sub && <p className="text-dark-muted/75 text-2xs mt-0.5 truncate">{sub}</p>}
     </motion.div>
   );
 }
@@ -1052,8 +1052,8 @@ export default function AdminReports() {
                           <td className="px-4 py-2.5 text-dark font-medium truncate max-w-[180px]">{p.name}</td>
                           <td className="px-4 py-2.5 text-dark-muted truncate max-w-[180px]">{p.trip}</td>
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{formatPrice(p.total)}</td>
-                          <td className="px-4 py-2.5 text-green-700 text-right whitespace-nowrap">{formatPrice(p.paid)}</td>
-                          <td className={`px-4 py-2.5 font-semibold text-right whitespace-nowrap ${p.balance > 0 ? 'text-primary' : 'text-green-700'}`}>
+                          <td className="px-4 py-2.5 text-success-fg text-right whitespace-nowrap">{formatPrice(p.paid)}</td>
+                          <td className={`px-4 py-2.5 font-semibold text-right whitespace-nowrap ${p.balance > 0 ? 'text-primary' : 'text-success-fg'}`}>
                             {p.balance > 0 ? formatPrice(p.balance) : 'Paid'}
                           </td>
                         </motion.tr>
@@ -1064,8 +1064,8 @@ export default function AdminReports() {
                         <td className="px-4 py-2.5 text-dark">Total</td>
                         <td className="px-4 py-2.5"></td>
                         <td className="px-4 py-2.5 text-dark text-right whitespace-nowrap">{formatPrice(balancesTotal.total)}</td>
-                        <td className="px-4 py-2.5 text-green-700 text-right whitespace-nowrap">{formatPrice(balancesTotal.paid)}</td>
-                        <td className={`px-4 py-2.5 text-right whitespace-nowrap ${balancesTotal.balance > 0 ? 'text-primary' : 'text-green-700'}`}>
+                        <td className="px-4 py-2.5 text-success-fg text-right whitespace-nowrap">{formatPrice(balancesTotal.paid)}</td>
+                        <td className={`px-4 py-2.5 text-right whitespace-nowrap ${balancesTotal.balance > 0 ? 'text-primary' : 'text-success-fg'}`}>
                           {formatPrice(balancesTotal.balance)}
                         </td>
                       </tr>
@@ -1120,7 +1120,7 @@ export default function AdminReports() {
                             {t.retainedRevenue > 0 && <span className="block text-[11px] font-normal text-dark-muted">incl. {formatPrice(t.retainedRevenue)} kept from cancelled/no-show</span>}
                           </td>
                           <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(t.totalCosts)}</td>
-                          <td className={`px-4 py-2.5 font-semibold text-right whitespace-nowrap ${t.netProfit < 0 ? 'text-red-600' : 'text-green-700'}`}>
+                          <td className={`px-4 py-2.5 font-semibold text-right whitespace-nowrap ${t.netProfit < 0 ? 'text-danger-fg' : 'text-success-fg'}`}>
                             {formatPrice(t.netProfit)}
                           </td>
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{formatPrice(Math.round(t.profitPerPerson))}</td>
@@ -1196,8 +1196,8 @@ export default function AdminReports() {
                           <td className="px-4 py-2.5 text-dark-muted text-right whitespace-nowrap">{t.seatsBooked}/{t.totalSeats}</td>
                           <td className="px-4 py-2.5 text-dark font-semibold text-right">{t.occupancyPct}%</td>
                           <td className="px-4 py-2.5 text-dark font-semibold text-right whitespace-nowrap">{formatPrice(t.expected)}</td>
-                          <td className="px-4 py-2.5 text-green-700 font-semibold text-right whitespace-nowrap">{formatPrice(t.collected)}</td>
-                          <td className="px-4 py-2.5 text-amber-600 font-semibold text-right whitespace-nowrap">{formatPrice(t.pending)}</td>
+                          <td className="px-4 py-2.5 text-success-fg font-semibold text-right whitespace-nowrap">{formatPrice(t.collected)}</td>
+                          <td className="px-4 py-2.5 text-warning-fg font-semibold text-right whitespace-nowrap">{formatPrice(t.pending)}</td>
                           <td className="px-4 py-2.5 text-primary font-semibold text-right whitespace-nowrap">{formatPrice(t.extra)}</td>
                         </motion.tr>
                       ))}

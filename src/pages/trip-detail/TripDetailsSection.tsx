@@ -82,7 +82,7 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
             href={safeHref(trip.meeting_point_map_url) || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(trip.meeting_point)}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-button font-semibold text-primary hover:text-primary-dark transition-colors"
           >
             <MapPin size={15} /> View on map
           </a>

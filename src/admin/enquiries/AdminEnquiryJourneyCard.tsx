@@ -121,7 +121,7 @@ export default function AdminEnquiryJourneyCard({
           {(discountAmount > 0 || addonsAmount > 0) && (
             <div className="flex flex-wrap items-center gap-2">
               {discountAmount > 0 && enquiry.discount_reason && (
-                <span className="inline-flex items-center gap-1 text-2xs font-button font-semibold text-green-700 bg-green-50 rounded-md px-2.5 py-1">
+                <span className="inline-flex items-center gap-1 text-2xs font-button font-semibold text-success-fg bg-success-bg rounded-md px-2.5 py-1">
                   <Tag size={11} aria-hidden="true" /> {enquiry.discount_reason}
                 </span>
               )}
@@ -170,12 +170,12 @@ export default function AdminEnquiryJourneyCard({
               </div>
             </div>
             <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
-              <span className="w-9 h-9 rounded-full bg-green-100 text-green-600 inline-flex items-center justify-center shrink-0">
+              <span className="w-9 h-9 rounded-full bg-success-bg text-success-fg inline-flex items-center justify-center shrink-0">
                 <CheckCircle2 size={17} aria-hidden="true" />
               </span>
               <div className="min-w-0">
                 <p className="text-dark-muted text-2xs">{forfeited ? 'Paid (forfeited)' : 'Paid Amount'}</p>
-                <p className={`${forfeited ? 'text-orange-700' : 'text-green-700'} text-sm font-bold`}>{formatPrice(paidAmount)}</p>
+                <p className={`${forfeited ? 'text-orange-700' : 'text-success-fg'} text-sm font-bold`}>{formatPrice(paidAmount)}</p>
               </div>
             </div>
             {/* Only shown while something is still owed — at ₹0 it was just a
@@ -183,12 +183,12 @@ export default function AdminEnquiryJourneyCard({
                 above already says the balance is cleared. */}
             {pendingAmount > 0 && (
               <div className="flex items-center gap-2.5 bg-background-warm/60 border border-background-warm rounded-lg px-3 py-2.5">
-                <span className="w-9 h-9 rounded-full bg-amber-100 text-amber-600 inline-flex items-center justify-center shrink-0">
+                <span className="w-9 h-9 rounded-full bg-warning-bg text-warning-fg inline-flex items-center justify-center shrink-0">
                   <Clock size={17} aria-hidden="true" />
                 </span>
                 <div className="min-w-0">
                   <p className="text-dark-muted text-2xs">Balance</p>
-                  <p className="text-amber-600 text-sm font-bold">{formatPrice(pendingAmount)}</p>
+                  <p className="text-warning-fg text-sm font-bold">{formatPrice(pendingAmount)}</p>
                 </div>
               </div>
             )}

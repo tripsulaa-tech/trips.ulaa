@@ -21,7 +21,7 @@ export default function AdminSharedPhoneAlert({
   const visible = showAll ? groups : groups.slice(0, COLLAPSED_COUNT);
 
   return (
-    <div className="rounded-lg bg-amber-50 border border-amber-200 text-amber-900 p-4 space-y-3" role="alert">
+    <div className="rounded-lg bg-warning-bg border border-warning-border text-warning-fg p-4 space-y-3" role="alert">
       <div className="flex items-start gap-2.5">
         <Warning size={18} className="shrink-0 mt-0.5" aria-hidden="true" />
         <div>
@@ -41,7 +41,7 @@ export default function AdminSharedPhoneAlert({
           >
             <div className="min-w-0">
               <p className="text-sm font-semibold">{formatPhone(g.phone)}</p>
-              <p className="text-xs text-amber-800 break-words">{g.contacts.map(c => c.fullName).join(' · ')}</p>
+              <p className="text-xs text-warning-fg break-words">{g.contacts.map(c => c.fullName).join(' · ')}</p>
             </div>
             <button
               type="button"
@@ -57,7 +57,7 @@ export default function AdminSharedPhoneAlert({
         <button
           type="button"
           onClick={() => setShowAll(v => !v)}
-          className="text-xs font-button font-semibold text-amber-800 hover:underline"
+          className="text-xs font-button font-semibold text-warning-fg hover:underline"
         >
           {showAll ? 'Show fewer' : `Show all ${groups.length}`}
         </button>

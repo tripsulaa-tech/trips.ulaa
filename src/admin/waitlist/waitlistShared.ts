@@ -17,13 +17,13 @@ import { FOOD_PREFERENCE_OPTIONS, foodPreferenceBadge } from '../../constants/fo
 export { FOOD_PREFERENCE_OPTIONS };
 
 export const STATUS_CONFIG = {
-  waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700', icon: Circle },
+  waiting: { label: 'Waiting', color: 'bg-warning-bg text-warning-fg', icon: Circle },
   // Displayed label is deliberately "Offer Sent" rather than "Notified" —
   // the underlying DB value/status key stays 'notified' (no migration
   // needed), only the admin-facing copy changed.
-  notified: { label: 'Offer Sent', color: 'bg-blue-100 text-blue-700', icon: Bell },
-  converted: { label: 'Converted', color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
-  declined: { label: 'Declined', color: 'bg-red-100 text-red-700', icon: XCircle },
+  notified: { label: 'Offer Sent', color: 'bg-info-bg text-info-fg', icon: Bell },
+  converted: { label: 'Converted', color: 'bg-success-bg text-success-fg', icon: CheckCircle2 },
+  declined: { label: 'Declined', color: 'bg-danger-bg text-danger-fg', icon: XCircle },
   // A waiting entry that sat too long without being offered a seat or
   // converting — manually set by the admin, same as declined.
   expired: { label: 'Expired', color: 'bg-slate-200 text-dark-muted', icon: Clock },

@@ -11,7 +11,7 @@ import { WarningCircle as AlertCircle } from '@phosphor-icons/react';
 type Props = { mfa: NonNullable<MfaState> };
 
 const inputClass =
-  'w-full px-4 py-3 rounded-md border-2 border-background-warm bg-background font-body text-dark text-center text-2xl tracking-[0.4em] placeholder-dark-muted/40 transition-all duration-200 outline-none focus:border-primary focus:bg-white';
+  'w-full px-4 py-3 rounded-md border-2 border-background-warm bg-background font-body text-dark text-center text-2xl tracking-[0.4em] placeholder-dark-muted/75 transition-all duration-200 outline-none focus:border-primary focus:bg-white';
 
 export default function AdminMfaStep({ mfa }: Props) {
   const { signOut, completeMfa } = useAuth();
@@ -83,7 +83,7 @@ export default function AdminMfaStep({ mfa }: Props) {
             Scan this code with the app, then enter the 6-digit code it shows.
           </p>
           {setupError && (
-            <div role="alert" className="flex items-center gap-2 text-red-600 bg-red-50 rounded-md p-3">
+            <div role="alert" className="flex items-center gap-2 text-danger-fg bg-danger-bg rounded-md p-3">
               <AlertCircle size={16} className="shrink-0" aria-hidden="true" />
               <p className="text-sm">{setupError}</p>
             </div>
@@ -124,7 +124,7 @@ export default function AdminMfaStep({ mfa }: Props) {
         </div>
 
         {error && (
-          <div id="admin-mfa-error" role="alert" className="flex items-center gap-2 text-red-600 bg-red-50 rounded-md p-3">
+          <div id="admin-mfa-error" role="alert" className="flex items-center gap-2 text-danger-fg bg-danger-bg rounded-md p-3">
             <AlertCircle size={16} className="shrink-0" aria-hidden="true" />
             <p className="text-sm">{error}</p>
           </div>

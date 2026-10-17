@@ -184,7 +184,7 @@ export default function AlbumPage() {
       aria-label={liked ? 'Unlike this album' : 'Like this album'}
       className={`inline-flex items-center justify-center gap-1.5 h-10 min-w-10 rounded-full text-sm font-button font-bold tabular-nums transition-all active:scale-[0.94] cursor-pointer disabled:opacity-70 disabled:cursor-default ${
         where === 'hero' ? 'bg-white shadow-warm hover:bg-background' : 'bg-white ring-1 ring-black/10 hover:bg-background-warm'
-      } ${album.likes_count > 0 ? 'px-3.5' : 'px-0'} ${liked ? 'text-red-500' : 'text-dark-muted'}`}
+      } ${album.likes_count > 0 ? 'px-3.5' : 'px-0'} ${liked ? 'text-danger-fg' : 'text-dark-muted'}`}
     >
       <motion.span
         key={liked ? 'liked' : 'idle'}
@@ -316,7 +316,7 @@ export default function AlbumPage() {
                 const inner = (
                   <>
                     <span className="leading-tight sm:text-left">
-                      <span className="block text-[11px] sm:text-xs font-button font-semibold uppercase tracking-[0.1em] text-dark-muted/70">
+                      <span className="block text-[11px] sm:text-xs font-button font-semibold uppercase tracking-[0.1em] text-dark-muted/75">
                         {label}
                       </span>
                       <span className="mt-0.5 flex items-center justify-center sm:justify-start gap-1 font-bold text-dark group-hover:text-primary transition-colors text-[15px] sm:text-base whitespace-nowrap">

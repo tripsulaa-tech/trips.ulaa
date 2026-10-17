@@ -102,7 +102,7 @@ export default function TripConfidenceBookingSection({
                   onClick={() => toggleInSet(setActiveConfidenceItems, i)}
                   aria-expanded={activeConfidenceItems.has(i)}
                   aria-label={`${item.description} — tap for details`}
-                  className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                  className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:pointer-events-none"
                 />
                 {item.icon && (
                   <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" filled={activeConfidenceItems.has(i)} hoverFill />
@@ -128,7 +128,7 @@ export default function TripConfidenceBookingSection({
                   <p className="text-dark-muted text-xs mt-1">per person{basicPackageName ? ` · ${basicPackageName} package` : ''}</p>
 
                   <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
-                    <span className="bg-green-50 border border-green-200 text-green-700 text-xs font-button font-medium px-2.5 py-1 rounded-md">
+                    <span className="bg-success-bg border border-success-border text-success-fg text-xs font-button font-medium px-2.5 py-1 rounded-md">
                       Save {formatPrice(saveAmount as number)}
                     </span>
                     {showPlusOffer && (
@@ -187,21 +187,21 @@ export default function TripConfidenceBookingSection({
           )}
           <div className="mb-6">
             {isFull ? (
-              <span className="inline-block bg-red-50 text-red-600 text-sm font-button font-semibold px-4 py-2 rounded-md">
+              <span className="inline-block bg-danger-bg text-danger-fg text-sm font-button font-semibold px-4 py-2 rounded-md">
                 Sold Out
               </span>
             ) : isAlmostFull ? (
-              <span className="inline-block bg-amber-50 text-amber-700 text-sm font-button font-semibold px-4 py-2 rounded-md">
+              <span className="inline-block bg-warning-bg text-warning-fg text-sm font-button font-semibold px-4 py-2 rounded-md">
                 Only {remaining} seats left — almost full!
               </span>
             ) : trip.advance_amount != null ? (
-              <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3 justify-center">
+              <div className="flex items-center gap-3 bg-success-bg border border-success-border rounded-lg px-4 py-3 justify-center">
                 <span className="shrink-0 w-9 h-9 rounded-full bg-green-600 flex items-center justify-center">
                   <ShieldCheck size={18} className="text-white" strokeWidth={2.5} />
                 </span>
                 <div className="text-left">
                   <p className="text-dark font-semibold text-sm sm:text-base">
-                    Reserve today with only <span className="text-green-600 font-bold">{formatPrice(trip.advance_amount)}</span>
+                    Reserve today with only <span className="text-success-fg font-bold">{formatPrice(trip.advance_amount)}</span>
                   </p>
                   {remainingAfterAdvance != null && (
                     <p className="text-dark-muted text-xs sm:text-sm mt-0.5">
@@ -211,7 +211,7 @@ export default function TripConfidenceBookingSection({
                 </div>
               </div>
             ) : (
-              <span className="inline-block bg-green-50 text-green-700 text-sm font-button font-semibold px-4 py-2 rounded-md">
+              <span className="inline-block bg-success-bg text-success-fg text-sm font-button font-semibold px-4 py-2 rounded-md">
                 Seats available
               </span>
             )}
@@ -315,7 +315,7 @@ export default function TripConfidenceBookingSection({
           </div>
 
           <div className="flex items-start justify-center gap-1.5 text-xs text-dark-muted mt-4">
-            <BadgeCheck size={14} className="text-green-600 shrink-0 mt-0.5" />
+            <BadgeCheck size={14} className="text-success-fg shrink-0 mt-0.5" />
             <span className="text-left">
               No payment required to enquire. We'll contact you {RESPONSE_TIME}.
             </span>

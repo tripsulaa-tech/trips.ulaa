@@ -19,11 +19,11 @@ export default function DumbCharadesPlayPage() {
 
   return (
     <Layout>
-      <section className="relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream min-h-[70vh]">
+      <section className="relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream min-h-[70vh]">
         <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-[28rem] h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
         <div className="relative max-w-md mx-auto px-4 sm:px-6 pt-36 pb-16 sm:pt-44 text-center">
           <motion.span
-            className="w-16 h-16 mx-auto mb-4 rounded-[22px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
+            className="w-16 h-16 mx-auto mb-4 rounded-[22px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
             animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
             transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             aria-hidden="true"

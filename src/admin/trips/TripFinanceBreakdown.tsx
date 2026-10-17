@@ -38,7 +38,7 @@ export default function TripFinanceBreakdown({ finance, summary: s, estimated = 
       {s.organiserItems.map(c => (
         <div key={c.id} className="flex justify-between pl-4 text-xs"><span className="text-dark-muted">{c.name || 'Unnamed expense'}</span><span className="text-dark-muted">{formatPrice(c.amount)}</span></div>
       ))}
-      <div className="flex justify-between border-t border-background-warm pt-1.5 text-base"><span className="font-semibold text-dark">Net Profit</span><span className={`font-bold ${s.netProfit >= 0 ? 'text-green-700' : 'text-red-600'}`}>{formatPrice(s.netProfit)}</span></div>
+      <div className="flex justify-between border-t border-background-warm pt-1.5 text-base"><span className="font-semibold text-dark">Net Profit</span><span className={`font-bold ${s.netProfit >= 0 ? 'text-success-fg' : 'text-danger-fg'}`}>{formatPrice(s.netProfit)}</span></div>
       {finance.agency_name && (
         <p className="text-xs text-dark-muted pt-1">Agency: {finance.agency_name}</p>
       )}

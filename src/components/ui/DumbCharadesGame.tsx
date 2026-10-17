@@ -208,7 +208,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
       />
 
       <Modal isOpen={phase !== 'idle'} onClose={close} ariaLabel="Dumb Charades Tamil movies group game" size="sm" flush fullScreen>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md flex flex-col">
             <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
             <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -216,14 +216,14 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
             {phase === 'setup' && (
               <div className="relative text-center pt-3 md:pt-0">
                 <motion.div
-                  className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
+                  className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                   animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                   aria-hidden="true"
                 >
                   <FilmSlate size={46} weight="duotone" />
                 </motion.div>
-                <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Teams · {MIN_TEAMS} to {MAX_TEAMS}</span>
+                <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Teams · {MIN_TEAMS} to {MAX_TEAMS}</span>
                 <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Dumb Charades</h2>
                 <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Act out Tamil movies without a word. Your team guesses before the clock runs out.</p>
 
@@ -239,7 +239,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
                           aria-label={`Team ${i + 1} name`}
                           placeholder={`Team ${i + 1}`}
                           onChange={e => setTeamName(i, e.target.value)}
-                          className="min-w-0 flex-1 rounded-xl bg-white/[0.07] border border-white/15 focus:border-[#F0CE7A]/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/30 outline-none transition-colors"
+                          className="min-w-0 flex-1 rounded-xl bg-white/[0.07] border border-white/15 focus:border-gold-300/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/55 outline-none transition-colors"
                         />
                         {teamNames.length > MIN_TEAMS && (
                           <button type="button" onClick={() => removeTeam(i)} aria-label={`Remove team ${i + 1}`} className={iconBtn}><X size={16} /></button>
@@ -248,7 +248,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
                     ))}
                   </ul>
                   {teamNames.length < MAX_TEAMS && (
-                    <button type="button" onClick={addTeam} className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[#F0CE7A] hover:text-white transition-colors">
+                    <button type="button" onClick={addTeam} className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-gold-300 hover:text-white transition-colors">
                       <Plus size={14} weight="bold" /> Add team
                     </button>
                   )}
@@ -291,7 +291,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
                 <button type="button" onClick={start} disabled={!poolOk} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
                   <Play size={18} weight="fill" /> Start the game
                 </button>
-                <p className="mt-3 text-[11px] text-cream/40 px-4">No talking, no pointing at objects. Tap your arm for the number of words, or act out each word one by one.</p>
+                <p className="mt-3 text-[11px] text-cream/55 px-4">No talking, no pointing at objects. Tap your arm for the number of words, or act out each word one by one.</p>
                 <button type="button" onClick={toggleMute} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                   {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />} Sound {muted ? 'off' : 'on'}
                 </button>
@@ -314,7 +314,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
                   ))}
                 </ul>
                 <p className="mb-4 text-sm text-cream/60 flex items-center justify-center gap-2">
-                  <DeviceMobile size={18} weight="duotone" className="text-[#F0CE7A]" aria-hidden="true" />
+                  <DeviceMobile size={18} weight="duotone" className="text-gold-300" aria-hidden="true" />
                   Pass the phone to one actor. Guessers, look away!
                 </p>
                 <button type="button" onClick={begin} className={primaryBtn}><Eye size={18} weight="bold" /> I'm the actor, start the {seconds}s clock</button>
@@ -331,7 +331,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
                   </div>
                   <div className="text-right">
                     <p className={eyebrow}>This turn</p>
-                    <p className="font-display text-lg font-extrabold text-[#F0CE7A] tabular-nums">{gotThisTurn}</p>
+                    <p className="font-display text-lg font-extrabold text-gold-300 tabular-nums">{gotThisTurn}</p>
                   </div>
                   <TimerRing secondsLeft={left} progress={1 - left / seconds} />
                 </div>
@@ -341,12 +341,12 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
                   initial={reduce ? false : { opacity: 0, y: 16, scale: 0.97 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   transition={{ duration: 0.25 }}
-                  className="rounded-3xl p-6 min-h-[14rem] flex flex-col items-center justify-center border bg-gradient-to-br from-[#F0CE7A]/20 to-gold/10 border-gold/40 mb-4"
+                  className="rounded-3xl p-6 min-h-[14rem] flex flex-col items-center justify-center border bg-gradient-to-br from-gold-300/20 to-gold/10 border-gold/40 mb-4"
                 >
-                  <FilmSlate size={34} weight="duotone" className="text-[#F0CE7A] mb-3" aria-hidden="true" />
+                  <FilmSlate size={34} weight="duotone" className="text-gold-300 mb-3" aria-hidden="true" />
                   <h2 className="font-display text-4xl font-extrabold leading-tight text-white break-words" aria-live="polite">{movie.title}</h2>
                   {hint
-                    ? <p className="mt-3 text-sm text-[#F0CE7A]">{hintText}</p>
+                    ? <p className="mt-3 text-sm text-gold-300">{hintText}</p>
                     : <button type="button" onClick={() => { play('click'); setHint(true); }} className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/60 hover:text-white transition-colors"><Lightbulb size={14} weight="duotone" /> Show hint for your team</button>}
                 </motion.div>
 
@@ -382,7 +382,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
             {phase === 'final' && (
               <div className="relative text-center pt-3">
                 {topScore > 0 && !reduce && <Confetti />}
-                <span className="w-16 h-16 mx-auto mb-3 rounded-[22px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]" aria-hidden="true">
+                <span className="w-16 h-16 mx-auto mb-3 rounded-[22px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]" aria-hidden="true">
                   <Trophy size={34} weight="duotone" />
                 </span>
                 <h2 className={`font-display text-4xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
@@ -393,7 +393,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
                   {teams.map((t, i) => (
                     <li key={t} className="flex items-center justify-between gap-3 px-3.5 py-3">
                       <span className="font-semibold text-white truncate">{t}</span>
-                      <span className="font-display text-xl font-extrabold text-[#F0CE7A] tabular-nums">{scores[i]}</span>
+                      <span className="font-display text-xl font-extrabold text-gold-300 tabular-nums">{scores[i]}</span>
                     </li>
                   ))}
                 </ul>

@@ -22,7 +22,7 @@ interface AdminTripCheckInModalProps {
 }
 
 // Same text colours the Enquiries table uses for its Food column.
-const FOOD_TEXT_COLOR = { veg: 'text-green-700', non_veg: 'text-red-700', not_set: 'text-dark-muted' } as const;
+const FOOD_TEXT_COLOR = { veg: 'text-success-fg', non_veg: 'text-danger-fg', not_set: 'text-dark-muted' } as const;
 
 const smallBtn =
   'inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1.5 rounded-md whitespace-nowrap transition-colors disabled:opacity-50 disabled:cursor-not-allowed';
@@ -141,7 +141,7 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-button font-semibold px-2 py-1 rounded-md bg-green-100 text-green-700">
+                <span className="text-xs font-button font-semibold px-2 py-1 rounded-md bg-success-bg text-success-fg">
                   {booked.length} Booked
                 </span>
                 <span className="text-xs font-button font-semibold px-2 py-1 rounded-md bg-indigo-100 text-indigo-700">
@@ -173,7 +173,7 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
           {loading ? (
             <p className="text-center py-10 text-dark-muted text-sm">Loading...</p>
           ) : error ? (
-            <p role="alert" className="text-center py-10 text-red-600 text-sm">Couldn't load bookings. Close this and try again.</p>
+            <p role="alert" className="text-center py-10 text-danger-fg text-sm">Couldn't load bookings. Close this and try again.</p>
           ) : booked.length === 0 ? (
             <p className="text-center py-10 text-dark-muted text-sm">No one is in Booked status for this trip yet.</p>
           ) : (
@@ -253,14 +253,14 @@ export default function AdminTripCheckInModal({ trip, onClose }: AdminTripCheckI
                           <LogIn size={13} aria-hidden="true" /> {busy ? 'Checking in…' : 'Check In'}
                         </button>
                       )}
-                      <span className={`text-2xs whitespace-nowrap ${due > 0 ? 'text-amber-700 font-medium' : 'text-dark-muted'}`}>
+                      <span className={`text-2xs whitespace-nowrap ${due > 0 ? 'text-warning-fg font-medium' : 'text-dark-muted'}`}>
                         {due > 0 ? `${formatPrice(due)} due` : 'Fully paid'}
                       </span>
                       {/* Booking email: status chip + the manual send button */}
                       <div className="flex items-center gap-1.5">
                         <span
                           title={emailStat ? `Last sent ${formatDate(emailStat.lastSentAt, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No booking email sent yet'}
-                          className={`text-2xs whitespace-nowrap ${emailStat ? 'text-green-700 font-medium' : 'text-dark-muted'}`}
+                          className={`text-2xs whitespace-nowrap ${emailStat ? 'text-success-fg font-medium' : 'text-dark-muted'}`}
                         >
                           {emailStat
                             ? `Emailed ×${emailStat.count} · ${formatDate(emailStat.lastSentAt, { day: 'numeric', month: 'short' })}`

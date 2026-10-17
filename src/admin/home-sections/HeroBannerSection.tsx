@@ -229,7 +229,7 @@ export default function HeroBannerSection({
                       onClick={() => removeSlide(slide.id)}
                       title="Remove"
                       aria-label={`Remove slide ${i + 1}`}
-                      className="p-1.5 rounded-full text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"
+                      className="p-1.5 rounded-full text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"
                     >
                       <Trash2 size={15} aria-hidden="true" />
                     </button>

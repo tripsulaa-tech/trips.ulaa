@@ -988,7 +988,7 @@ export default function AdminLogoStudio() {
                   </div>
                   <p className="text-2xs text-dark-muted">Preview shows the {cw} × {ch} px frame. Drag the logo, use the arrow keys, or type an exact X / Y shift in pixels (0 = centred); zoom in to crop the edges.</p>
                   {!customValid && (
-                    <p role="alert" className="text-2xs text-red-600">Each side must be {CUSTOM_MIN} to {CUSTOM_MAX} px, and the whole image no more than {CUSTOM_MAX_PIXELS / 1_000_000} million pixels.</p>
+                    <p role="alert" className="text-2xs text-danger-fg">Each side must be {CUSTOM_MIN} to {CUSTOM_MAX} px, and the whole image no more than {CUSTOM_MAX_PIXELS / 1_000_000} million pixels.</p>
                   )}
                 </div>
               )}

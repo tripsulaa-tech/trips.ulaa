@@ -13,7 +13,7 @@ interface DraftConflictNoticeProps {
  *  so pressing Save can never overwrite newer data without that being a deliberate choice. */
 export default function DraftConflictNotice({ subject, onRestore, onDiscard, className = '' }: DraftConflictNoticeProps) {
   return (
-    <div role="alert" className={`rounded-lg border-2 border-amber-300 bg-amber-50 px-4 py-3 ${className}`}>
+    <div role="alert" className={`rounded-lg border-2 border-warning-border bg-warning-bg px-4 py-3 ${className}`}>
       <p className="text-sm text-dark">
         <strong>The saved version of {subject} changed</strong> after you started editing it, so your unsaved
         draft is on hold. You are looking at the newer saved version.

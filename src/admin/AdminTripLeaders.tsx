@@ -304,7 +304,7 @@ export default function AdminTripLeaders() {
                         )}
                       </div>
                     </div>
-                    <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                    <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-success-bg text-success-fg' : 'bg-background-warm text-dark-muted'}`}>
                       {t.is_published ? 'Published' : 'Draft'}
                     </span>
                   </div>
@@ -373,7 +373,7 @@ export default function AdminTripLeaders() {
                         <td className="px-4 py-4 text-dark-muted hidden md:table-cell">{t.designation}</td>
                         <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.description}</td>
                         <td className="px-4 py-4 text-center">
-                          <span className={`text-xs font-button font-semibold px-3 py-1 rounded-md ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                          <span className={`text-xs font-button font-semibold px-3 py-1 rounded-md ${t.is_published ? 'bg-success-bg text-success-fg' : 'bg-background-warm text-dark-muted'}`}>
                             {t.is_published ? 'Published' : 'Draft'}
                           </span>
                         </td>
@@ -464,7 +464,7 @@ export default function AdminTripLeaders() {
                   type="button"
                   onClick={() => removeSocial(i)}
                   aria-label={`Remove ${link.platform || `social link ${i + 1}`}`}
-                  className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+                  className="p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"
                 >
                   <Trash2 size={14} aria-hidden="true" />
                 </button>
@@ -493,7 +493,7 @@ export default function AdminTripLeaders() {
         size="sm"
       >
         <div className="flex items-start gap-3">
-          <CheckCircle size={28} weight="fill" className="text-green-600 flex-shrink-0" aria-hidden="true" />
+          <CheckCircle size={28} weight="fill" className="text-success-fg flex-shrink-0" aria-hidden="true" />
           <p className="text-sm text-dark">
             {savedPrompt?.created
               ? <><strong>{savedPrompt.name}</strong> was added and will be selected as the leader for </>

@@ -123,7 +123,7 @@ export default function AdminEditTravellerModal({
             className={inputClass}
             placeholder="e.g. Priya Sharma"
           />
-          {touched && nameError && <p id="tc-edit-name-error" role="alert" className="text-red-500 text-xs mt-1">{nameError}</p>}
+          {touched && nameError && <p id="tc-edit-name-error" role="alert" className="text-danger-fg text-xs mt-1">{nameError}</p>}
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -138,7 +138,7 @@ export default function AdminEditTravellerModal({
               className={inputClass}
               placeholder="e.g. 98765 43210"
             />
-            {touched && phoneError && <p id="tc-edit-phone-error" role="alert" className="text-red-500 text-xs mt-1">{phoneError}</p>}
+            {touched && phoneError && <p id="tc-edit-phone-error" role="alert" className="text-danger-fg text-xs mt-1">{phoneError}</p>}
           </div>
           <div>
             <label htmlFor="tc-edit-phone2" className="block text-sm font-medium text-dark mb-1">Emergency contact</label>
@@ -152,7 +152,7 @@ export default function AdminEditTravellerModal({
               className={inputClass}
               placeholder="Optional"
             />
-            {touched && secondPhoneError && <p id="tc-edit-phone2-error" role="alert" className="text-red-500 text-xs mt-1">{secondPhoneError}</p>}
+            {touched && secondPhoneError && <p id="tc-edit-phone2-error" role="alert" className="text-danger-fg text-xs mt-1">{secondPhoneError}</p>}
           </div>
         </div>
         <p id="tc-edit-phone2-hint" className="text-2xs text-dark-muted -mt-2">
@@ -170,7 +170,7 @@ export default function AdminEditTravellerModal({
             className={inputClass}
             placeholder="Optional"
           />
-          {touched && emailError && <p id="tc-edit-email-error" role="alert" className="text-red-500 text-xs mt-1">{emailError}</p>}
+          {touched && emailError && <p id="tc-edit-email-error" role="alert" className="text-danger-fg text-xs mt-1">{emailError}</p>}
           {emailSuggestField.open && <SuggestionDropdown items={emailSuggestField.suggestions} onSelect={emailSuggestField.select} />}
         </div>
         <div className="relative">
@@ -185,15 +185,15 @@ export default function AdminEditTravellerModal({
             className={inputClass}
             placeholder="Optional"
           />
-          {touched && cityError && <p id="tc-edit-city-error" role="alert" className="text-red-500 text-xs mt-1">{cityError}</p>}
+          {touched && cityError && <p id="tc-edit-city-error" role="alert" className="text-danger-fg text-xs mt-1">{cityError}</p>}
           {citySuggestField.open && <SuggestionDropdown items={citySuggestField.suggestions} onSelect={citySuggestField.select} />}
         </div>
         <div>
           <span id="tc-edit-food-label" className="block text-sm font-medium text-dark mb-1">Food preference</span>
           <div role="radiogroup" aria-labelledby="tc-edit-food-label" className="grid grid-cols-3 gap-2">
             {([
-              { value: 'veg', label: 'Veg', active: 'border-green-600 bg-green-50 text-green-700' },
-              { value: 'non_veg', label: 'Non-veg', active: 'border-red-600 bg-red-50 text-red-700' },
+              { value: 'veg', label: 'Veg', active: 'border-green-600 bg-success-bg text-success-fg' },
+              { value: 'non_veg', label: 'Non-veg', active: 'border-red-600 bg-danger-bg text-danger-fg' },
               { value: '', label: 'Not set', active: 'border-dark-muted bg-background-warm text-dark' },
             ] as const).map(opt => {
               const selected = form.food_preference === opt.value;

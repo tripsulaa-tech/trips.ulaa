@@ -67,7 +67,7 @@ export default function Select<T extends string | number = string>({
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={isOpen}
-        className={`w-full flex items-center justify-between gap-2 text-dark text-left outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses} ${sizeClasses} ${className}`}
+        className={`w-full flex items-center justify-between gap-2 text-dark text-left outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses} ${sizeClasses} ${className}`}
       >
         <span className={`flex-1 min-w-0 truncate ${selected ? '' : 'text-dark-muted'}`}>
           {selected ? selected.label : placeholder}

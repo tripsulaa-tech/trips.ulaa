@@ -7,7 +7,7 @@ const SPECIAL_TONE: Record<SpecialId, string> = {
   joyFool: 'from-amber-300 to-orange-400',
   duelists: 'from-rose-300 to-red-400',
   boomerang: 'from-emerald-300 to-teal-400',
-  goddess: 'from-[#F0CE7A] to-gold',
+  goddess: 'from-gold-300 to-gold',
   ghost: 'from-sky-300 to-blue-400',
   revenger: 'from-fuchsia-300 to-pink-400',
   falafelVendor: 'from-yellow-200 to-amber-300',
@@ -49,9 +49,9 @@ export default function SpecialList({ on, onToggle, players }: { on: ReadonlySet
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-bold text-white leading-tight">{def.name}</span>
-                <span className={`block text-[12px] leading-snug mt-0.5 ${isShort ? 'text-cream/45' : 'text-cream/60'}`}>{SPECIAL_BLURB[def.id]}</span>
+                <span className={`block text-[12px] leading-snug mt-0.5 ${isShort ? 'text-cream/55' : 'text-cream/60'}`}>{SPECIAL_BLURB[def.id]}</span>
                 {isShort && (
-                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-300/15 border border-amber-200/30 px-2 py-0.5 text-[10px] font-bold text-amber-100">
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-300/15 border border-warning-border/30 px-2 py-0.5 text-[10px] font-bold text-amber-100">
                     <Users size={11} weight="bold" aria-hidden="true" />
                     Needs {needs}+ players · you have {players}{checked ? ' · joins in once there are enough' : ''}
                   </span>

@@ -725,7 +725,7 @@ export default function AdminEnquiries() {
                     <span className="shrink-0 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-background-warm text-dark-muted">Completed</span>
                   )}
                   {activeGroup?.isDeletedTrip && (
-                    <span className="shrink-0 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-50 text-red-600">Deleted</span>
+                    <span className="shrink-0 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-danger-bg text-danger-fg">Deleted</span>
                   )}
                 </p>
                 {activeGroup?.trip?.start_date && activeGroup.trip.end_date && (
@@ -747,8 +747,8 @@ export default function AdminEnquiries() {
                       {(food.veg > 0 || food.nonVeg > 0) && (
                         <>
                           {activeGroup?.trip && <span className="text-dark-muted/40" aria-hidden="true">|</span>}
-                          <span className="inline-flex items-center gap-1 text-green-700"><FoodMark type="veg" size={9} /> {food.veg} Veg</span>
-                          <span className="inline-flex items-center gap-1 text-red-700"><FoodMark type="non_veg" size={9} /> {food.nonVeg} Non-veg</span>
+                          <span className="inline-flex items-center gap-1 text-success-fg"><FoodMark type="veg" size={9} /> {food.veg} Veg</span>
+                          <span className="inline-flex items-center gap-1 text-danger-fg"><FoodMark type="non_veg" size={9} /> {food.nonVeg} Non-veg</span>
                         </>
                       )}
                     </p>
@@ -797,11 +797,11 @@ export default function AdminEnquiries() {
                         </div>
                         <div title="Already received from booked travellers">
                           <p className="text-dark-muted text-xs">Collected</p>
-                          <p className="text-green-700 font-semibold text-sm">{formatPrice(totals.collected)}</p>
+                          <p className="text-success-fg font-semibold text-sm">{formatPrice(totals.collected)}</p>
                         </div>
                         <div title="Still to be received from booked travellers">
                           <p className="text-dark-muted text-xs">Pending</p>
-                          <p className="text-amber-600 font-semibold text-sm">{formatPrice(totals.pending)}</p>
+                          <p className="text-warning-fg font-semibold text-sm">{formatPrice(totals.pending)}</p>
                         </div>
                         <div title="Extra money kept from cancelled or no-show bookings (paid minus refunded). Not part of Total Amount.">
                           <p className="text-dark-muted text-xs">Extra (Cancellation)</p>
@@ -848,7 +848,7 @@ export default function AdminEnquiries() {
             </p>
             <Link
               to={`/admin/waitlist?trip=${activeGroup.key}`}
-              className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded bg-orange-600 text-white hover:bg-orange-700 transition-colors whitespace-nowrap"
+              className="shrink-0 text-xs font-button font-semibold px-3 py-1.5 rounded bg-orange-700 text-white hover:bg-orange-800 transition-colors whitespace-nowrap"
             >
               Go to Waitlist
             </Link>

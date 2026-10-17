@@ -53,7 +53,7 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
           // the regular price, which would just look like the Normal package.
           const wasPrice = soldOut ? packageListPrice(pkg, cfg, trip, 'early_bird') : undefined;
           const gap = popular && pkg.id !== entry.id && quote.price != null && entryPrice != null ? quote.price - entryPrice : 0;
-          const tick = popular ? 'text-gold-dark' : 'text-primary';
+          const tick = popular ? 'text-gold-700' : 'text-primary';
           return (
             <div
               key={pkg.id}

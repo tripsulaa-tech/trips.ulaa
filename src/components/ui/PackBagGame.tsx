@@ -461,7 +461,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
       />
 
       <Modal isOpen={open} onClose={close} ariaLabel="Pack the bag game" size="sm" flush fullScreen>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -471,14 +471,14 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
             <div className="relative text-center pt-3 md:pt-0 md:grid md:grid-cols-[1fr_1.15fr] md:gap-12 lg:gap-16 md:items-center">
               <div>
               <motion.div
-                className="w-20 h-20 md:w-28 md:h-28 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
+                className="w-20 h-20 md:w-28 md:h-28 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                 animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 aria-hidden="true"
               >
                 <Backpack size={46} weight="duotone" />
               </motion.div>
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">30-second challenge</span>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">30-second challenge</span>
               <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white leading-tight">Pack the bag</h2>
               <p className="text-sm text-cream/60 mt-1 mb-5 px-6 line-clamp-2">{themed ? `Packing for ${tripTitle}` : 'Pack what you would really take on a trip'}</p>
               </div>
@@ -493,11 +493,11 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                     ))}
                   </div>
                 </div>
-                <div className="rounded-2xl bg-red-400/[0.08] border border-red-300/20 p-3">
+                <div className="rounded-2xl bg-red-400/[0.08] border border-danger-border/20 p-3">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-red-300 mb-2">Skip these · {BAD_POINTS}</p>
                   <div className="flex gap-1.5">
                     {profile.bad.slice(0, 4).map(g => (
-                      <span key={g.label} className="w-8 h-8 rounded-xl bg-red-300/10 border border-red-300/20 text-red-200 flex items-center justify-center"><g.Icon size={20} weight="duotone" aria-label={g.label} /></span>
+                      <span key={g.label} className="w-8 h-8 rounded-xl bg-red-300/10 border border-danger-border/20 text-red-200 flex items-center justify-center"><g.Icon size={20} weight="duotone" aria-label={g.label} /></span>
                     ))}
                   </div>
                 </div>
@@ -505,22 +505,22 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
 
               <ul className={`${glass} text-left divide-y divide-white/10 mb-4`}>
                 <li className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
-                  <span className="w-7 h-7 shrink-0 rounded-lg bg-primary/25 text-[#F4B183] flex items-center justify-center"><Fire size={16} weight="fill" /></span>
+                  <span className="w-7 h-7 shrink-0 rounded-lg bg-primary/25 text-peach flex items-center justify-center"><Fire size={16} weight="fill" /></span>
                   <span>Pack {COMBO_STEP} right in a row for <strong className="text-white">×2</strong>, and <strong className="text-white">×3</strong> after {COMBO_STEP * 2}.</span>
                 </li>
                 <li className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
-                  <span className="w-7 h-7 shrink-0 rounded-lg bg-gold/20 text-[#F0CE7A] flex items-center justify-center"><Star size={16} weight="fill" /></span>
+                  <span className="w-7 h-7 shrink-0 rounded-lg bg-gold/20 text-gold-300 flex items-center justify-center"><Star size={16} weight="fill" /></span>
                   <span>Golden star is worth <strong className="text-white">+{GOLD_POINTS}</strong>.</span>
                 </li>
                 <li className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
-                  <span className="w-7 h-7 shrink-0 rounded-lg bg-secondary/25 text-[#F4B183] flex items-center justify-center"><Hourglass size={16} weight="duotone" /></span>
+                  <span className="w-7 h-7 shrink-0 rounded-lg bg-secondary/25 text-peach flex items-center justify-center"><Hourglass size={16} weight="duotone" /></span>
                   <span>Hourglass slows time. Magnet packs everything useful on screen.</span>
                 </li>
               </ul>
 
               {best > 0 && (
                 <p className="inline-flex items-center gap-1.5 text-sm text-cream/70 mb-3">
-                  <Trophy size={16} weight="fill" className="text-[#F0CE7A]" /> Your best <strong className="text-[#F0CE7A]">{best}</strong>. Can you beat it?
+                  <Trophy size={16} weight="fill" className="text-gold-300" /> Your best <strong className="text-gold-300">{best}</strong>. Can you beat it?
                 </p>
               )}
               <NameField value={name} onChange={setName} onEnter={begin} />
@@ -584,13 +584,13 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                     key={mult}
                     initial={reduce ? false : { scale: 1.5 }}
                     animate={{ scale: 1 }}
-                    className={`font-display text-sm font-extrabold ${mult > 1 ? 'text-[#F0CE7A]' : 'text-cream/60'}`}
+                    className={`font-display text-sm font-extrabold ${mult > 1 ? 'text-gold-300' : 'text-cream/60'}`}
                   >
                     ×{mult}{mult >= MAX_MULT ? ' MAX' : ''}
                   </motion.span>
                   <div className="flex gap-1" aria-hidden="true">
                     {Array.from({ length: COMBO_STEP }, (_, n) => (
-                      <span key={n} className={`h-1.5 w-6 rounded-full transition-colors ${n < comboPips ? 'bg-gradient-to-r from-secondary to-[#F0CE7A]' : 'bg-white/10'}`} />
+                      <span key={n} className={`h-1.5 w-6 rounded-full transition-colors ${n < comboPips ? 'bg-gradient-to-r from-secondary to-gold-300' : 'bg-white/10'}`} />
                     ))}
                   </div>
                 </div>
@@ -612,7 +612,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
               <motion.div
                 ref={stageRef}
                 animate={stage}
-                className="relative h-[clamp(20rem,calc(100dvh-15rem),64rem)] rounded-3xl overflow-hidden select-none touch-none bg-gradient-to-b from-[#3A2A1F] to-[#1B130E] border border-white/10 shadow-[inset_0_0_60px_rgba(0,0,0,0.4)]"
+                className="relative h-[clamp(20rem,calc(100dvh-15rem),64rem)] rounded-3xl overflow-hidden select-none touch-none bg-gradient-to-b from-[#3A2A1F] to-neutral-900 border border-white/10 shadow-[inset_0_0_60px_rgba(0,0,0,0.4)]"
               >
                 {/* Trip-themed backdrop: the cover photo, darkened */}
                 {coverImage && (
@@ -629,7 +629,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                   const power = isPowerUp(i.kind);
                   const gold = i.kind === 'golden';
                   const tile = gold
-                    ? 'bg-gradient-to-br from-[#FFF0B8] to-gold text-dark ring-2 ring-[#F0CE7A] shadow-[0_0_22px_rgba(240,206,122,0.8)]'
+                    ? 'bg-gradient-to-br from-[#FFF0B8] to-gold text-dark ring-2 ring-gold-300 shadow-[0_0_22px_rgba(240,206,122,0.8)]'
                     : power
                       ? 'bg-gradient-to-br from-secondary to-primary text-white ring-2 ring-white/50 shadow-[0_0_20px_rgba(217,138,58,0.75)]'
                       : 'bg-white/[0.13] text-[#F6E7C6] border border-white/20 shadow-[0_6px_12px_rgba(0,0,0,0.3)]';
@@ -655,7 +655,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                 {flying.map(f => (
                   <motion.span
                     key={f.id}
-                    className={`absolute pointer-events-none ${f.golden ? 'text-[#F0CE7A]' : 'text-[#F6E7C6]'}`}
+                    className={`absolute pointer-events-none ${f.golden ? 'text-gold-300' : 'text-[#F6E7C6]'}`}
                     initial={{ left: `${f.x}%`, top: f.y, scale: 1, opacity: 1 }}
                     animate={{ left: '44%', top: areaH - 64, scale: 0.3, opacity: 0 }}
                     transition={{ duration: 0.4, ease: 'easeIn' }}
@@ -684,7 +684,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                   className="absolute bottom-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md pl-2 pr-3.5 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.4)] pointer-events-none"
                   aria-hidden="true"
                 >
-                  <span className="w-9 h-9 rounded-full bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center">
+                  <span className="w-9 h-9 rounded-full bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center">
                     <Backpack size={22} weight="duotone" />
                   </span>
                   <span className="font-display text-sm font-extrabold text-white tabular-nums">{packed}<span className="ml-1 text-[10px] font-semibold uppercase tracking-wider text-cream/60">packed</span></span>
@@ -732,7 +732,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
           {phase === 'done' && (
             <div className="relative text-center pt-1">
               {!reduce && (r.stars >= 2 || isNewBest) && <Confetti />}
-              <span className={`inline-block text-[11px] font-bold uppercase tracking-[0.18em] rounded-full px-3 py-1 mb-3 ${isNewBest ? 'bg-gradient-to-r from-[#F0CE7A] to-gold text-dark' : 'bg-white/10 text-cream/70 border border-white/15'}`}>
+              <span className={`inline-block text-[11px] font-bold uppercase tracking-[0.18em] rounded-full px-3 py-1 mb-3 ${isNewBest ? 'bg-gradient-to-r from-gold-300 to-gold text-dark' : 'bg-white/10 text-cream/70 border border-white/15'}`}>
                 {isNewBest ? 'New best!' : "Time's up"}
               </span>
 
@@ -746,7 +746,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ delay: 0.5 + n * 0.18, type: 'spring', stiffness: 260, damping: 12 }}
                   >
-                    <Star size={32} weight="fill" className={n <= r.stars ? 'text-[#F0CE7A] drop-shadow-[0_0_10px_rgba(240,206,122,0.6)]' : 'text-white/15'} />
+                    <Star size={32} weight="fill" className={n <= r.stars ? 'text-gold-300 drop-shadow-[0_0_10px_rgba(240,206,122,0.6)]' : 'text-white/15'} />
                   </motion.span>
                 ))}
               </div>
@@ -754,7 +754,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
               <p className="font-display text-2xl font-extrabold text-white">{r.title}</p>
               <p className="text-sm text-cream/60 mt-0.5">{r.blurb}</p>
               {!isNewBest && prevBest > 0 && (
-                <p className="text-sm text-[#F0CE7A] font-medium mt-1">
+                <p className="text-sm text-gold-300 font-medium mt-1">
                   {prevBest - score <= 20 ? `So close! Just ${prevBest - score + 1} more to beat your best.` : `Your best is ${prevBest}. Go get it!`}
                 </p>
               )}
@@ -800,7 +800,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                 <div className="flex flex-wrap gap-1.5">
                   {profile.good.map(g => (
                     <span key={g.label} className="inline-flex items-center gap-1 text-xs text-cream/85 bg-white/[0.07] border border-white/10 rounded-full px-2.5 py-1">
-                      <g.Icon size={14} weight="duotone" className="text-[#F0CE7A]" /> {g.label}
+                      <g.Icon size={14} weight="duotone" className="text-gold-300" /> {g.label}
                     </span>
                   ))}
                 </div>
@@ -811,7 +811,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                 href={notifyHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#F0CE7A] hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-gold-300 hover:text-white transition-colors"
               >
                 <WhatsappLogo size={16} weight="fill" aria-hidden="true" />
                 Notify me when this trip opens

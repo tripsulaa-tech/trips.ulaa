@@ -1,6 +1,6 @@
 // Shared styling + share helper for the Coming Soon mini-games.
 
-export const GOLD_GRAD_TEXT = 'bg-gradient-to-b from-[#FFF6CC] via-[#F0CE7A] to-gold bg-clip-text text-transparent';
+export const GOLD_GRAD_TEXT = 'bg-gradient-to-b from-gold-100 via-gold-300 to-gold bg-clip-text text-transparent';
 
 export const primaryBtn = 'w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-primary-light to-primary hover:brightness-110 active:scale-[0.96] active:brightness-95 touch-manipulation select-none [-webkit-tap-highlight-color:transparent] text-white font-button font-semibold py-3.5 shadow-[0_10px_24px_rgba(168,90,42,0.45)] transition duration-100 ease-out';
 export const ghostBtn = 'w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-white/10 hover:bg-white/15 active:scale-[0.96] active:brightness-95 touch-manipulation select-none [-webkit-tap-highlight-color:transparent] border border-white/15 text-cream font-button font-semibold py-3 transition disabled:opacity-60';

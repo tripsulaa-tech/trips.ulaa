@@ -404,7 +404,7 @@ export default function LogoStudioMailEditor({ onDirtyChange, fit = false }: { o
             </div>
           )}
 
-          {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+          {error && <p role="alert" className="text-sm text-danger-fg">{error}</p>}
         </div>
 
         <section aria-label="Email preview" className={`space-y-2 min-w-0 ${fit ? 'min-h-0 flex flex-col' : ''}`}>

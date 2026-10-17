@@ -137,9 +137,9 @@ export function matchWaitlistEntries(contact: TravellerContact, entries: Waitlis
 }
 
 export const WAITLIST_STATUS_LABEL: Record<WaitlistEntry['status'], { label: string; color: string }> = {
-  waiting: { label: 'Waiting', color: 'bg-amber-100 text-amber-700' },
+  waiting: { label: 'Waiting', color: 'bg-warning-bg text-warning-fg' },
   notified: { label: 'Seat offered', color: 'bg-purple-100 text-purple-700' },
-  converted: { label: 'Converted', color: 'bg-green-100 text-green-700' },
+  converted: { label: 'Converted', color: 'bg-success-bg text-success-fg' },
   declined: { label: 'Declined', color: 'bg-slate-200 text-dark-muted' },
   expired: { label: 'Expired', color: 'bg-slate-200 text-dark-muted' },
 };

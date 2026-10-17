@@ -200,11 +200,11 @@ export default function DetailsModal({
                   </div>
                   <div>
                     <p className="text-dark-muted text-2xs">Paid</p>
-                    <p className="text-green-700 text-sm font-semibold">{formatPrice(detailsTarget.amount_paid || 0)}</p>
+                    <p className="text-success-fg text-sm font-semibold">{formatPrice(detailsTarget.amount_paid || 0)}</p>
                   </div>
                   <div>
                     <p className="text-dark-muted text-2xs">Pending</p>
-                    <p className="text-amber-600 text-sm font-semibold">
+                    <p className="text-warning-fg text-sm font-semibold">
                       {formatPrice(Math.max(0, (detailsTarget.total_amount || 0) - (detailsTarget.amount_paid || 0)))}
                     </p>
                   </div>
@@ -261,12 +261,12 @@ export default function DetailsModal({
                               </p>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className={`text-sm font-semibold ${isRefund ? 'text-red-600' : 'text-dark'}`}>
+                              <span className={`text-sm font-semibold ${isRefund ? 'text-danger-fg' : 'text-dark'}`}>
                                 {isRefund ? '\u2212 ' : ''}{formatPrice(Math.abs(inv.amount))}
                               </span>
                               <span
                                 className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap ${
-                                  isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                                  isPending ? 'bg-warning-bg text-warning-fg' : 'bg-success-bg text-success-fg'
                                 }`}
                               >
                                 <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : 'Paid'}
@@ -339,7 +339,7 @@ export default function DetailsModal({
                   label="Food Preference"
                 >
                   <p className={`text-sm font-semibold truncate flex items-center gap-1 ${
-                    detailsTarget.food_preference === 'veg' ? 'text-green-700' : detailsTarget.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark'
+                    detailsTarget.food_preference === 'veg' ? 'text-success-fg' : detailsTarget.food_preference === 'non_veg' ? 'text-danger-fg' : 'text-dark'
                   }`}>
                     {(detailsTarget.food_preference === 'veg' || detailsTarget.food_preference === 'non_veg') && <FoodMark type={detailsTarget.food_preference} size={11} />}
                     {detailsTarget.food_preference === 'veg' ? 'Veg' : detailsTarget.food_preference === 'non_veg' ? 'Non-veg' : '—'}

@@ -10,13 +10,13 @@ interface ButtonProps extends HTMLMotionProps<'button'> {
 
 const variants = {
   primary: 'bg-primary text-white hover:bg-primary-dark active:bg-primary-dark shadow-warm hover:shadow-warm-lg border-2 border-primary',
-  secondary: 'bg-secondary text-white hover:bg-secondary-dark active:bg-secondary-dark shadow-warm hover:shadow-warm-lg border-2 border-secondary',
+  secondary: 'bg-amber-700 text-white hover:bg-amber-800 active:bg-amber-800 shadow-warm hover:shadow-warm-lg border-2 border-amber-700',
   outline: 'bg-transparent text-primary border-2 border-primary hover:bg-primary hover:text-white active:bg-primary active:text-white',
   // Same outline theme as "Not Interested" (border-2, transparent fill,
   // fills solid on hover) but in red — used for urgent/overdue states like
   // the Overdue follow-up CTA, so it reads as "needs attention" rather than
   // the routine amber "secondary" fill non-overdue follow-ups get.
-  outlineDanger: 'bg-transparent text-red-600 border-2 border-red-600 hover:bg-red-600 hover:text-white active:bg-red-600 active:text-white',
+  outlineDanger: 'bg-transparent text-danger-fg border-2 border-red-600 hover:bg-red-600 hover:text-white active:bg-red-600 active:text-white',
   ghost: 'bg-transparent text-dark border-2 border-transparent hover:bg-background-warm active:bg-background-warm',
   dark: 'bg-dark text-white hover:bg-dark-muted active:bg-dark-muted border-2 border-dark',
 };

@@ -228,7 +228,7 @@ export default function SpecialOfferPopupCard({
                           saveAmount/plusOfferAmount above. */}
                       {saveAmount != null && (
                         <div className="flex items-center justify-center gap-2 mt-2">
-                          <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-semibold px-2.5 py-1 rounded-md">
+                          <span className="inline-flex items-center gap-1 bg-success-bg border border-success-border text-success-fg text-2xs font-button font-semibold px-2.5 py-1 rounded-md">
                             <Tag size={13} weight="fill" className="shrink-0" />
                             Save {formatPrice(saveAmount)}
                           </span>

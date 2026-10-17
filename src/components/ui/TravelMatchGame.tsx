@@ -360,7 +360,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
       />
 
       <Modal isOpen={open} onClose={close} ariaLabel="Travel match game" size="sm" flush fullScreen>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
           <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -370,14 +370,14 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
             <div className="relative text-center pt-3 md:pt-0 md:grid md:grid-cols-[1fr_1.15fr] md:gap-12 lg:gap-16 md:items-center">
               <div>
               <motion.div
-                className="w-20 h-20 md:w-28 md:h-28 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
+                className="w-20 h-20 md:w-28 md:h-28 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                 animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
                 transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                 aria-hidden="true"
               >
                 <Compass size={46} weight="duotone" />
               </motion.div>
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Memory challenge</span>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Memory challenge</span>
               <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white leading-tight">Travel match</h2>
               <p className="text-sm text-cream/60 mt-1 mb-4 px-6 line-clamp-2">{themed ? `A memory game while ${tripTitle} gets ready` : 'Flip, match and vanish every pair'}</p>
               </div>
@@ -387,29 +387,29 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
                 {LEVELS.map((l, i) => (
                   <span key={i} className="flex flex-col items-center rounded-xl bg-white/[0.06] border border-white/10 px-3 py-1.5 min-w-[3.4rem]">
                     <span className="text-[9px] font-bold uppercase tracking-wider text-cream/50">Lv {i + 1}</span>
-                    <span className="font-display text-sm font-extrabold text-[#F0CE7A] tabular-nums">{cardCount(l)}</span>
+                    <span className="font-display text-sm font-extrabold text-gold-300 tabular-nums">{cardCount(l)}</span>
                   </span>
                 ))}
               </div>
 
               <ul className={`${glass} text-left divide-y divide-white/10 mb-4`}>
                 <li className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
-                  <span className="w-7 h-7 shrink-0 rounded-lg bg-primary/25 text-[#F4B183] flex items-center justify-center"><Eye size={16} weight="duotone" /></span>
+                  <span className="w-7 h-7 shrink-0 rounded-lg bg-primary/25 text-peach flex items-center justify-center"><Eye size={16} weight="duotone" /></span>
                   <span>Cards start <strong className="text-white">face down</strong>. Tap two to peek. A match <strong className="text-white">vanishes</strong>.</span>
                 </li>
                 <li className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
-                  <span className="w-7 h-7 shrink-0 rounded-lg bg-gold/20 text-[#F0CE7A] flex items-center justify-center"><Fire size={16} weight="fill" /></span>
+                  <span className="w-7 h-7 shrink-0 rounded-lg bg-gold/20 text-gold-300 flex items-center justify-center"><Fire size={16} weight="fill" /></span>
                   <span>Chain matches for a <strong className="text-white">streak bonus</strong>. One miss resets it.</span>
                 </li>
                 <li className="flex items-center gap-3 px-3 py-2.5 text-[13px] text-cream/75">
-                  <span className="w-7 h-7 shrink-0 rounded-lg bg-secondary/25 text-[#F4B183] flex items-center justify-center"><Timer size={16} weight="duotone" /></span>
+                  <span className="w-7 h-7 shrink-0 rounded-lg bg-secondary/25 text-peach flex items-center justify-center"><Timer size={16} weight="duotone" /></span>
                   <span>Each level has a countdown. <strong className="text-white">Spare seconds</strong> are bonus points.</span>
                 </li>
               </ul>
 
               {best > 0 && (
                 <p className="inline-flex items-center gap-1.5 text-sm text-cream/70 mb-3">
-                  <Trophy size={16} weight="fill" className="text-[#F0CE7A]" /> Your best <strong className="text-[#F0CE7A]">{best}</strong>. Can you beat it?
+                  <Trophy size={16} weight="fill" className="text-gold-300" /> Your best <strong className="text-gold-300">{best}</strong>. Can you beat it?
                 </p>
               )}
               <NameField value={name} onChange={setName} onEnter={begin} />
@@ -436,7 +436,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
               {/* Level + streak */}
               <div className="flex items-center justify-between mb-2.5 h-7">
                 <div className="flex items-center gap-2">
-                  <span className="rounded-full bg-gold/15 border border-gold/30 text-[#F0CE7A] text-[10px] font-bold uppercase tracking-wider px-2.5 py-1">Level {level + 1}/{LEVELS.length}</span>
+                  <span className="rounded-full bg-gold/15 border border-gold/30 text-gold-300 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1">Level {level + 1}/{LEVELS.length}</span>
                   <span className="text-xs font-bold text-cream/60 tabular-nums">{found}/{def.pairs} pairs</span>
                 </div>
                 <AnimatePresence>
@@ -486,11 +486,11 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
                                 className="absolute inset-0 rounded-xl bg-gradient-to-br from-white/[0.16] to-white/[0.05] border border-white/15 flex items-center justify-center shadow-[0_4px_10px_rgba(0,0,0,0.3)] active:scale-95 transition-transform"
                                 style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                               >
-                                <span className="font-display text-base font-extrabold text-[#F0CE7A]/50 select-none">U</span>
+                                <span className="font-display text-base font-extrabold text-gold-300/50 select-none">U</span>
                               </div>
                               {/* Front (picture) */}
                               <div
-                                className={`absolute inset-0 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#FFF6DD] to-[#F0CE7A] text-primary border ${c.state === 'matched' ? 'border-emerald-300 shadow-[0_0_20px_rgba(110,231,183,0.7)]' : 'border-[#F0CE7A]'}`}
+                                className={`absolute inset-0 rounded-xl flex items-center justify-center bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-primary border ${c.state === 'matched' ? 'border-emerald-300 shadow-[0_0_20px_rgba(110,231,183,0.7)]' : 'border-gold-300'}`}
                                 style={{ transform: 'rotateY(180deg)', backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
                               >
                                 <c.Icon size={ICON_SIZE[def.cols]} weight="duotone" aria-hidden="true" />
@@ -535,12 +535,12 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
                 initial={reduce ? false : { scale: 0.4, rotate: -20 }}
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: 'spring', stiffness: 240, damping: 12 }}
-                className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
+                className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                 aria-hidden="true"
               >
                 <Star size={44} weight="fill" />
               </motion.div>
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Level {level + 1} cleared</span>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Level {level + 1} cleared</span>
               <p className={`font-display text-5xl font-extrabold tabular-nums ${GOLD_GRAD_TEXT}`}>{score}</p>
               <p className={`${eyebrow} mt-1 mb-4`}>Total points</p>
 
@@ -558,7 +558,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
               </div>
 
               <p className="text-sm text-cream/70 mb-4">
-                Next: <strong className="text-white">Level {level + 2}</strong> with <strong className="text-[#F0CE7A]">{cardCount(LEVELS[level + 1])} cards</strong> and {LEVELS[level + 1].seconds} seconds.
+                Next: <strong className="text-white">Level {level + 2}</strong> with <strong className="text-gold-300">{cardCount(LEVELS[level + 1])} cards</strong> and {LEVELS[level + 1].seconds} seconds.
               </p>
               <button type="button" onClick={() => startLevel(level + 1)} className={primaryBtn}><Play size={18} weight="fill" /> Start level {level + 2}</button>
               <button type="button" onClick={() => endRun(false)} className="mt-3 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">Bank my score and stop</button>
@@ -569,7 +569,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
           {phase === 'done' && (
             <div className="relative text-center pt-1">
               {!reduce && (r.stars >= 2 || isNewBest) && <Confetti />}
-              <span className={`inline-block text-[11px] font-bold uppercase tracking-[0.18em] rounded-full px-3 py-1 mb-3 ${isNewBest ? 'bg-gradient-to-r from-[#F0CE7A] to-gold text-dark' : 'bg-white/10 text-cream/70 border border-white/15'}`}>
+              <span className={`inline-block text-[11px] font-bold uppercase tracking-[0.18em] rounded-full px-3 py-1 mb-3 ${isNewBest ? 'bg-gradient-to-r from-gold-300 to-gold text-dark' : 'bg-white/10 text-cream/70 border border-white/15'}`}>
                 {isNewBest ? 'New best!' : allCleared ? 'All levels cleared' : timeLeft > 0 ? 'Score banked' : "Time's up"}
               </span>
 
@@ -583,7 +583,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
                     animate={{ scale: 1, rotate: 0 }}
                     transition={{ delay: 0.5 + n * 0.18, type: 'spring', stiffness: 260, damping: 12 }}
                   >
-                    <Star size={32} weight="fill" className={n <= r.stars ? 'text-[#F0CE7A] drop-shadow-[0_0_10px_rgba(240,206,122,0.6)]' : 'text-white/15'} />
+                    <Star size={32} weight="fill" className={n <= r.stars ? 'text-gold-300 drop-shadow-[0_0_10px_rgba(240,206,122,0.6)]' : 'text-white/15'} />
                   </motion.span>
                 ))}
               </div>
@@ -591,7 +591,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
               <p className={`font-display text-2xl font-extrabold ${GOLD_GRAD_TEXT}`}>{r.title}</p>
               <p className="text-sm text-cream/60 mt-0.5">{r.blurb}</p>
               {!isNewBest && prevBest > 0 && (
-                <p className="text-sm text-[#F0CE7A] font-medium mt-1">
+                <p className="text-sm text-gold-300 font-medium mt-1">
                   {prevBest - score <= 60 ? `So close! Just ${prevBest - score + 1} more to beat your best.` : `Your best is ${prevBest}. Go get it!`}
                 </p>
               )}
@@ -638,7 +638,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
                 href={notifyHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#F0CE7A] hover:text-white transition-colors"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-gold-300 hover:text-white transition-colors"
               >
                 <WhatsappLogo size={16} weight="fill" aria-hidden="true" />
                 Notify me when this trip opens

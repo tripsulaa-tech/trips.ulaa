@@ -456,7 +456,7 @@ export default function AdminTravelCards() {
           label: `${t.title} · ${formatDate(t.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}`,
         }))}
       />
-      {loadError && <p role="alert" className="text-sm text-red-600">Couldn't load trips and bookings. Refresh the page and try again.</p>}
+      {loadError && <p role="alert" className="text-sm text-danger-fg">Couldn't load trips and bookings. Refresh the page and try again.</p>}
     </div>
   );
 
@@ -466,7 +466,7 @@ export default function AdminTravelCards() {
     : `No one has booked ${trip ? `“${trip.title}”` : 'this trip'} yet. A traveler appears here once their payment is recorded.`;
 
   const fontNote = customFont === false && tab !== 'badge' && (
-    <p className="mt-3 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md p-2">
+    <p className="mt-3 text-xs text-warning-fg bg-warning-bg border border-warning-border rounded-md p-2">
       Using a stand-in script font. Add <span className="font-mono">RasleyHeights.ttf</span> to <span className="font-mono">public/travel-card/fonts/</span> to match the design.
     </p>
   );
@@ -664,19 +664,19 @@ export default function AdminTravelCards() {
                   <div>
                     <label htmlFor="badge-guides" className="block text-sm font-medium text-dark mb-1">Cut guides</label>
                     <Select inputId="badge-guides" value={badgeGuides} onChange={setBadgeGuides} options={cutGuideOptions('badge')} />
-                    {badgeGuides === 'marks' && badgeGap < MIN_GAP_FOR_MARKS_MM && <p className="text-xs text-amber-800 mt-1">{MARKS_GAP_HINT}</p>}
+                    {badgeGuides === 'marks' && badgeGap < MIN_GAP_FOR_MARKS_MM && <p className="text-xs text-warning-fg mt-1">{MARKS_GAP_HINT}</p>}
                   </div>
                   {!badgeSizeValid ? (
-                    <p role="alert" className="text-xs text-red-600">Badge size must be 20 to 250 mm and the gap 0 to 30 mm.</p>
+                    <p role="alert" className="text-xs text-danger-fg">Badge size must be 20 to 250 mm and the gap 0 to 30 mm.</p>
                   ) : badgePlan.perSheet === 0 ? (
-                    <p role="alert" className="text-xs text-red-600">That size does not fit on an A3 sheet.</p>
+                    <p role="alert" className="text-xs text-danger-fg">That size does not fit on an A3 sheet.</p>
                   ) : (
                     <p className="text-sm text-dark bg-background-warm rounded-md px-3 py-2">
                       <span className="font-semibold">{badgePlan.perSheet}</span> badges fit on one A3 sheet.
                       {' '}{badgeQuantity} badge{badgeQuantity === 1 ? '' : 's'} = <span className="font-semibold">{badgeSheets}</span> sheet{badgeSheets === 1 ? '' : 's'}.
                     </p>
                   )}
-                  {badgeTooMany && <p role="alert" className="text-xs text-red-600">That is more than {MAX_PRINT_SHEETS} sheets. Please download in smaller batches.</p>}
+                  {badgeTooMany && <p role="alert" className="text-xs text-danger-fg">That is more than {MAX_PRINT_SHEETS} sheets. Please download in smaller batches.</p>}
 
                   {badgeSlots.length > 0 && (
                     <div className="space-y-2">

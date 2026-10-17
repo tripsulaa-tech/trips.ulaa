@@ -91,7 +91,7 @@ export default function InlineEditText({ value, onSave, ariaLabel, className = '
           start();
         }
       }}
-      className={`group/edit flex-1 min-w-0 flex items-start gap-1.5 cursor-text rounded-md px-2 py-1 -mx-2 -my-1 text-sm text-dark hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 transition-colors ${className}`}
+      className={`group/edit flex-1 min-w-0 flex items-start gap-1.5 cursor-text rounded-md px-2 py-1 -mx-2 -my-1 text-sm text-dark hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors ${className}`}
     >
       <span className="flex-1 min-w-0 break-words">{value}</span>
       <PencilSimple

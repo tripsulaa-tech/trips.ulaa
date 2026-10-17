@@ -45,7 +45,7 @@ export default function TripInclusionsSection({
                       onClick={() => toggleInSet(setActiveIncludedGroups, gi)}
                       aria-expanded={activeIncludedGroups.has(gi)}
                       aria-label={`${group.heading} — tap for details`}
-                      className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                      className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:pointer-events-none"
                     />
                     <div className="flex items-center gap-2 mb-2">
                       {group.icon && (
@@ -73,13 +73,13 @@ export default function TripInclusionsSection({
                       onClick={() => toggleInSet(setActiveIncludedItems, i)}
                       aria-expanded={activeIncludedItems.has(i)}
                       aria-label={`${item.description} — tap for details`}
-                      className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                      className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:pointer-events-none"
                     />
                     {item.icon ? (
                       <TripHighlightIconDisplay icon={item.icon} index={i} size="sm" filled={activeIncludedItems.has(i)} hoverFill />
                     ) : (
-                      <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                        <CheckCircle size={18} className="text-green-600" />
+                      <div className="w-10 h-10 rounded-full bg-success-bg flex items-center justify-center flex-shrink-0">
+                        <CheckCircle size={18} className="text-success-fg" />
                       </div>
                     )}
                     <span className="text-sm text-dark font-medium leading-snug">{item.description}</span>

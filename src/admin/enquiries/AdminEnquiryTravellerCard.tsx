@@ -163,7 +163,7 @@ export default function AdminEnquiryTravellerCard({
               className={`${inlineInputClass} mt-0.5`}
               placeholder="e.g. Priya Sharma"
             />
-            {editTouched.has('full_name') && editErrors.full_name && <p id="eq-detail-edit-name-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.full_name}</p>}
+            {editTouched.has('full_name') && editErrors.full_name && <p id="eq-detail-edit-name-error" role="alert" className="text-danger-fg text-xs mt-1">{editErrors.full_name}</p>}
           </div>
         </div>
       )}
@@ -198,7 +198,7 @@ export default function AdminEnquiryTravellerCard({
                   className={`${inlineInputClass} mt-0.5`}
                   placeholder="e.g. 98765 43210"
                 />
-                {editTouched.has('phone') && editErrors.phone && <p id="eq-detail-edit-phone-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.phone}</p>}
+                {editTouched.has('phone') && editErrors.phone && <p id="eq-detail-edit-phone-error" role="alert" className="text-danger-fg text-xs mt-1">{editErrors.phone}</p>}
               </>
             ) : (
               <p className="text-dark text-sm font-semibold whitespace-nowrap">{formatPhone(enquiry.phone)}</p>
@@ -234,7 +234,7 @@ export default function AdminEnquiryTravellerCard({
                   className={`${inlineInputClass} mt-0.5`}
                   placeholder="Optional"
                 />
-                {editTouched.has('email') && editErrors.email && <p id="eq-detail-edit-email-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.email}</p>}
+                {editTouched.has('email') && editErrors.email && <p id="eq-detail-edit-email-error" role="alert" className="text-danger-fg text-xs mt-1">{editErrors.email}</p>}
                 {emailSuggestField.open && <SuggestionDropdown items={emailSuggestField.suggestions} onSelect={emailSuggestField.select} />}
               </>
             ) : (
@@ -262,7 +262,7 @@ export default function AdminEnquiryTravellerCard({
                     options={[{ value: '', label: '— No trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
                   />
                   {editForm.trip_id !== (enquiry.trip_id || '') && (
-                    <p className="text-2xs text-amber-700 bg-amber-50 rounded px-2 py-1.5 mt-1.5">
+                    <p className="text-2xs text-warning-fg bg-warning-bg rounded px-2 py-1.5 mt-1.5">
                       Changing the trip doesn't update an already-tracked total amount — open Payment afterwards to re-check the price for the new trip.
                     </p>
                   )}
@@ -300,7 +300,7 @@ export default function AdminEnquiryTravellerCard({
                   {!(editTouched.has('age') && editErrors.age) && editForm.trip_id && (
                     <p id="eq-detail-edit-age-hint" className="text-2xs text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
                   )}
-                  {editTouched.has('age') && editErrors.age && <p id="eq-detail-edit-age-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.age}</p>}
+                  {editTouched.has('age') && editErrors.age && <p id="eq-detail-edit-age-error" role="alert" className="text-danger-fg text-xs mt-1">{editErrors.age}</p>}
                 </>
               ) : (
                 <p className="text-dark text-sm font-semibold truncate">{enquiry.age ?? '—'}</p>
@@ -328,7 +328,7 @@ export default function AdminEnquiryTravellerCard({
                     className={`${inlineInputClass} mt-0.5`}
                     placeholder="Optional"
                   />
-                  {editTouched.has('city') && editErrors.city && <p id="eq-detail-edit-city-error" role="alert" className="text-red-500 text-xs mt-1">{editErrors.city}</p>}
+                  {editTouched.has('city') && editErrors.city && <p id="eq-detail-edit-city-error" role="alert" className="text-danger-fg text-xs mt-1">{editErrors.city}</p>}
                   {citySuggestField.open && <SuggestionDropdown items={citySuggestField.suggestions} onSelect={citySuggestField.select} />}
                 </>
               ) : (
@@ -354,7 +354,7 @@ export default function AdminEnquiryTravellerCard({
                 </div>
               ) : (
                 <p className={`text-sm font-semibold truncate flex items-center gap-1 ${
-                  enquiry.food_preference === 'veg' ? 'text-green-700' : enquiry.food_preference === 'non_veg' ? 'text-red-700' : 'text-dark'
+                  enquiry.food_preference === 'veg' ? 'text-success-fg' : enquiry.food_preference === 'non_veg' ? 'text-danger-fg' : 'text-dark'
                 }`}>
                   {(enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg') && <FoodMark type={enquiry.food_preference} size={11} />}
                   {enquiry.food_preference === 'veg' ? 'Veg' : enquiry.food_preference === 'non_veg' ? 'Non-veg' : '—'}

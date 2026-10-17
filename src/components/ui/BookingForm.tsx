@@ -610,13 +610,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
   const inputClass = `
     w-full min-w-0 px-3 sm:px-4 py-3 rounded-md border-2 bg-white/70
-    font-body text-dark placeholder-dark-muted/60
+    font-body text-dark placeholder-dark-muted/75
     transition-all duration-200 outline-none
     focus:border-primary focus:bg-white
     border-[#D5C29A]
   `;
 
-  const errorClass = 'text-red-500 text-xs mt-1';
+  const errorClass = 'text-danger-fg text-xs mt-1';
 
   // City suggestions — filters INDIAN_CITIES against whatever's typed so
   // far. validateCity enforces this same list: picking a suggestion (or
@@ -1013,7 +1013,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
         {/* Emergency Contact */}
         <div className="col-span-2 sm:col-span-3">
-          <label htmlFor={ids.emergencyContact} className="block text-sm font-medium text-dark mb-1">Emergency contact <span className="text-xs font-normal text-dark-muted/70">Optional</span></label>
+          <label htmlFor={ids.emergencyContact} className="block text-sm font-medium text-dark mb-1">Emergency contact <span className="text-xs font-normal text-dark-muted/75">Optional</span></label>
           <input
             id={ids.emergencyContact}
             type="tel"
@@ -1045,7 +1045,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
       {/* Message */}
       <div>
-        <label htmlFor={ids.message} className="block text-sm font-medium text-dark mb-1">Message <span className="text-xs font-normal text-dark-muted/70">Optional</span></label>
+        <label htmlFor={ids.message} className="block text-sm font-medium text-dark mb-1">Message <span className="text-xs font-normal text-dark-muted/75">Optional</span></label>
         <textarea
           id={ids.message}
           {...register('message')}
@@ -1081,7 +1081,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
       {/* Error */}
       {status === 'error' && (
-        <div role="alert" className="flex items-start gap-2 text-red-600 bg-red-50 rounded-lg p-3">
+        <div role="alert" className="flex items-start gap-2 text-danger-fg bg-danger-bg rounded-lg p-3">
           <AlertCircle size={18} className="shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-sm">{errorMsg}</p>
         </div>

@@ -100,7 +100,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
   const isEmpty = options.length === 0 && packages.length === 0;
 
   const smallBtn = 'inline-flex items-center gap-1 text-xs font-medium text-primary border border-primary rounded-md px-2.5 py-1.5 hover:bg-primary/5 transition-colors';
-  const iconBtn = 'p-2 rounded-md text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0';
+  const iconBtn = 'p-2 rounded-md text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0';
   const pill = (on: boolean) =>
     `inline-flex items-center gap-2 text-sm text-dark cursor-pointer rounded-md border-2 px-3 py-1.5 transition-colors ${on ? 'border-primary/50 bg-primary/5' : 'border-background-warm bg-background hover:border-primary/30'}`;
 
@@ -240,7 +240,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                   title={p.highlight ? 'Tap to remove the "Most popular" badge' : 'Tap to show a "Most popular" badge on this package'}
                   className={`inline-flex items-center gap-1 rounded-md border-2 text-xs font-semibold px-3 py-1 transition-colors ${
                     p.highlight
-                      ? 'border-amber-400 bg-amber-100 text-amber-800'
+                      ? 'border-amber-400 bg-warning-bg text-warning-fg'
                       : 'border-background-warm text-dark-muted hover:border-amber-300 hover:text-amber-800'
                   }`}
                 >

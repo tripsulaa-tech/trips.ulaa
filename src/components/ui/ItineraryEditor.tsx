@@ -109,7 +109,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
         <button
           type="button"
           onClick={addDay}
-          className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+          className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary-dark transition-colors"
         >
           <Plus size={14} aria-hidden="true" /> Add Day
         </button>
@@ -134,7 +134,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                   <button type="button" onClick={() => move(index, 1)} disabled={index === value.length - 1} className="p-1 rounded-md hover:bg-background-warm disabled:opacity-30 text-dark-muted transition-colors" title="Move down" aria-label={`Move Day ${day.day} down`}>
                     <ChevronDown size={14} aria-hidden="true" />
                   </button>
-                  <button type="button" onClick={() => removeDay(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove day" aria-label={`Remove Day ${day.day}${day.title ? `: ${day.title}` : ''}`}>
+                  <button type="button" onClick={() => removeDay(index)} className="p-1 rounded-md hover:bg-danger-bg text-dark-muted hover:text-red-600 transition-colors" title="Remove day" aria-label={`Remove Day ${day.day}${day.title ? `: ${day.title}` : ''}`}>
                     <X size={14} aria-hidden="true" />
                   </button>
                 </div>
@@ -206,7 +206,7 @@ export default function ItineraryEditor({ value, onChange, tripSlug }: Itinerary
                   allowUrl
                 />
                 {(day.images?.length || 0) < MIN_RECOMMENDED_PHOTOS && (
-                  <p className="flex items-center gap-1 text-xs text-amber-600 mt-1.5">
+                  <p className="flex items-center gap-1 text-xs text-warning-fg mt-1.5">
                     <AlertTriangle size={12} aria-hidden="true" />
                     Add at least {MIN_RECOMMENDED_PHOTOS} photos so this day looks great on the trip page.
                   </p>

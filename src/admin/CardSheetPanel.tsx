@@ -200,13 +200,13 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
           <div>
             <label htmlFor="sheet-guides" className="block text-sm font-medium text-dark mb-1">Cut guides</label>
             <Select inputId="sheet-guides" value={guides} onChange={setGuides} options={cutGuideOptions('card')} />
-            {guides === 'marks' && gapMm < MIN_GAP_FOR_MARKS_MM && <p className="text-xs text-amber-800 mt-1">{MARKS_GAP_HINT}</p>}
+            {guides === 'marks' && gapMm < MIN_GAP_FOR_MARKS_MM && <p className="text-xs text-warning-fg mt-1">{MARKS_GAP_HINT}</p>}
           </div>
 
           {!valid ? (
-            <p role="alert" className="text-xs text-red-600">Card width must be 20 to 200 mm and the gap 0 to 30 mm.</p>
+            <p role="alert" className="text-xs text-danger-fg">Card width must be 20 to 200 mm and the gap 0 to 30 mm.</p>
           ) : perSheet === 0 ? (
-            <p role="alert" className="text-xs text-red-600">That size does not fit on an A3 sheet.</p>
+            <p role="alert" className="text-xs text-danger-fg">That size does not fit on an A3 sheet.</p>
           ) : (
             <p className="text-sm text-dark bg-background-warm rounded-md px-3 py-2">
               Cards print {formatLength(widthMm, unit)} × {formatLength(layout?.cardHeight ?? 0, unit)} {unit}.
@@ -214,7 +214,7 @@ export default function CardSheetPanel({ items, copies, fileName, emptyMessage, 
               {' '}{total} {noun(total)} = <span className="font-semibold">{sheets}</span> sheet{sheets === 1 ? '' : 's'}.
             </p>
           )}
-          {tooMany && <p role="alert" className="text-xs text-red-600">That is more than {MAX_PRINT_SHEETS} sheets. Please download in smaller batches.</p>}
+          {tooMany && <p role="alert" className="text-xs text-danger-fg">That is more than {MAX_PRINT_SHEETS} sheets. Please download in smaller batches.</p>}
 
           {layout && perSheet > 0 && items.length > 0 && (
             <div className="space-y-2">

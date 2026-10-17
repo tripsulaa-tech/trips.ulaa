@@ -74,7 +74,7 @@ function PremiumPlane({ size = 40 }: { size?: number }) {
       {/* Contrail */}
       <span
         aria-hidden="true"
-        className="absolute right-[88%] top-1/2 h-[2px] w-12 -translate-y-1/2 rounded-full bg-gradient-to-l from-[#FBEFD3]/80 via-[#E9C77B]/30 to-transparent"
+        className="absolute right-[88%] top-1/2 h-[2px] w-12 -translate-y-1/2 rounded-full bg-gradient-to-l from-[#FBEFD3]/80 via-gold-soft/30 to-transparent"
       />
       {use3D ? <Plane3D size={size} /> : <FlatPlaneSvg size={size} />}
     </span>
@@ -660,7 +660,7 @@ export default function TripCountdownCard({
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
               className={`font-display font-extrabold tabular-nums tracking-tight text-6xl sm:text-7xl lg:text-8xl bg-clip-text text-transparent bg-gradient-to-b ${
-                urgent ? 'from-cream to-orange-300' : 'from-cream to-[#E9C77B]'
+                urgent ? 'from-cream to-orange-300' : 'from-cream to-gold-soft'
               }`}
             >
               {bigNumber}
@@ -718,7 +718,7 @@ export default function TripCountdownCard({
                       <span
                         key={i}
                         className={`h-2 w-2 rounded-full transition-colors duration-200 ${
-                          i < game.runCatches ? 'bg-[#E9C77B]' : 'bg-white/25'
+                          i < game.runCatches ? 'bg-gold-soft' : 'bg-white/25'
                         }`}
                       />
                     ))}
@@ -743,7 +743,7 @@ export default function TripCountdownCard({
               transition={{ duration: 0.4, delay: 0.3, ease: 'easeOut' }}
             >
               {/* Script carries the feeling, sans carries the instruction */}
-              <p className="font-script text-2xl sm:text-3xl leading-tight text-[#E9C77B]">{copy.heading}</p>
+              <p className="font-script text-2xl sm:text-3xl leading-tight text-gold-soft">{copy.heading}</p>
               <p className="mt-1.5 max-w-xl text-base sm:text-lg leading-relaxed text-white/90">
                 Pack your bags and catch it with <strong className="font-semibold text-white">Ulaa</strong>. Book your
                 seats soon.
@@ -781,7 +781,7 @@ export default function TripCountdownCard({
                   >
                     <span
                       className={`h-3 w-3 rounded-full border-2 ${
-                        edge ? 'border-[#E9C77B] bg-[#E9C77B]' : 'border-white/60 bg-[#47291A]'
+                        edge ? 'border-gold-soft bg-gold-soft' : 'border-white/60 bg-[#47291A]'
                       }`}
                     />
                     <span className={`text-sm whitespace-nowrap ${edge ? 'text-white font-semibold' : 'text-white/70'}`}>
@@ -797,7 +797,7 @@ export default function TripCountdownCard({
                 aria-label={copy.aria}
                 onClick={game.onClick}
                 disabled={game.phase === 'teasing' || departed}
-                className="absolute top-[5px] -ml-[24px] -mt-[24px] z-10 flex h-12 w-12 items-center justify-center rounded-full touch-manipulation cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#E9C77B]"
+                className="absolute top-[5px] -ml-[24px] -mt-[24px] z-10 flex h-12 w-12 items-center justify-center rounded-full touch-manipulation cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-soft"
                 initial={reduceMotion ? false : { left: '0%' }}
                 animate={
                   departed
@@ -820,7 +820,7 @@ export default function TripCountdownCard({
               >
                 {/* Invitation: a soft ping until the first tap */}
                 {game.introDone && game.phase === 'idle' && (
-                  <span aria-hidden="true" className="absolute inset-0 rounded-full bg-[#E9C77B]/30 ring-2 ring-[#E9C77B]/50 animate-ping" />
+                  <span aria-hidden="true" className="absolute inset-0 rounded-full bg-gold-soft/30 ring-2 ring-gold-soft/50 animate-ping" />
                 )}
                 <motion.span
                   className="relative flex"
@@ -845,7 +845,7 @@ export default function TripCountdownCard({
                     <motion.span
                       key={`${game.spin}-${i}`}
                       aria-hidden="true"
-                      className="pointer-events-none absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-[#E9C77B]"
+                      className="pointer-events-none absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-gold-soft"
                       initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
                       animate={{ x: d.x, y: d.y, opacity: 0, scale: 0.4 }}
                       transition={{ duration: 0.7, ease: 'easeOut' }}
@@ -869,7 +869,7 @@ export default function TripCountdownCard({
         <div>
           {isAlmostFull && !isFull ? (
             <motion.p
-              className="inline-block font-bold text-xl text-red-600 bg-clip-text"
+              className="inline-block font-bold text-xl text-danger-fg bg-clip-text"
               style={
                 reduceMotion
                   ? undefined
@@ -911,7 +911,7 @@ export default function TripCountdownCard({
                   <span className="text-xs text-white/80 line-through">{earlyBird.regularPrice}</span>
                 )}
                 {earlyBird.saving && (
-                  <span className="rounded-full bg-white px-2 py-0.5 text-2xs font-button font-bold text-red-700">
+                  <span className="rounded-full bg-white px-2 py-0.5 text-2xs font-button font-bold text-danger-fg">
                     Save {earlyBird.saving}
                   </span>
                 )}
@@ -924,7 +924,7 @@ export default function TripCountdownCard({
                     return (
                       <span
                         key={i}
-                        className={`flex h-5 w-5 items-center justify-center rounded ${taken ? 'bg-white/25 text-white/60' : 'bg-white text-red-600'}`}
+                        className={`flex h-5 w-5 items-center justify-center rounded ${taken ? 'bg-white/25 text-white/60' : 'bg-white text-danger-fg'}`}
                       >
                         <User size={11} weight="fill" />
                       </span>

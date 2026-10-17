@@ -12,8 +12,8 @@ export const FOOD_PREFERENCE_OPTIONS = [
 // both places. Centralized here so the label/color pairing only has to be
 // changed once.
 const FOOD_PREFERENCE_BADGE: Record<'veg' | 'non_veg' | 'not_set', { label: string; color: string }> = {
-  veg: { label: 'Veg', color: 'bg-green-100 text-green-700' },
-  non_veg: { label: 'Non-veg', color: 'bg-red-100 text-red-700' },
+  veg: { label: 'Veg', color: 'bg-success-bg text-success-fg' },
+  non_veg: { label: 'Non-veg', color: 'bg-danger-bg text-danger-fg' },
   not_set: { label: 'Food not set', color: 'bg-slate-100 text-dark-muted' },
 };
 

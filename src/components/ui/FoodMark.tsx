@@ -1,7 +1,7 @@
 // Veg / non-veg symbols used everywhere food preference is shown (booking
 // form and admin): a leaf for veg, a piece of meat for non-veg. Both draw in
 // `currentColor`, so they automatically match whatever text color class the
-// surrounding badge already sets (e.g. text-green-700 / text-red-700).
+// surrounding badge already sets (e.g. text-success-fg / text-danger-fg).
 // 'mixed' shows both side by side in fixed green/red — for a group booking
 // that's part veg, part non-veg, so it isn't tied to a single badge color.
 // 'not_set' is a neutral dashed square: no choice made yet.
@@ -30,8 +30,8 @@ export default function FoodMark({ type, size = 12, className = '' }: FoodMarkPr
     const half = Math.round(size * 0.9);
     return (
       <span className={`inline-flex items-center shrink-0 ${className}`} aria-hidden="true">
-        <LeafIcon size={half} className="text-green-700" />
-        <ChickenLegIcon size={half} className="text-red-700" />
+        <LeafIcon size={half} className="text-success-fg" />
+        <ChickenLegIcon size={half} className="text-danger-fg" />
       </span>
     );
   }

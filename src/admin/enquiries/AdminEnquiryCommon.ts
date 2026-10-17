@@ -421,16 +421,16 @@ export const SOURCE_OPTIONS_ALL = (Object.keys(SOURCE_CONFIG) as (keyof typeof S
 // migration has run; the 'new_enquiry' fallback here only guards against a
 // stale row read before that migration is applied.
 export const JOURNEY_STAGE_CONFIG: Record<Enquiry['journey_stage'], { label: string; color: string; icon: typeof Clock }> = {
-  new_enquiry: { label: 'New Enquiry', color: 'bg-blue-100 text-blue-700', icon: Clock },
-  contacted: { label: 'Contacted', color: 'bg-amber-100 text-amber-700', icon: RefreshCw },
-  advance_pending: { label: 'Advance Pending', color: 'bg-amber-100 text-amber-700', icon: Hourglass },
+  new_enquiry: { label: 'New Enquiry', color: 'bg-info-bg text-info-fg', icon: Clock },
+  contacted: { label: 'Contacted', color: 'bg-warning-bg text-warning-fg', icon: RefreshCw },
+  advance_pending: { label: 'Advance Pending', color: 'bg-warning-bg text-warning-fg', icon: Hourglass },
   advance_paid: { label: 'Advance Paid', color: 'bg-purple-100 text-purple-700', icon: IndianRupee },
   confirmed: { label: 'Confirmed', color: 'bg-teal-100 text-teal-700', icon: CheckCircle2 },
   balance_pending: { label: 'Balance Pending', color: 'bg-orange-100 text-orange-700', icon: AlertTriangle },
-  fully_paid: { label: 'Fully Paid', color: 'bg-green-100 text-green-700', icon: BadgeCheck },
+  fully_paid: { label: 'Fully Paid', color: 'bg-success-bg text-success-fg', icon: BadgeCheck },
   checked_in: { label: 'Checked In', color: 'bg-indigo-100 text-indigo-700', icon: LogIn },
-  completed: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: PartyPopper },
-  cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-700', icon: XCircle },
+  completed: { label: 'Completed', color: 'bg-success-bg text-success-fg', icon: PartyPopper },
+  cancelled: { label: 'Cancelled', color: 'bg-danger-bg text-danger-fg', icon: XCircle },
   // A lead that was contacted and said no — closed out before any money
   // changed hands. Distinct from `cancelled` (which is always a booking
   // that had money on it at some point). See add_not_interested_journey_stage.sql.
@@ -512,9 +512,9 @@ function computeDueStatus(
   const target = new Date(y, (m || 1) - 1, d || 1);
   const diffDays = Math.round((target.getTime() - today.getTime()) / 86400000);
   const dateLabel = formatDate(dateStr, { day: 'numeric', month: 'short', year: undefined });
-  if (diffDays < 0) return { label: labels.overdue(dateLabel), color: 'bg-red-100 text-red-700', isDue: true, isOverdue: true };
-  if (diffDays === 0) return { label: labels.today, color: 'bg-amber-100 text-amber-700', isDue: true, isOverdue: false };
-  return { label: labels.upcoming(dateLabel), color: 'bg-blue-50 text-blue-700', isDue: false, isOverdue: false };
+  if (diffDays < 0) return { label: labels.overdue(dateLabel), color: 'bg-danger-bg text-danger-fg', isDue: true, isOverdue: true };
+  if (diffDays === 0) return { label: labels.today, color: 'bg-warning-bg text-warning-fg', isDue: true, isOverdue: false };
+  return { label: labels.upcoming(dateLabel), color: 'bg-info-bg text-info-fg', isDue: false, isOverdue: false };
 }
 
 // Follow-up reminder chip shown next to a Contacted lead — auto-escalates

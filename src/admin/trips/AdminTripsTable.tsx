@@ -163,11 +163,11 @@ export default function AdminTripsTable({
         <div className="bg-white rounded-lg shadow-card px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 flex-wrap">
             <ClipboardList size={18} className="text-primary shrink-0" aria-hidden="true" />
-            <button type="button" aria-pressed={statusFilter === 'published'} onClick={() => toggleStatus('published')} title="Show only Published trips" className={pillClass('published', 'bg-green-50 text-green-700')}>
+            <button type="button" aria-pressed={statusFilter === 'published'} onClick={() => toggleStatus('published')} title="Show only Published trips" className={pillClass('published', 'bg-success-bg text-success-fg')}>
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" aria-hidden="true" />
               {publishedCount} Published
             </button>
-            <button type="button" aria-pressed={statusFilter === 'coming_soon'} onClick={() => toggleStatus('coming_soon')} title="Show only Coming Soon trips" className={pillClass('coming_soon', 'bg-amber-50 text-amber-700')}>
+            <button type="button" aria-pressed={statusFilter === 'coming_soon'} onClick={() => toggleStatus('coming_soon')} title="Show only Coming Soon trips" className={pillClass('coming_soon', 'bg-warning-bg text-warning-fg')}>
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" aria-hidden="true" />
               {comingSoonCount} Coming Soon
             </button>
@@ -209,7 +209,7 @@ export default function AdminTripsTable({
               onChange={e => setQuery(e.target.value)}
               placeholder="Search trips by name or destination"
               aria-label="Search trips"
-              className="w-full bg-white rounded-lg shadow-card pl-9 pr-9 py-2.5 text-sm text-dark placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full bg-white rounded-lg shadow-card pl-9 pr-9 py-2.5 text-sm text-dark placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-primary"
             />
             {query && (
               <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-dark-muted hover:text-primary">
@@ -281,8 +281,8 @@ export default function AdminTripsTable({
                       </div>
                     </div>
                     <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
-                      trip.status === 'published' ? 'bg-green-100 text-green-700'
-                      : trip.status === 'coming_soon' ? 'bg-amber-100 text-amber-700'
+                      trip.status === 'published' ? 'bg-success-bg text-success-fg'
+                      : trip.status === 'coming_soon' ? 'bg-warning-bg text-warning-fg'
                       : 'bg-background-warm text-dark-muted'
                     }`}>
                       {trip.status === 'published' ? 'Published' : trip.status === 'coming_soon' ? 'Coming Soon' : 'Draft'}
@@ -350,14 +350,14 @@ export default function AdminTripsTable({
                     <td className="px-4 py-4 text-dark-muted hidden lg:table-cell whitespace-nowrap">{formatDate(trip.start_date, { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                     <td className="px-4 py-4 text-dark-muted hidden md:table-cell whitespace-nowrap">
                       {trip.seats_booked}/{trip.total_seats}
-                      <span className="text-xs text-dark-muted/70 ml-1">
+                      <span className="text-xs text-dark-muted/75 ml-1">
                         ({Math.max(0, trip.total_seats - trip.seats_booked)} left)
                       </span>
                     </td>
                     <td className="px-2 py-4 text-center">
                       <span className={`inline-block text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
-                        trip.status === 'published' ? 'bg-green-100 text-green-700'
-                        : trip.status === 'coming_soon' ? 'bg-amber-100 text-amber-700'
+                        trip.status === 'published' ? 'bg-success-bg text-success-fg'
+                        : trip.status === 'coming_soon' ? 'bg-warning-bg text-warning-fg'
                         : 'bg-background-warm text-dark-muted'
                       }`}>
                         {trip.status === 'published' ? 'Published' : trip.status === 'coming_soon' ? 'Coming Soon' : 'Draft'}

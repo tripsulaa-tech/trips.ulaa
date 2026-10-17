@@ -37,7 +37,7 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
         {isOpen && options && (
           <DialogShell
             icon={Icon}
-            iconClass={variant === 'danger' ? 'bg-red-100 text-red-600' : 'bg-primary/10 text-primary'}
+            iconClass={variant === 'danger' ? 'bg-danger-bg text-danger-fg' : 'bg-primary/10 text-primary'}
             title={options.title}
             message={options.message}
             messageId="confirm-dialog-message"

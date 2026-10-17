@@ -11,9 +11,9 @@ import DialogShell from './DialogShell';
 import { AlertContext, type AlertFn, type AlertOptions } from './useAlert';
 
 const VARIANT_CONFIG = {
-  error: { icon: AlertCircle, iconClass: 'bg-red-100 text-red-600' },
+  error: { icon: AlertCircle, iconClass: 'bg-danger-bg text-danger-fg' },
   info: { icon: Info, iconClass: 'bg-primary/10 text-primary' },
-  success: { icon: CheckCircle2, iconClass: 'bg-green-100 text-green-600' },
+  success: { icon: CheckCircle2, iconClass: 'bg-success-bg text-success-fg' },
 } as const;
 
 export function AlertDialogProvider({ children }: { children: ReactNode }) {

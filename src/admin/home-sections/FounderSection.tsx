@@ -107,7 +107,7 @@ export default function FounderSection({
                 type="button"
                 onClick={() => removeSocial(i)}
                 aria-label={`Remove ${link.platform || `social link ${i + 1}`}`}
-                className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+                className="p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"
               >
                 <Trash2 size={14} aria-hidden="true" />
               </button>
@@ -137,7 +137,7 @@ export default function FounderSection({
                 type="button"
                 onClick={() => removeSocial(i)}
                 aria-label={`Remove ${link.platform || `social link ${i + 1}`}`}
-                className="hidden sm:inline-flex p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+                className="hidden sm:inline-flex p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"
               >
                 <Trash2 size={14} aria-hidden="true" />
               </button>

@@ -206,7 +206,7 @@ export default function AdminTripFormModal({
         }
       >
         {modalSearchNoMatch && (
-          <p role="status" className="text-xs text-red-500 -mt-2 mb-3">No matching field found for "{modalSearch}".</p>
+          <p role="status" className="text-xs text-danger-fg -mt-2 mb-3">No matching field found for "{modalSearch}".</p>
         )}
         <div>
           <Tabs key={editingTrip?.id ?? 'new'} scrollContainerRef={modalBodyRef}>
@@ -543,7 +543,7 @@ export default function AdminTripFormModal({
                   <label htmlFor={`trip-card-tag-label-${i}`} className="sr-only">Tag {i + 1} label</label>
                   <input id={`trip-card-tag-label-${i}`} value={tag.label} onChange={e => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.map((t, idx) => idx === i ? { ...t, label: e.target.value } : t) }))} className={`${inputClass} flex-1`} placeholder="e.g. Girls-Only" />
                   <ReorderArrows vertical drag={tagDrag} index={i} count={form.card_feature_tags.length} className="mt-1.5" />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.filter((_, idx) => idx !== i) }))} aria-label={`Remove tag ${i + 1}`} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
+                  <button type="button" onClick={() => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.filter((_, idx) => idx !== i) }))} aria-label={`Remove tag ${i + 1}`} className="p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
                 </div>
               ))}
               {form.card_feature_tags.length === 0 && <p className="text-xs text-dark-muted">No custom tags. The card shows travelers, age range, duration and destinations.</p>}
@@ -632,7 +632,7 @@ export default function AdminTripFormModal({
                       </span>
                       <div className="flex items-center gap-0.5">
                         <ReorderArrows drag={galleryDrag} index={i} count={form.gallery_items.length} />
-                        <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} aria-label={`Remove Photo ${i + 1}`} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} aria-hidden="true" /></button>
+                        <button type="button" onClick={() => setForm(f => ({ ...f, gallery_items: f.gallery_items.filter((_, idx) => idx !== i) }))} aria-label={`Remove Photo ${i + 1}`} className="p-1 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"><Trash2 size={13} aria-hidden="true" /></button>
                       </div>
                     </div>
                     <ImageUploadField
@@ -704,7 +704,7 @@ export default function AdminTripFormModal({
                       </span>
                       <div className="flex items-center gap-0.5">
                         <ReorderArrows drag={highlightDrag} index={i} count={form.highlight_cards.length} />
-                      <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} aria-label={`Remove Card ${i + 1}`} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} aria-hidden="true" /></button>
+                      <button type="button" onClick={() => setForm(f => ({ ...f, highlight_cards: f.highlight_cards.filter((_, idx) => idx !== i) }))} aria-label={`Remove Card ${i + 1}`} className="p-1 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"><Trash2 size={13} aria-hidden="true" /></button>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -766,7 +766,7 @@ export default function AdminTripFormModal({
                     </span>
                     <div className="flex items-center gap-0.5">
                       <ReorderArrows drag={groupDrag} index={gi} count={form.included_groups.length} />
-                    <button type="button" onClick={() => setForm(f => ({ ...f, included_groups: f.included_groups.filter((_, idx) => idx !== gi) }))} aria-label={`Remove Group ${gi + 1}`} className="p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors"><Trash2 size={13} aria-hidden="true" /></button>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, included_groups: f.included_groups.filter((_, idx) => idx !== gi) }))} aria-label={`Remove Group ${gi + 1}`} className="p-1 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors"><Trash2 size={13} aria-hidden="true" /></button>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -869,7 +869,7 @@ export default function AdminTripFormModal({
                   <label htmlFor={`trip-carry-desc-${i}`} className="sr-only">Item {i + 1} description</label>
                   <input id={`trip-carry-desc-${i}`} value={item.description} onChange={e => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. Warm jacket" />
                   <ReorderArrows vertical drag={carryDrag} index={i} count={form.things_to_carry_items.length} className="mt-1.5" />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.filter((_, idx) => idx !== i) }))} aria-label={`Remove item ${i + 1}`} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
+                  <button type="button" onClick={() => setForm(f => ({ ...f, things_to_carry_items: f.things_to_carry_items.filter((_, idx) => idx !== i) }))} aria-label={`Remove item ${i + 1}`} className="p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
                 </div>
               ))}
               {form.things_to_carry_items.length === 0 && <p className="text-xs text-dark-muted">No items yet. Click "Add Item" to begin.</p>}
@@ -909,7 +909,7 @@ export default function AdminTripFormModal({
                   <label htmlFor={`trip-confidence-desc-${i}`} className="sr-only">Item {i + 1} description</label>
                   <input id={`trip-confidence-desc-${i}`} value={item.description} onChange={e => setForm(f => ({ ...f, confidence_items: f.confidence_items.map((it, idx) => idx === i ? { ...it, description: e.target.value } : it) }))} className={`${inputClass} flex-1`} placeholder="e.g. 24/7 on-ground support" />
                   <ReorderArrows vertical drag={confidenceDrag} index={i} count={form.confidence_items.length} className="mt-1.5" />
-                  <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: f.confidence_items.filter((_, idx) => idx !== i) }))} aria-label={`Remove item ${i + 1}`} className="p-1.5 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
+                  <button type="button" onClick={() => setForm(f => ({ ...f, confidence_items: f.confidence_items.filter((_, idx) => idx !== i) }))} aria-label={`Remove item ${i + 1}`} className="p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
                 </div>
               ))}
               {form.confidence_items.length === 0 && <p className="text-xs text-dark-muted">No confidence items yet.</p>}

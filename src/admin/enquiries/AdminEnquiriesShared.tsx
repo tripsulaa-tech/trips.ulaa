@@ -87,10 +87,10 @@ export function emailSignature(email: string | null | undefined): string | null 
 // rows are one group" apart from "these rows just happen to be next to each
 // other".
 export const GROUP_COLOR_PALETTE = [
-  { row: 'bg-blue-50/60 hover:bg-blue-50', accent: 'border-blue-400', badge: 'bg-blue-100 text-blue-700' },
+  { row: 'bg-info-bg/60 hover:bg-info-bg', accent: 'border-blue-400', badge: 'bg-info-bg text-info-fg' },
   { row: 'bg-purple-50/60 hover:bg-purple-50', accent: 'border-purple-400', badge: 'bg-purple-100 text-purple-700' },
   { row: 'bg-teal-50/60 hover:bg-teal-50', accent: 'border-teal-400', badge: 'bg-teal-100 text-teal-700' },
-  { row: 'bg-amber-50/60 hover:bg-amber-50', accent: 'border-amber-400', badge: 'bg-amber-100 text-amber-700' },
+  { row: 'bg-warning-bg/60 hover:bg-warning-bg', accent: 'border-amber-400', badge: 'bg-warning-bg text-warning-fg' },
   { row: 'bg-pink-50/60 hover:bg-pink-50', accent: 'border-pink-400', badge: 'bg-pink-100 text-pink-700' },
   { row: 'bg-lime-50/60 hover:bg-lime-50', accent: 'border-lime-400', badge: 'bg-lime-100 text-lime-700' },
   { row: 'bg-cyan-50/60 hover:bg-cyan-50', accent: 'border-cyan-400', badge: 'bg-cyan-100 text-cyan-700' },
@@ -186,12 +186,12 @@ export function isForfeited(e: Enquiry): boolean {
 export function paymentStatus(e: Enquiry): { label: string; color: string } {
   if (isForfeited(e)) return { label: 'Forfeited', color: 'bg-orange-100 text-orange-700' };
   if (!e.total_amount) {
-    if (e.journey_stage === 'contacted') return { label: 'Needs Pricing', color: 'bg-red-100 text-red-700' };
+    if (e.journey_stage === 'contacted') return { label: 'Needs Pricing', color: 'bg-danger-bg text-danger-fg' };
     return { label: 'Not set', color: 'bg-slate-100 text-dark-muted' };
   }
-  if (e.amount_paid <= 0) return { label: 'Unpaid', color: 'bg-red-100 text-red-700' };
-  if (e.amount_paid >= e.total_amount) return { label: 'Paid in full', color: 'bg-green-100 text-green-700' };
-  return { label: 'Partial', color: 'bg-amber-100 text-amber-700' };
+  if (e.amount_paid <= 0) return { label: 'Unpaid', color: 'bg-danger-bg text-danger-fg' };
+  if (e.amount_paid >= e.total_amount) return { label: 'Paid in full', color: 'bg-success-bg text-success-fg' };
+  return { label: 'Partial', color: 'bg-warning-bg text-warning-fg' };
 }
 
 export function paymentBalance(e: Enquiry): number | null {
@@ -231,8 +231,8 @@ export function isCancelled(e: Enquiry): boolean {
 // both, per the spec's core principle of not mixing responsibilities.
 export function bookingStateBadge(e: Enquiry): { label: string; color: string } {
   return isCancelled(e)
-    ? { label: 'Cancelled', color: 'bg-red-100 text-red-700' }
-    : { label: 'Active', color: 'bg-green-100 text-green-700' };
+    ? { label: 'Cancelled', color: 'bg-danger-bg text-danger-fg' }
+    : { label: 'Active', color: 'bg-success-bg text-success-fg' };
 }
 
 // "Attendance" (CRM spec section 4) — independent of Booking Journey and
@@ -255,14 +255,14 @@ export function attendanceBadge(e: Enquiry): { label: string; color: string } {
 // per policy, where a normal cancellation doesn't).
 export function seatStatus(e: Enquiry): { label: string; title: string; color: string; icon: typeof CheckCircle2 } {
   if (isBooked(e)) {
-    return { label: 'Booked', title: 'Seat booked automatically from payment', color: 'bg-green-100 text-green-700', icon: CheckCircle2 };
+    return { label: 'Booked', title: 'Seat booked automatically from payment', color: 'bg-success-bg text-success-fg', icon: CheckCircle2 };
   }
   if (e.cancelled_at) {
     return e.is_no_show
       // "Released", not "No Show" — the Status column already says No Show,
       // so repeating it here told the admin nothing new about the seat.
       ? { label: 'Released', title: 'No-show — seat released, forfeits refund per policy', color: 'bg-orange-100 text-orange-700', icon: XCircle }
-      : { label: 'Cancelled', title: 'Cancelled — seat released', color: 'bg-red-100 text-red-700', icon: XCircle };
+      : { label: 'Cancelled', title: 'Cancelled — seat released', color: 'bg-danger-bg text-danger-fg', icon: XCircle };
   }
   return { label: 'Not booked', title: 'No payment recorded yet, so no seat is held', color: 'bg-background-warm text-dark-muted', icon: Circle };
 }
@@ -286,15 +286,15 @@ export function refundStatus(e: Enquiry, short = false): { label: string; color:
   // the payment line right above it.
   if (e.is_no_show) return { label: short ? 'No refund' : `No refund — ${formatPrice(e.amount_paid)} forfeited`, color: 'bg-orange-100 text-orange-700' };
   const refunded = e.refund_amount || 0;
-  if (refunded >= e.amount_paid) return { label: 'Refunded', color: 'bg-green-100 text-green-700' };
-  if (refunded > 0) return { label: `Refund pending — ${formatPrice(e.amount_paid - refunded)} left`, color: 'bg-amber-100 text-amber-700' };
-  return { label: `Refund pending — ${formatPrice(e.amount_paid)}`, color: 'bg-red-100 text-red-700' };
+  if (refunded >= e.amount_paid) return { label: 'Refunded', color: 'bg-success-bg text-success-fg' };
+  if (refunded > 0) return { label: `Refund pending — ${formatPrice(e.amount_paid - refunded)} left`, color: 'bg-warning-bg text-warning-fg' };
+  return { label: `Refund pending — ${formatPrice(e.amount_paid)}`, color: 'bg-danger-bg text-danger-fg' };
 }
 
 export const STATUS_CONFIG = {
-  new: { label: 'New', color: 'bg-blue-100 text-blue-700', icon: Clock },
-  contacted: { label: 'Contacted', color: 'bg-amber-100 text-amber-700', icon: RefreshCw },
-  closed: { label: 'Closed', color: 'bg-green-100 text-green-700', icon: CheckCircle },
+  new: { label: 'New', color: 'bg-info-bg text-info-fg', icon: Clock },
+  contacted: { label: 'Contacted', color: 'bg-warning-bg text-warning-fg', icon: RefreshCw },
+  closed: { label: 'Closed', color: 'bg-success-bg text-success-fg', icon: CheckCircle },
 };
 
 // JOURNEY_STAGE_CONFIG / journeyBadge / nextManualAction / BookingLifecycleStepper

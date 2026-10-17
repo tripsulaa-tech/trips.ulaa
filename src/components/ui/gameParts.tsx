@@ -135,7 +135,7 @@ export function GameTile({ onClick, compact, thumb, row, Icon, iconSrc, title, s
   const tapAnim = reduce ? undefined : { scale: 0.96 };
   const hoverAnim = reduce ? undefined : { y: -2 };
   const medallion = accent === 'gold'
-    ? 'from-[#F0CE7A] to-gold text-dark shadow-[0_6px_18px_rgba(200,150,42,0.45)]'
+    ? 'from-gold-300 to-gold text-dark shadow-[0_6px_18px_rgba(200,150,42,0.45)]'
     : 'from-secondary to-primary text-white shadow-[0_6px_18px_rgba(168,90,42,0.5)]';
   const shell = 'group relative w-full rounded-2xl overflow-hidden text-left text-cream bg-gradient-to-br from-dark to-footer border border-gold/30 shadow-[0_8px_24px_rgba(39,30,24,0.35)] hover:shadow-[0_12px_32px_rgba(39,30,24,0.5)] transition-shadow';
   const glows = (
@@ -154,7 +154,7 @@ export function GameTile({ onClick, compact, thumb, row, Icon, iconSrc, title, s
         whileTap={reduce ? undefined : { scale: 0.93 }}
         whileHover={reduce ? undefined : { y: -4 }}
         aria-label={`${title}. ${subtitle}`}
-        className="group relative flex flex-col items-center gap-1.5 sm:gap-3 w-full touch-manipulation [-webkit-tap-highlight-color:transparent] outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded-2xl sm:rounded-3xl p-0 sm:p-1"
+        className="group relative flex flex-col items-center gap-1.5 sm:gap-3 w-full touch-manipulation [-webkit-tap-highlight-color:transparent] outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-2xl sm:rounded-3xl p-0 sm:p-1"
       >
         <span className={`relative w-full aspect-square max-w-[3.5rem] sm:max-w-[9.5rem] rounded-[26%] bg-gradient-to-br ${medallion} flex items-center justify-center overflow-hidden border border-white/25 shadow-[0_6px_14px_rgba(39,30,24,0.25)] sm:shadow-[0_14px_30px_rgba(39,30,24,0.28)] group-hover:shadow-[0_18px_38px_rgba(39,30,24,0.38)] transition-shadow`}>
           <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/30 to-transparent pointer-events-none" aria-hidden="true" />
@@ -181,7 +181,7 @@ export function GameTile({ onClick, compact, thumb, row, Icon, iconSrc, title, s
           <span className="block font-display text-[15px] font-extrabold leading-tight text-white">{title}</span>
           <span className="block text-[11px] text-cream/60 truncate">{subtitle}</span>
         </span>
-        <span className="relative shrink-0 rounded-full bg-white/10 border border-white/20 px-3.5 py-1.5 text-xs font-bold text-[#F0CE7A]">Play</span>
+        <span className="relative shrink-0 rounded-full bg-white/10 border border-white/20 px-3.5 py-1.5 text-xs font-bold text-gold-300">Play</span>
       </motion.button>
     );
   }
@@ -218,7 +218,7 @@ export function GameTile({ onClick, compact, thumb, row, Icon, iconSrc, title, s
         {iconSrc ? <img src={iconSrc} alt="" className="w-7 h-7 object-contain" draggable={false} /> : Icon && <Icon size={28} weight="duotone" />}
       </motion.span>
       <span className="relative flex-1 min-w-0">
-        <span className="inline-flex items-center whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.14em] bg-gold/20 text-[#F0CE7A] border border-gold/40 rounded-full px-2 py-0.5 mb-1">{chip}</span>
+        <span className="inline-flex items-center whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.14em] bg-gold/20 text-gold-300 border border-gold/40 rounded-full px-2 py-0.5 mb-1">{chip}</span>
         <span className="block font-display text-lg font-extrabold leading-tight text-white">{title}</span>
         <span className="block text-xs text-cream/60 truncate">{subtitle}</span>
       </span>
@@ -234,9 +234,9 @@ export function NameField({ value, onChange, onEnter }: { value: string; onChang
   const id = useId();
   return (
     <div className="text-left mb-3">
-      <label htmlFor={id} className="block text-[10px] font-bold uppercase tracking-[0.18em] text-cream/50 mb-1.5">Your name <span className="normal-case tracking-normal font-medium text-cream/40">(optional)</span></label>
-      <div className="flex items-center gap-2 rounded-2xl bg-white/[0.07] border border-white/15 focus-within:border-[#F0CE7A]/70 focus-within:bg-white/10 px-3.5 transition-colors">
-        <User size={18} weight="duotone" className="text-[#F0CE7A] shrink-0" aria-hidden="true" />
+      <label htmlFor={id} className="block text-[10px] font-bold uppercase tracking-[0.18em] text-cream/50 mb-1.5">Your name <span className="normal-case tracking-normal font-medium text-cream/55">(optional)</span></label>
+      <div className="flex items-center gap-2 rounded-2xl bg-white/[0.07] border border-white/15 focus-within:border-gold-300/70 focus-within:bg-white/10 px-3.5 transition-colors">
+        <User size={18} weight="duotone" className="text-gold-300 shrink-0" aria-hidden="true" />
         <input
           id={id}
           type="text"
@@ -247,10 +247,10 @@ export function NameField({ value, onChange, onEnter }: { value: string; onChang
           placeholder="e.g. Ulaa"
           onChange={e => onChange(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') onEnter(); }}
-          className="w-full bg-transparent py-3 text-[15px] font-semibold text-white placeholder:text-cream/30 outline-none"
+          className="w-full bg-transparent py-3 text-[15px] font-semibold text-white placeholder:text-cream/55 outline-none"
         />
       </div>
-      <p className="mt-1.5 text-[11px] text-cream/40">Shown on the score card you share. Stays on this device.</p>
+      <p className="mt-1.5 text-[11px] text-cream/55">Shown on the score card you share. Stays on this device.</p>
     </div>
   );
 }

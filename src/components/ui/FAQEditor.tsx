@@ -31,7 +31,7 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
         <button
           type="button"
           onClick={addFAQ}
-          className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary/80 transition-colors"
+          className="flex items-center gap-1 text-xs font-button font-semibold text-primary hover:text-primary-dark transition-colors"
         >
           <Plus size={14} /> Add FAQ
         </button>
@@ -51,7 +51,7 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
                 </span>
                 <div className="flex items-center gap-0.5">
                   <ReorderArrows vertical drag={drag} index={index} count={value.length} />
-                  <button type="button" onClick={() => removeFAQ(index)} className="p-1 rounded-md hover:bg-red-50 text-dark-muted hover:text-red-600 transition-colors" title="Remove">
+                  <button type="button" onClick={() => removeFAQ(index)} className="p-1 rounded-md hover:bg-danger-bg text-dark-muted hover:text-red-600 transition-colors" title="Remove">
                     <X size={14} />
                   </button>
                 </div>

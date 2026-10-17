@@ -156,7 +156,7 @@ export default function JourneyIntroSection({
                 <button
                   type="button"
                   onClick={() => removeHYEItem(i)}
-                  className="p-1.5 rounded-full text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+                  className="p-1.5 rounded-full text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"
                   aria-label={`Remove ${item.text || `item ${i + 1}`}`}
                 >
                   <Trash2 size={14} aria-hidden="true" />
@@ -228,7 +228,7 @@ export default function JourneyIntroSection({
                 <button
                   type="button"
                   onClick={() => removeWTUItem(i)}
-                  className="p-1.5 rounded-full text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors flex-shrink-0"
+                  className="p-1.5 rounded-full text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"
                   aria-label={`Remove ${item.title || `item ${i + 1}`}`}
                 >
                   <Trash2 size={14} aria-hidden="true" />

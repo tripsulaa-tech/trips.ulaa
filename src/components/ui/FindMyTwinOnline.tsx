@@ -32,7 +32,7 @@ import { useTwinPromptsSync } from './useGameContentSync';
 
 const MUTE_KEY = 'ulaa:packbag:muted'; // one sound setting for all the games
 
-const inputCls = 'w-full rounded-xl bg-white/[0.07] border border-white/15 focus:border-[#F0CE7A]/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/30 outline-none transition-colors';
+const inputCls = 'w-full rounded-xl bg-white/[0.07] border border-white/15 focus:border-gold-300/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/55 outline-none transition-colors';
 
 interface Audio {
   play: ReturnType<typeof useSynth>['play'];
@@ -127,7 +127,7 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
 
   return (
     <div className="relative text-center pt-3">
-      <div className="w-16 h-16 mx-auto mb-3 rounded-[22px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]" aria-hidden="true">
+      <div className="w-16 h-16 mx-auto mb-3 rounded-[22px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]" aria-hidden="true">
         <Users size={36} weight="duotone" />
       </div>
       <h2 className="font-display text-3xl font-extrabold text-white leading-tight">Find My Twin</h2>
@@ -178,7 +178,7 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
                       aria-checked={on}
                       disabled={taken}
                       onClick={() => { setName(n); setError(''); }}
-                      className={`min-h-[44px] rounded-xl border px-2.5 py-2 text-sm font-semibold text-left leading-tight transition-colors ${on ? 'bg-[#F0CE7A] border-[#F0CE7A] text-dark' : taken ? 'bg-white/[0.03] border-white/10 text-cream/30 line-through cursor-not-allowed' : 'bg-white/[0.07] border-white/15 text-white hover:border-[#F0CE7A]/60'}`}
+                      className={`min-h-[44px] rounded-xl border px-2.5 py-2 text-sm font-semibold text-left leading-tight transition-colors ${on ? 'bg-gold-300 border-gold-300 text-dark' : taken ? 'bg-white/[0.03] border-white/10 text-cream/30 line-through cursor-not-allowed' : 'bg-white/[0.07] border-white/15 text-white hover:border-gold-300/60'}`}
                     >
                       <span className="block truncate">{n}</span>
                       {taken && <span className="block text-[10px] font-bold uppercase tracking-wider no-underline">Joined</span>}
@@ -186,7 +186,7 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
                   );
                 })}
               </div>
-              <p className="text-[11px] text-cream/40 mb-3">Not here? Ask the host. Names greyed out have already joined.</p>
+              <p className="text-[11px] text-cream/55 mb-3">Not here? Ask the host. Names greyed out have already joined.</p>
             </>
           ) : (
             <>
@@ -201,7 +201,7 @@ export default function FindMyTwinOnline({ tripTitle, initialCode, onExit }: Fin
               placeholder="e.g. Ulaa"
               className={`${inputCls} mb-1`}
             />
-            <p className="text-[11px] text-cream/40 mb-3">Use the name your friends know you by. They will be looking for it!</p>
+            <p className="text-[11px] text-cream/55 mb-3">Use the name your friends know you by. They will be looking for it!</p>
             </>
           )}
           {error && <p role="alert" className="text-xs font-semibold text-rose-300 mb-2">{error}</p>}
@@ -271,7 +271,7 @@ function PlayerChips({ players, hostId, meId, canKick, onKick }: {
           key={p.id}
           className={`inline-flex items-center gap-1 rounded-full pl-2.5 ${canKick && p.id !== meId ? 'pr-1' : 'pr-2.5'} py-1 text-[11px] font-bold border ${p.answered ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'} ${p.away ? 'opacity-50' : ''}`}
         >
-          {p.id === hostId && <Crown size={11} weight="fill" className="text-[#F0CE7A]" aria-label="Host" />}
+          {p.id === hostId && <Crown size={11} weight="fill" className="text-gold-300" aria-label="Host" />}
           {p.answered && <CheckCircle size={11} weight="fill" aria-label="Answered" />}
           <span className="max-w-[7rem] truncate">{p.name}{p.id === meId ? ' (you)' : ''}</span>
           {canKick && p.id !== meId && (
@@ -314,7 +314,7 @@ function Quiz({ onSubmit, busy, play }: { onSubmit: (answers: string) => void; b
       <p className={eyebrow}>{reviewing ? 'All done' : `Question ${idx + 1} of ${QUESTIONS.length}`}</p>
       <div className="flex flex-wrap justify-center gap-1.5 mt-2 mb-4" aria-hidden="true">
         {QUESTIONS.map((_, i) => (
-          <span key={i} className={`h-1.5 rounded-full transition-all ${QUESTIONS.length > 10 ? (i < idx ? 'w-4 bg-[#F0CE7A]' : i === idx ? 'w-6 bg-white' : 'w-4 bg-white/15') : (i < idx ? 'w-6 bg-[#F0CE7A]' : i === idx ? 'w-8 bg-white' : 'w-6 bg-white/15')}`} />
+          <span key={i} className={`h-1.5 rounded-full transition-all ${QUESTIONS.length > 10 ? (i < idx ? 'w-4 bg-gold-300' : i === idx ? 'w-6 bg-white' : 'w-4 bg-white/15') : (i < idx ? 'w-6 bg-gold-300' : i === idx ? 'w-8 bg-white' : 'w-6 bg-white/15')}`} />
         ))}
       </div>
 
@@ -328,7 +328,7 @@ function Quiz({ onSubmit, busy, play }: { onSubmit: (answers: string) => void; b
             transition={{ duration: 0.18 }}
           >
             <h2 className="font-display text-3xl font-extrabold text-white leading-tight mb-4">
-              {q.left.label} <span className="text-cream/40 text-2xl">or</span> {q.right.label}?
+              {q.left.label} <span className="text-cream/55 text-2xl">or</span> {q.right.label}?
             </h2>
             <div className="grid gap-3">
               {([q.left, q.right] as const).map((o, i) => {
@@ -341,7 +341,7 @@ function Quiz({ onSubmit, busy, play }: { onSubmit: (answers: string) => void; b
                     onClick={() => choose(i as 0 | 1)}
                     className={`touch-manipulation rounded-3xl border px-4 py-5 flex items-center gap-4 text-left transition active:scale-[0.97] ${on ? 'bg-gradient-to-br from-primary-light to-primary border-transparent text-white shadow-[0_10px_26px_rgba(168,90,42,0.5)]' : 'bg-white/[0.06] border-white/10 text-cream hover:bg-white/10'}`}
                   >
-                    <span className={`w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center border ${on ? 'bg-white/20 border-white/30 text-white' : 'bg-gradient-to-br from-[#F0CE7A] to-gold border-white/25 text-dark shadow-[0_6px_16px_rgba(200,150,42,0.4)]'}`} aria-hidden="true"><o.Icon size={30} weight="duotone" /></span>
+                    <span className={`w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center border ${on ? 'bg-white/20 border-white/30 text-white' : 'bg-gradient-to-br from-gold-300 to-gold border-white/25 text-dark shadow-[0_6px_16px_rgba(200,150,42,0.4)]'}`} aria-hidden="true"><o.Icon size={30} weight="duotone" /></span>
                     <span className="font-display text-2xl font-extrabold leading-tight">{o.label}</span>
                   </button>
                 );
@@ -363,7 +363,7 @@ function Quiz({ onSubmit, busy, play }: { onSubmit: (answers: string) => void; b
                 return (
                   <li key={qq.id}>
                     <button type="button" onClick={() => setIdx(i)} className="inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] border border-white/15 px-3 py-1.5 text-sm font-bold text-white hover:bg-white/15 transition-colors" aria-label={`${o.label}. Change answer`}>
-                      <o.Icon size={16} weight="duotone" className="text-[#F0CE7A]" aria-hidden="true" /> {o.label}
+                      <o.Icon size={16} weight="duotone" className="text-gold-300" aria-hidden="true" /> {o.label}
                     </button>
                   </li>
                 );
@@ -397,7 +397,7 @@ function TwinCard({ edge, round, reduce, busy, onFound, onDone }: {
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-300"><CheckCircle size={11} weight="fill" className="inline -mt-0.5 mr-1" />Connected</p>
           <p className="font-display text-lg font-extrabold text-white leading-tight truncate">You + {first}</p>
         </div>
-        <Heart size={22} weight="fill" className="text-[#F0CE7A] shrink-0" aria-hidden="true" />
+        <Heart size={22} weight="fill" className="text-gold-300 shrink-0" aria-hidden="true" />
       </div>
     );
   }
@@ -411,7 +411,7 @@ function TwinCard({ edge, round, reduce, busy, onFound, onDone }: {
     >
       {!bothFound && (
         <>
-          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">👯 Your travel twin</span>
+          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">👯 Your travel twin</span>
           <h3 className="font-display text-3xl font-extrabold text-white leading-tight">You + <span className={GOLD_GRAD_TEXT}>{first}</span></h3>
           <div className="my-3"><MatchRing score={edge.score} reduce={reduce} /></div>
           <p className="font-display text-xl font-extrabold text-white">{edge.score}% Match <span aria-hidden="true">💗</span></p>
@@ -423,7 +423,7 @@ function TwinCard({ edge, round, reduce, busy, onFound, onDone }: {
             className="rounded-2xl bg-gradient-to-br from-primary/45 to-secondary/25 border border-gold/35 px-4 py-3 mb-4"
           >
             <p className="inline-flex items-center gap-1.5 font-display text-2xl font-extrabold text-white">
-              <MagnifyingGlass size={22} weight="bold" className="text-[#F0CE7A]" aria-hidden="true" /> Find {first}!
+              <MagnifyingGlass size={22} weight="bold" className="text-gold-300" aria-hidden="true" /> Find {first}!
             </p>
             <p className="text-xs text-cream/70 mt-0.5">Look around the room. They are looking for you too.</p>
           </motion.div>
@@ -450,7 +450,7 @@ function TwinCard({ edge, round, reduce, busy, onFound, onDone }: {
           <p className="text-sm font-bold text-emerald-300 mb-3"><CheckCircle size={16} weight="fill" className="inline -mt-0.5 mr-1" />You found each other!</p>
 
           <div className="rounded-2xl bg-gradient-to-br from-primary/45 to-secondary/25 border border-gold/35 px-4 py-4 mb-4 text-left">
-            <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><ChatCircleDots size={13} weight="fill" /> Ask each other</p>
+            <p className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300"><ChatCircleDots size={13} weight="fill" /> Ask each other</p>
             <p className="font-display text-xl font-extrabold text-white leading-snug mt-1">“{promptFor(round)}”</p>
           </div>
 
@@ -461,7 +461,7 @@ function TwinCard({ edge, round, reduce, busy, onFound, onDone }: {
           ) : (
             <p className="text-sm font-bold text-cream/70" role="status">Waiting for {first} to finish the chat…</p>
           )}
-          <p className="text-[11px] text-cream/40 mt-2">Both of you answer, then tap. It unlocks the next round for everyone.</p>
+          <p className="text-[11px] text-cream/55 mt-2">Both of you answer, then tap. It unlocks the next round for everyone.</p>
         </>
       )}
     </motion.div>
@@ -611,7 +611,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const hostBanner = !isHost && state.host_away && (
     <div className="rounded-2xl bg-rose-400/10 border border-rose-300/30 px-3 py-2.5 mb-3 text-left">
       <p className="text-xs text-rose-100"><WifiSlash size={13} weight="bold" className="inline -mt-0.5 mr-1" />{hostName} seems to be away.</p>
-      <button type="button" onClick={() => void act(() => twin.claimHost(room.code))} className="mt-1.5 text-xs font-bold text-[#F0CE7A] hover:text-white transition-colors">Take over as host</button>
+      <button type="button" onClick={() => void act(() => twin.claimHost(room.code))} className="mt-1.5 text-xs font-bold text-gold-300 hover:text-white transition-colors">Take over as host</button>
     </div>
   );
 
@@ -625,7 +625,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       {/* Top bar */}
       <div className="flex items-center gap-2 pr-12 mb-3">
         <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-2.5 py-1 text-[11px] font-bold text-cream/80">
-          <Hash size={12} weight="bold" /> <span className="font-display tracking-[0.2em] text-[#F0CE7A]">{room.code}</span>
+          <Hash size={12} weight="bold" /> <span className="font-display tracking-[0.2em] text-gold-300">{room.code}</span>
         </span>
         {offline && <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-300"><WifiSlash size={13} weight="bold" /> Reconnecting…</span>}
         <span className="flex-1" />
@@ -717,7 +717,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           </div>
 
           <div className="h-1.5 rounded-full bg-white/10 overflow-hidden mb-4" aria-hidden="true">
-            <div className="h-full rounded-full bg-gradient-to-r from-secondary to-[#F0CE7A] transition-all duration-500" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
+            <div className="h-full rounded-full bg-gradient-to-r from-secondary to-gold-300 transition-all duration-500" style={{ width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%` }} />
           </div>
 
           {edges.length === 0 ? (
@@ -756,7 +756,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               Someone missing? Skip unfinished pairs
             </button>
           )}
-          <button type="button" onClick={() => void leave()} className="mt-2 w-full text-xs font-semibold text-cream/40 hover:text-cream transition-colors">Leave game</button>
+          <button type="button" onClick={() => void leave()} className="mt-2 w-full text-xs font-semibold text-cream/55 hover:text-cream transition-colors">Leave game</button>
         </div>
       )}
 
@@ -764,7 +764,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       {phase === 'roundEnd' && (
         <div className="relative text-center pt-2">
           {!reduce && <Confetti />}
-          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Round {room.round_no} complete</span>
+          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Round {room.round_no} complete</span>
           <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>Everyone found their twin!</h2>
           <p className="text-sm text-cream/60 mt-1 mb-4">{progress.total} new connection{progress.total === 1 ? '' : 's'} made in this room.</p>
 
@@ -772,16 +772,16 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <ul className={`${glass} text-left divide-y divide-white/10 mb-4`}>
               {edges.map(e => (
                 <li key={e.id} className="flex items-center gap-3 px-3 py-2.5">
-                  <Heart size={18} weight="fill" className="text-[#F0CE7A] shrink-0" aria-hidden="true" />
+                  <Heart size={18} weight="fill" className="text-gold-300 shrink-0" aria-hidden="true" />
                   <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{e.partner_name}</span>
-                  <span className="font-display text-lg font-extrabold text-[#F0CE7A] tabular-nums">{e.score}%</span>
+                  <span className="font-display text-lg font-extrabold text-gold-300 tabular-nums">{e.score}%</span>
                 </li>
               ))}
             </ul>
           )}
 
           <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-4 text-left">
-            <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#F0CE7A]"><LockSimpleOpen size={11} weight="fill" /> Unlocked</p>
+            <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300"><LockSimpleOpen size={11} weight="fill" /> Unlocked</p>
             <p className="text-sm font-bold text-white mt-0.5">{isLast ? 'The wrap-up: your whole twin story.' : `Round ${room.round_no + 1}: a new twin and a new question.`}</p>
           </div>
 
@@ -798,8 +798,8 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       {phase === 'final' && (
         <div className="relative text-center pt-1">
           {!reduce && <Confetti />}
-          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">{roundNo} round{roundNo === 1 ? '' : 's'} played</span>
-          <div className="w-16 h-16 mx-auto mb-2 rounded-[22px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_12px_30px_rgba(200,150,42,0.45)]" aria-hidden="true">
+          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">{roundNo} round{roundNo === 1 ? '' : 's'} played</span>
+          <div className="w-16 h-16 mx-auto mb-2 rounded-[22px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_12px_30px_rgba(200,150,42,0.45)]" aria-hidden="true">
             <Heart size={36} weight="fill" />
           </div>
           {best ? (
@@ -816,9 +816,9 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <ul className={`${glass} text-left divide-y divide-white/10 mb-3`}>
               {history.map((h, i) => (
                 <li key={`${h.round}-${i}`} className="flex items-center gap-3 px-3 py-2">
-                  <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-cream/45">Round {h.round}</span>
+                  <span className="w-12 shrink-0 text-[10px] font-bold uppercase tracking-wider text-cream/55">Round {h.round}</span>
                   <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{h.partner_name}</span>
-                  <span className="font-display text-lg font-extrabold text-[#F0CE7A] tabular-nums">{h.score}%</span>
+                  <span className="font-display text-lg font-extrabold text-gold-300 tabular-nums">{h.score}%</span>
                 </li>
               ))}
             </ul>
@@ -831,7 +831,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 {state.all_pairs.slice(0, 5).map((p, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-cream/80">
                     <span className="flex-1 min-w-0 truncate"><strong className="text-white">{p.a_name}</strong> + <strong className="text-white">{p.b_name}</strong></span>
-                    <span className="font-display font-extrabold text-[#F0CE7A] tabular-nums">{p.score}%</span>
+                    <span className="font-display font-extrabold text-gold-300 tabular-nums">{p.score}%</span>
                   </li>
                 ))}
               </ol>

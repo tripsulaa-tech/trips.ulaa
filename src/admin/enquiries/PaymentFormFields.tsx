@@ -56,7 +56,7 @@ export default function PaymentFormFields({
   enquiry, paymentForm, setPaymentForm, paymentErrors, payments, paymentsLoading,
   togglingNoShow, onToggleNoShow, getTripPrice, getTripChildFareAmount, idPrefix = 'ed-pay', compact = false,
 }: PaymentFormFieldsProps) {
-  const paymentErrorClass = 'text-red-500 text-xs mt-1';
+  const paymentErrorClass = 'text-danger-fg text-xs mt-1';
   const fieldClass = 'w-full px-3 py-2 rounded-md border-2 border-background-warm bg-white text-sm focus:border-primary outline-none';
   // Only meaningful when a trip is linked — no-trip (general) enquiries
   // have no list price, so they keep the old free-typed Total Amount field.
@@ -273,14 +273,14 @@ export default function PaymentFormFields({
             </p>
           )}
           {capApplies && !isChildFare && (
-            <p className={`text-2xs mt-1 ${cappedAt != null ? 'text-amber-700 font-medium' : 'text-dark-muted'}`}>
+            <p className={`text-2xs mt-1 ${cappedAt != null ? 'text-warning-fg font-medium' : 'text-dark-muted'}`}>
               {cappedAt != null
                 ? `Can't be more than the ${capLabel} — set to ${formatPrice(cappedAt)}.`
                 : `Up to ${formatPrice(remainingOwed as number)} (${capLabel}).`}
             </p>
           )}
           {nearMiss && !isChildFare && (
-            <div role="status" className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 flex flex-wrap items-center gap-x-2 gap-y-1">
+            <div role="status" className="mt-2 rounded-md border border-warning-border bg-warning-bg px-3 py-2 text-xs text-warning-fg flex flex-wrap items-center gap-x-2 gap-y-1">
               <span>
                 Only <span className="font-semibold">{formatPrice(leftAfter as number)}</span> would still be owed after this. Did you mean the full {formatPrice(remainingOwed as number)}?
               </span>
@@ -325,7 +325,7 @@ export default function PaymentFormFields({
             options={availablePaymentTypeOptions(paymentForm, enquiry.amount_paid || 0)}
           />
           {autoSwitch && autoSwitch.type === paymentForm.payment_type && autoSwitch.text && (
-            <p className="text-2xs text-green-700 mt-1" role="status">{autoSwitch.text}</p>
+            <p className="text-2xs text-success-fg mt-1" role="status">{autoSwitch.text}</p>
           )}
           {paymentForm.payment_type === 'addon' && (
             <>
@@ -420,13 +420,13 @@ export default function PaymentFormFields({
           <p className="text-sm text-dark-muted">
             Already paid <span className="font-medium text-dark">{formatPrice(alreadyPaid)}</span>
             {thisPayment > 0 && !isPending && <> · after this payment: <span className="font-semibold text-dark">{formatPrice(projectedTotal)}</span></>}
-            {thisPayment > 0 && isPending && <> · <span className="font-semibold text-amber-700">{formatPrice(thisPayment)} raised as pending</span>, not yet counted as paid</>}
+            {thisPayment > 0 && isPending && <> · <span className="font-semibold text-warning-fg">{formatPrice(thisPayment)} raised as pending</span>, not yet counted as paid</>}
             {isExtraCharge && thisPayment > 0 && <> · booking total will rise by <span className="font-semibold text-dark">{formatPrice(thisPayment)}</span></>}
             {balance != null && !isOverpaid && (
               <> · Balance due: <span className="font-semibold text-dark">{formatPrice(balance)}</span></>
             )}
             {isOverpaid && (
-              <> · <span className="font-semibold text-red-600">Overpaid by {formatPrice(Math.abs(balance))} — refund needed</span></>
+              <> · <span className="font-semibold text-danger-fg">Overpaid by {formatPrice(Math.abs(balance))} — refund needed</span></>
             )}
           </p>
         );
@@ -445,7 +445,7 @@ export default function PaymentFormFields({
           placeholder={paymentForm.payment_type === 'addon' ? 'What is this add-on? e.g. Hotel upgrade, Extra night, Child fare' : 'Any additional context for this payment'}
         />
         {paymentErrors.notes && (
-          <p className="text-2xs text-red-600 mt-1" role="alert">{paymentErrors.notes}</p>
+          <p className="text-2xs text-danger-fg mt-1" role="alert">{paymentErrors.notes}</p>
         )}
         {paymentForm.payment_type === 'addon' && !paymentErrors.notes && (
           <p className="text-2xs text-dark-muted mt-1">Shown next to this charge in the invoice list, the invoice PDF and the booking email.</p>
@@ -461,8 +461,8 @@ export default function PaymentFormFields({
       />
 
       {enquiry.cancelled_at && (
-        <div className="bg-red-50 rounded-md p-3 space-y-2">
-          <p className="text-red-700 text-xs font-medium">Booking cancelled. Track any refund here.</p>
+        <div className="bg-danger-bg rounded-md p-3 space-y-2">
+          <p className="text-danger-fg text-xs font-medium">Booking cancelled. Track any refund here.</p>
           <label className="flex items-start gap-2 text-xs text-dark cursor-pointer bg-white/60 rounded px-2 py-1.5">
             <input
               type="checkbox"

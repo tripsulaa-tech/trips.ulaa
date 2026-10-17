@@ -92,9 +92,9 @@ function PaymentSummaryLine({ e }: { e: Enquiry }) {
   const status = paymentStatus(e);
   const balance = paymentBalance(e);
   const isPartial = paymentFilterKey(e) === 'partial' && balance != null;
-  const colorClass = status.color.includes('green') ? 'text-green-700'
-    : status.color.includes('amber') ? 'text-amber-700'
-    : status.color.includes('red') ? 'text-red-700'
+  const colorClass = status.color.includes('green') ? 'text-success-fg'
+    : status.color.includes('amber') ? 'text-warning-fg'
+    : status.color.includes('red') ? 'text-danger-fg'
     : status.color.includes('orange') ? 'text-orange-700'
     : 'text-dark-muted';
   return (
@@ -202,7 +202,7 @@ export default function AdminEnquiriesDesktopTable({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className={`transition-colors duration-1000 ${
-                    isHighlighted ? 'bg-amber-50 ring-2 ring-inset ring-primary/40' : clr ? clr.row : 'hover:bg-background/50'
+                    isHighlighted ? 'bg-warning-bg ring-2 ring-inset ring-primary/40' : clr ? clr.row : 'hover:bg-background/50'
                   }`}
                 >
                   <td className="px-3 py-3">
@@ -226,7 +226,7 @@ export default function AdminEnquiriesDesktopTable({
                         {e.has_child_addon && (
                           <span
                             title="A Child Fare add-on has been added to this booking"
-                            className="inline-flex items-center gap-1 text-xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 shrink-0"
+                            className="inline-flex items-center gap-1 text-xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-warning-bg text-warning-fg shrink-0"
                           >
                             <Baby size={9} className="shrink-0" aria-hidden="true" /> Child
                           </span>

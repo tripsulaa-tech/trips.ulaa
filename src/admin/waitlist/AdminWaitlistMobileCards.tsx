@@ -92,7 +92,7 @@ export default function AdminWaitlistMobileCards({
               <div className="text-xs text-dark-muted space-y-1">
                 <div className="flex items-center justify-between gap-2">
                   <p className="flex items-center gap-1.5 min-w-0">
-                    <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                    <span className="w-5 h-5 rounded-full bg-warning-bg text-warning-fg inline-flex items-center justify-center shrink-0">
                       <Mail size={10} aria-hidden="true" />
                     </span>
                     <span className="truncate">{realEmail(e.email) || 'No email'}</span>
@@ -100,7 +100,7 @@ export default function AdminWaitlistMobileCards({
                   <ContactQuickLinks phone={e.phone} email={realEmail(e.email)} name={e.full_name} tripTitle={e.trip_title} />
                 </div>
                 <p className="flex items-center gap-1.5">
-                  <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                  <span className="w-5 h-5 rounded-full bg-warning-bg text-warning-fg inline-flex items-center justify-center shrink-0">
                     <Phone size={10} aria-hidden="true" />
                   </span>
                   {e.phone}
@@ -111,7 +111,7 @@ export default function AdminWaitlistMobileCards({
                     {e.age && (
                       <>
                         <span className="inline-flex items-center gap-1.5">
-                          <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                          <span className="w-5 h-5 rounded-full bg-warning-bg text-warning-fg inline-flex items-center justify-center shrink-0">
                             <User size={10} aria-hidden="true" />
                           </span>
                           {e.age} yrs
@@ -121,16 +121,16 @@ export default function AdminWaitlistMobileCards({
                     )}
                     {foodBreakdown(e) ? (
                       <span className="inline-flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 text-green-700">
+                        <span className="inline-flex items-center gap-1 text-success-fg">
                           <FoodMark type="veg" size={11} /> {foodBreakdown(e)![1]} veg
                         </span>
                         <span className="text-dark-muted/40">/</span>
-                        <span className="inline-flex items-center gap-1 text-red-700">
+                        <span className="inline-flex items-center gap-1 text-danger-fg">
                           <FoodMark type="non_veg" size={11} /> {foodBreakdown(e)![2]} non-veg
                         </span>
                       </span>
                     ) : e.food_preference && (
-                      <span className={`inline-flex items-center gap-1 ${e.food_preference === 'veg' ? 'text-green-700' : 'text-red-700'}`}>
+                      <span className={`inline-flex items-center gap-1 ${e.food_preference === 'veg' ? 'text-success-fg' : 'text-danger-fg'}`}>
                         <FoodMark type={e.food_preference} size={11} /> {e.food_preference === 'veg' ? 'Veg' : 'Non-veg'}
                       </span>
                     )}
@@ -138,7 +138,7 @@ export default function AdminWaitlistMobileCards({
                       <span className="w-px h-3.5 bg-background-warm shrink-0" />
                     )}
                     <span className="inline-flex items-center gap-1.5">
-                      <span className="w-5 h-5 rounded-full bg-amber-50 text-amber-700 inline-flex items-center justify-center shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-warning-bg text-warning-fg inline-flex items-center justify-center shrink-0">
                         <CalendarDays size={10} aria-hidden="true" />
                       </span>
                       {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -146,7 +146,7 @@ export default function AdminWaitlistMobileCards({
                   </p>
                 )}
                 {e.city && <p>{e.city}</p>}
-                {e.emergency_contact && <p className="flex items-center gap-1"><Siren size={12} weight="fill" className="shrink-0 text-red-500" aria-hidden="true" /> <span className="font-semibold text-red-500">Emergency:</span> {e.emergency_contact}</p>}
+                {e.emergency_contact && <p className="flex items-center gap-1"><Siren size={12} weight="fill" className="shrink-0 text-danger-fg" aria-hidden="true" /> <span className="font-semibold text-danger-fg">Emergency:</span> {e.emergency_contact}</p>}
                 {!(e.age || e.food_preference || foodBreakdown(e)) && (
                   <p className="flex items-center gap-1.5">
                     <CalendarDays size={11} className="shrink-0" aria-hidden="true" /> {formatDate(e.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}

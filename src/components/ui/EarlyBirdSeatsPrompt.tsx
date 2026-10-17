@@ -32,7 +32,7 @@ export function EarlyBirdSeatsStrip({ total, left }: { total: number; left: numb
           </span>
         ))}
       </div>
-      <p className={`text-2xs leading-tight font-bold text-center ${left === 1 ? 'text-red-700' : 'text-orange-900'}`}>
+      <p className={`text-2xs leading-tight font-bold text-center ${left === 1 ? 'text-danger-fg' : 'text-orange-900'}`}>
         {earlyBirdSeatsCaption(total, left)}
       </p>
     </div>
@@ -117,7 +117,7 @@ export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advance
           {/* Seat tracker */}
           <div className="text-center">
             <SeatTiles total={totalSeats} left={seatsLeft} />
-            <p className={`mt-2.5 text-sm font-button font-semibold ${isLast ? 'text-red-600' : 'text-dark'}`}>
+            <p className={`mt-2.5 text-sm font-button font-semibold ${isLast ? 'text-danger-fg' : 'text-dark'}`}>
               {isLast
                 ? 'Last early-bird seat!'
                 : seatsLeft === totalSeats
@@ -136,7 +136,7 @@ export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advance
               <span className="text-xs text-dark-muted">per person</span>
             </div>
             {saving > 0 && (
-              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-green-100 text-green-700 text-xs font-button font-bold px-2.5 py-1">
+              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-success-bg text-success-fg text-xs font-button font-bold px-2.5 py-1">
                 You save {formatPrice(saving)}
               </span>
             )}

@@ -27,7 +27,7 @@ export default function MethodReferenceFields({
   selectPlaceholder = 'Select method',
   methodError,
   utrError,
-  errorClassName = 'text-red-500 text-xs mt-1',
+  errorClassName = 'text-danger-fg text-xs mt-1',
 }: {
   /** Ids become `${idPrefix}-method` / `${idPrefix}-utr`. */
   idPrefix: string;

@@ -12,7 +12,7 @@ const VARIANT_CONFIG: Record<ToastVariant, { tile: string; shadow: string; edge:
   success: { tile: 'bg-green-500', shadow: 'shadow-[0_10px_28px_-8px_rgba(34,197,94,0.40),0_2px_8px_rgba(45,33,24,0.06)]', edge: ['#22c55e', '#2dd4bf'] },
   error: { tile: 'bg-red-500', shadow: 'shadow-[0_10px_28px_-8px_rgba(239,68,68,0.38),0_2px_8px_rgba(45,33,24,0.06)]', edge: ['#ef4444', '#fb923c'] },
   info: { tile: 'bg-primary', shadow: 'shadow-[0_10px_28px_-8px_rgba(168,90,42,0.42),0_2px_8px_rgba(45,33,24,0.06)]', edge: ['#A85A2A', '#E8A04A'] },
-  warning: { tile: 'bg-gold', shadow: 'shadow-[0_10px_28px_-8px_rgba(200,150,42,0.45),0_2px_8px_rgba(45,33,24,0.06)]', edge: ['#C8962A', '#F0643C'] },
+  warning: { tile: 'bg-gold-700', shadow: 'shadow-[0_10px_28px_-8px_rgba(200,150,42,0.45),0_2px_8px_rgba(45,33,24,0.06)]', edge: ['#C8962A', '#F0643C'] },
 };
 
 // Tail of the border comet: many stacked arcs that all end at the same head. Where they
@@ -202,7 +202,7 @@ function ToastItem({
           <button
             type="button"
             onClick={() => { toast.action?.onClick(); onDismiss(toast.id); }}
-            className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-button font-semibold text-white hover:bg-primary-dark active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
+            className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-button font-semibold text-white hover:bg-primary-dark active:scale-95 transition-all cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           >
             {toast.action.label}
           </button>
@@ -214,7 +214,7 @@ function ToastItem({
           aria-label="Dismiss notification"
           className="group shrink-0 -my-2 -mr-1.5 w-11 h-11 flex items-center justify-center cursor-pointer outline-none"
         >
-          <span className="w-7 h-7 rounded-md flex items-center justify-center text-dark-muted/60 group-hover:text-dark group-hover:bg-background-warm group-active:scale-90 group-focus-visible:ring-2 group-focus-visible:ring-primary/40 transition-all">
+          <span className="w-7 h-7 rounded-md flex items-center justify-center text-dark-muted/60 group-hover:text-dark group-hover:bg-background-warm group-active:scale-90 group-focus-visible:ring-2 group-focus-visible:ring-primary transition-all">
             <X size={14} aria-hidden="true" />
           </span>
         </button>

@@ -312,7 +312,7 @@ export default function AdminAlbums() {
                 onChange={e => setQuery(e.target.value)}
                 placeholder="Search albums by name, destination or batch"
                 aria-label="Search albums"
-                className="w-full bg-white rounded-lg shadow-card pl-9 pr-9 py-2.5 text-sm text-dark placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-primary/40"
+                className="w-full bg-white rounded-lg shadow-card pl-9 pr-9 py-2.5 text-sm text-dark placeholder:text-dark-muted focus:outline-none focus:ring-2 focus:ring-primary"
               />
               {query && (
                 <button type="button" onClick={() => setQuery('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-dark-muted hover:text-primary">
@@ -384,7 +384,7 @@ export default function AdminAlbums() {
                         <p className="text-xs text-dark-muted truncate">{album.destination}</p>
                       </div>
                     </div>
-                    <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                    <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-success-bg text-success-fg' : 'bg-background-warm text-dark-muted'}`}>
                       {album.is_published ? 'Published' : 'Draft'}
                     </span>
                   </div>
@@ -456,7 +456,7 @@ export default function AdminAlbums() {
                         <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">{album.participants}</td>
                         <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">{album.gallery_images?.length || 0}</td>
                         <td className="px-2 py-4 text-center">
-                          <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                          <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${album.is_published ? 'bg-success-bg text-success-fg' : 'bg-background-warm text-dark-muted'}`}>
                             {album.is_published ? 'Published' : 'Draft'}
                           </span>
                         </td>
@@ -495,7 +495,7 @@ export default function AdminAlbums() {
               className={`${inputClass} ${errors.title ? '!border-red-400' : ''}`}
               placeholder="e.g. Magical Meghalaya"
             />
-            {errors.title && <p role="alert" className="text-xs text-red-500 mt-1">{errors.title}</p>}
+            {errors.title && <p role="alert" className="text-xs text-danger-fg mt-1">{errors.title}</p>}
           </div>
           <div>
             <label htmlFor="album-destination" className="block text-sm font-medium text-dark mb-1">Destination *</label>
@@ -517,7 +517,7 @@ export default function AdminAlbums() {
                 Find on Maps ↗
               </a>
             </div>
-            {errors.destination && <p role="alert" className="text-xs text-red-500 mt-1">{errors.destination}</p>}
+            {errors.destination && <p role="alert" className="text-xs text-danger-fg mt-1">{errors.destination}</p>}
           </div>
           <div>
             <label htmlFor="album-map-url" className="block text-sm font-medium text-dark mb-1">Destination — Google Maps Link</label>
@@ -545,7 +545,7 @@ export default function AdminAlbums() {
             <input id="album-batch" value={form.batch} onChange={e => setForm(f => ({ ...f, batch: e.target.value }))} className={`${inputClass} ${duplicateAlbum ? '!border-red-400' : ''}`} placeholder="e.g. 1 (shows as 'Batch 1')" />
             <p className="text-xs text-dark-muted mt-1">Use when the same trip ran in more than one batch.</p>
             {duplicateAlbum && (
-              <p role="alert" className="text-xs text-red-500 mt-1">
+              <p role="alert" className="text-xs text-danger-fg mt-1">
                 An album with this title already exists{form.batch.trim() ? ' for this batch' : ''}. Use a different batch, or change the title.
               </p>
             )}
@@ -558,7 +558,7 @@ export default function AdminAlbums() {
               onChange={trip_date => { setForm(f => ({ ...f, trip_date })); setErrors(err => ({ ...err, trip_date: undefined })); }}
               className={errors.trip_date ? '!border-red-400' : ''}
             />
-            {errors.trip_date && <p role="alert" className="text-xs text-red-500 mt-1">{errors.trip_date}</p>}
+            {errors.trip_date && <p role="alert" className="text-xs text-danger-fg mt-1">{errors.trip_date}</p>}
           </div>
           <div>
             <label htmlFor="album-participants" className="block text-sm font-medium text-dark mb-1">Participants</label>
@@ -602,7 +602,7 @@ export default function AdminAlbums() {
               rows={3}
               className={`${inputClass} resize-none ${errors.description ? '!border-red-400' : ''}`}
             />
-            {errors.description && <p role="alert" className="text-xs text-red-500 mt-1">{errors.description}</p>}
+            {errors.description && <p role="alert" className="text-xs text-danger-fg mt-1">{errors.description}</p>}
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <input type="checkbox" id="pub" checked={form.is_published} onChange={e => setForm(f => ({ ...f, is_published: e.target.checked }))} className="w-4 h-4 accent-primary" />
@@ -635,7 +635,7 @@ export default function AdminAlbums() {
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${viewing.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+              <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${viewing.is_published ? 'bg-success-bg text-success-fg' : 'bg-background-warm text-dark-muted'}`}>
                 {viewing.is_published ? 'Published' : 'Draft'}
               </span>
               {viewing.batch && (
@@ -687,7 +687,7 @@ export default function AdminAlbums() {
               <details className="group">
                 <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
                   <span className="transition-transform group-open:rotate-90">▶</span> Original Trip Plan
-                  <span className="text-dark-muted/70 font-normal">(from Upcoming Trips; admin reference only)</span>
+                  <span className="text-dark-muted/75 font-normal">(from Upcoming Trips; admin reference only)</span>
                 </summary>
                 <div className="mt-2 bg-background rounded-md p-3 max-h-80 overflow-y-auto app-scroll space-y-4">
                   {viewing.original_highlight_cards?.length ? (

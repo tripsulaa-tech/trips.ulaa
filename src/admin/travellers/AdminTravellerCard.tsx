@@ -77,7 +77,7 @@ export default function AdminTravellerCard({
                   type="button"
                   onClick={onMerge}
                   title="Another traveller uses this phone number — tap to review and merge"
-                  className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 shrink-0"
+                  className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning-bg text-warning-fg shrink-0"
                 >
                   <Warning size={9} aria-hidden="true" /> Shared number
                 </button>
@@ -106,13 +106,13 @@ export default function AdminTravellerCard({
               className="inline-flex items-center gap-1 hover:text-primary transition-colors"
             >
               {i > 0
-                ? <Siren size={12} weight="fill" className="text-red-500" aria-hidden="true" />
+                ? <Siren size={12} weight="fill" className="text-danger-fg" aria-hidden="true" />
                 : <Phone size={12} aria-hidden="true" />} {ph}
-              {i > 0 && <span className="text-2xs font-semibold text-red-500">Emergency</span>}
+              {i > 0 && <span className="text-2xs font-semibold text-danger-fg">Emergency</span>}
             </a>
           ))
         ) : (
-          <span className="inline-flex items-center gap-1 text-dark-muted/60">
+          <span className="inline-flex items-center gap-1 text-dark-muted/75">
             <Phone size={12} aria-hidden="true" /> No phone on file
           </span>
         )}

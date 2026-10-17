@@ -126,7 +126,7 @@ export default function ActionsMenu({ items, disabled, label = 'Actions', varian
                   onClick={() => { setOpen(false); item.onClick(); }}
                   disabled={item.disabled}
                   className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-button font-medium text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                    item.danger ? 'text-red-600 hover:bg-red-50' : 'text-dark hover:bg-background-warm/60'
+                    item.danger ? 'text-danger-fg hover:bg-danger-bg' : 'text-dark hover:bg-background-warm/60'
                   }`}
                 >
                   {item.icon && <item.icon size={13} className="shrink-0" aria-hidden="true" />}

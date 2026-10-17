@@ -55,7 +55,7 @@ export default function YaaruAvanRules({ onBack }: { onBack: () => void }) {
             'Repeat from step 2 with the players still aboard, until a side wins.',
           ].map((t, i) => (
             <li key={i} className="flex gap-3 px-3 py-2.5 text-[13px] text-cream/75">
-              <span className="w-5 shrink-0 font-bold text-[#F0CE7A] tabular-nums">{i + 1}</span>
+              <span className="w-5 shrink-0 font-bold text-gold-300 tabular-nums">{i + 1}</span>
               <span>{t}</span>
             </li>
           ))}
@@ -106,7 +106,7 @@ export default function YaaruAvanRules({ onBack }: { onBack: () => void }) {
           ].map(([a, b]) => (
             <div key={a} className="flex items-center justify-between gap-3 px-3 py-2 text-[13px]">
               <span className="text-cream/75">{a}</span>
-              <span className="font-bold text-[#F0CE7A] tabular-nums shrink-0">{b}</span>
+              <span className="font-bold text-gold-300 tabular-nums shrink-0">{b}</span>
             </div>
           ))}
         </div>

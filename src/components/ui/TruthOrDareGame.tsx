@@ -78,7 +78,7 @@ const levelFor = (choice: LevelChoice, round: number): TodLevel =>
   choice !== 'heatup' ? choice : round <= 2 ? 'chill' : round <= 4 ? 'spicy' : 'wild';
 
 const HeatDots = ({ level }: { level: TodLevel }) => (
-  <span className="inline-flex items-center gap-0.5 text-[#F0CE7A]" aria-label={`Heat: ${level}`}>
+  <span className="inline-flex items-center gap-0.5 text-gold-300" aria-label={`Heat: ${level}`}>
     {[0, 1, 2].map(i => (
       <Fire key={i} size={13} weight={i <= ['chill', 'spicy', 'wild'].indexOf(level) ? 'fill' : 'regular'} className={i <= ['chill', 'spicy', 'wild'].indexOf(level) ? '' : 'opacity-30'} />
     ))}
@@ -309,12 +309,12 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
   const st = stats[current];
   const isDare = card?.kind === 'dare';
   const accent = card?.kind === 'truth'
-    ? 'bg-gradient-to-br from-[#F0CE7A]/20 to-gold/10 border-gold/40'
+    ? 'bg-gradient-to-br from-gold-300/20 to-gold/10 border-gold/40'
     : card?.kind === 'dare'
       ? 'bg-gradient-to-br from-secondary/30 to-primary/20 border-primary/50'
       : 'bg-gradient-to-br from-fuchsia-500/20 to-primary/20 border-fuchsia-300/40';
   const badge = card?.kind === 'truth'
-    ? 'bg-gradient-to-br from-[#F0CE7A] to-gold text-dark'
+    ? 'bg-gradient-to-br from-gold-300 to-gold text-dark'
     : 'bg-gradient-to-br from-secondary to-primary text-white';
 
   const scoreboard = (
@@ -324,7 +324,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
           <span className="flex items-center gap-2 min-w-0">
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: HUES[i % HUES.length] }} aria-hidden="true" />
             <span className="truncate">{p}</span>
-            {stats[i]?.streak >= 2 && <span className="inline-flex items-center gap-0.5 text-[11px] text-[#F0CE7A]"><Fire size={12} weight="fill" />{stats[i].streak}</span>}
+            {stats[i]?.streak >= 2 && <span className="inline-flex items-center gap-0.5 text-[11px] text-gold-300"><Fire size={12} weight="fill" />{stats[i].streak}</span>}
           </span>
           <span className="tabular-nums">{stats[i]?.points ?? 0}</span>
         </li>
@@ -347,7 +347,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
       />
 
       <Modal isOpen={phase !== 'idle'} onClose={close} ariaLabel="Truth or Dare group game" size="sm" flush fullScreen>
-        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-[#1B130E] text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
+        <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md flex flex-col">
             <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
             <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -355,14 +355,14 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
             {phase === 'setup' && (
               <div className="relative text-center pt-3 md:pt-0">
                 <motion.div
-                  className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
+                  className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_14px_36px_rgba(200,150,42,0.45)]"
                   animate={reduce ? undefined : { y: [0, -6, 0], rotate: [-3, 3, -3] }}
                   transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
                   aria-hidden="true"
                 >
                   <img src={todBottle} alt="" className="w-12 h-12 object-contain" draggable={false} />
                 </motion.div>
-                <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-[#F0CE7A] bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {maxPlayers} players</span>
+                <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {maxPlayers} players</span>
                 <h2 className="font-display text-4xl font-extrabold text-white leading-tight">Truth or Dare</h2>
                 <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Spin to pick who is next. Flip a mystery card. Earn points, build streaks, and watch the heat rise.</p>
 
@@ -381,7 +381,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                           enterKeyHint="next"
                           onChange={e => setName(i, e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter' && i === names.length - 1) addPlayer(); }}
-                          className="min-w-0 flex-1 rounded-xl bg-white/[0.07] border border-white/15 focus:border-[#F0CE7A]/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/30 outline-none transition-colors"
+                          className="min-w-0 flex-1 rounded-xl bg-white/[0.07] border border-white/15 focus:border-gold-300/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/55 outline-none transition-colors"
                         />
                         {names.length > MIN_PLAYERS && (
                           <button type="button" onClick={() => removePlayer(i)} aria-label={`Remove player ${i + 1}`} className={iconBtn}><X size={16} /></button>
@@ -390,7 +390,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                     ))}
                   </ul>
                   {names.length < maxPlayers && (
-                    <button type="button" onClick={addPlayer} className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-[#F0CE7A] hover:text-white transition-colors">
+                    <button type="button" onClick={addPlayer} className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold text-gold-300 hover:text-white transition-colors">
                       <Plus size={14} weight="bold" /> Add player
                     </button>
                   )}
@@ -434,7 +434,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                 <button type="button" onClick={start} disabled={!canStart} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
                   <Play size={18} weight="fill" /> {canStart ? 'Start the game' : `Add at least ${MIN_PLAYERS} names`}
                 </button>
-                <p className="mt-3 text-[11px] text-cream/40 px-4">Everyone gets {SKIPS_PER_PLAYER} skips. Play kind: nobody has to do anything that feels unsafe or uncomfortable.</p>
+                <p className="mt-3 text-[11px] text-cream/55 px-4">Everyone gets {SKIPS_PER_PLAYER} skips. Play kind: nobody has to do anything that feels unsafe or uncomfortable.</p>
                 <button type="button" onClick={toggleMute} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                   {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />} Sound {muted ? 'off' : 'on'}
                 </button>
@@ -469,8 +469,8 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                     transition={reduce ? { duration: 0 } : { duration: SPIN_MS / 1000, ease: [0.17, 0.67, 0.21, 1] }}
                     aria-hidden="true"
                   >
-                    <span className="absolute left-1/2 top-[22%] -translate-x-1/2 w-3 h-[28%] rounded-full bg-gradient-to-t from-gold/20 to-[#F0CE7A]" />
-                    <ArrowUp size={30} weight="fill" className="absolute left-1/2 top-[14%] -translate-x-1/2 text-[#F0CE7A] drop-shadow-[0_0_10px_rgba(240,206,122,0.8)]" />
+                    <span className="absolute left-1/2 top-[22%] -translate-x-1/2 w-3 h-[28%] rounded-full bg-gradient-to-t from-gold/20 to-gold-300" />
+                    <ArrowUp size={30} weight="fill" className="absolute left-1/2 top-[14%] -translate-x-1/2 text-gold-300 drop-shadow-[0_0_10px_rgba(240,206,122,0.8)]" />
                   </motion.div>
                   <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-gradient-to-br from-secondary to-primary border-2 border-white/30 flex items-center justify-center text-white shadow-lg" aria-hidden="true">
                     <Sparkle size={26} weight="fill" />
@@ -511,7 +511,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                 </AnimatePresence>
 
                 <div className="grid grid-cols-2 gap-3 mb-3">
-                  <button type="button" onClick={() => choose('truth')} className="rounded-3xl bg-gradient-to-br from-[#F0CE7A] to-gold text-dark py-7 shadow-[0_12px_28px_rgba(200,150,42,0.4)] active:scale-95 transition touch-manipulation select-none">
+                  <button type="button" onClick={() => choose('truth')} className="rounded-3xl bg-gradient-to-br from-gold-300 to-gold text-dark py-7 shadow-[0_12px_28px_rgba(200,150,42,0.4)] active:scale-95 transition touch-manipulation select-none">
                     <ChatCircleDots size={36} weight="duotone" className="mx-auto" aria-hidden="true" />
                     <span className="block font-display text-2xl font-extrabold mt-1">Truth</span>
                   </button>
@@ -619,7 +619,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                       className={`font-display text-4xl font-extrabold pt-2 ${GOLD_GRAD_TEXT}`}
                       aria-live="polite"
                     >
-                      +{gain.pts} {gain.bonus && <span className="text-base align-middle text-[#F0CE7A]">streak bonus!</span>}
+                      +{gain.pts} {gain.bonus && <span className="text-base align-middle text-gold-300">streak bonus!</span>}
                     </motion.p>
                   )}
                 </div>
@@ -635,7 +635,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                   <ul className="grid grid-cols-2 gap-2.5 mb-4">
                     {awards.map(a => (
                       <li key={a.key} className={`${glass} p-3 text-center`}>
-                        <span className="w-9 h-9 mx-auto mb-1.5 rounded-xl bg-gradient-to-br from-[#F0CE7A] to-gold text-dark flex items-center justify-center" aria-hidden="true"><a.Icon size={20} weight="duotone" /></span>
+                        <span className="w-9 h-9 mx-auto mb-1.5 rounded-xl bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center" aria-hidden="true"><a.Icon size={20} weight="duotone" /></span>
                         <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-cream/50">{a.label}</span>
                         <span className="block font-display text-lg font-extrabold text-white truncate">{a.win?.name}</span>
                         <span className="block text-[11px] text-cream/50">{a.win?.value} {a.unit}</span>

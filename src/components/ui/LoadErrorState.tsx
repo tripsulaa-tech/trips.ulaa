@@ -14,7 +14,7 @@ interface LoadErrorStateProps {
 export default function LoadErrorState({ what, onRetry, className = '' }: LoadErrorStateProps) {
   return (
     <div role="alert" className={`bg-white rounded-lg shadow-card p-8 text-center space-y-3 ${className}`}>
-      <WarningCircle size={32} weight="duotone" className="mx-auto text-red-500" aria-hidden="true" />
+      <WarningCircle size={32} weight="duotone" className="mx-auto text-danger-fg" aria-hidden="true" />
       <p className="font-display text-xl text-dark">Couldn't load {what}.</p>
       <p className="text-sm text-dark-muted">Check your connection and try again.</p>
       <Button variant="primary" size="sm" onClick={onRetry}>Try again</Button>

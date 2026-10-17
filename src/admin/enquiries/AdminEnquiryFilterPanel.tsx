@@ -122,7 +122,7 @@ function Group({
               selected={selected}
               count={opt.count}
               dim={opt.count === 0 && opt.key !== 'all'}
-              className={opt.key === 'veg' ? 'text-green-700' : opt.key === 'non_veg' ? 'text-red-700' : undefined}
+              className={opt.key === 'veg' ? 'text-success-fg' : opt.key === 'non_veg' ? 'text-danger-fg' : undefined}
               // Tapping the active chip again resets that filter to "All".
               onClick={() => set.onChange(selected && opt.key !== 'all' ? 'all' : opt.key)}
             >

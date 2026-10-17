@@ -158,7 +158,7 @@ export default function AdminEnquiriesMobileCards({
                       </span>
                     )}
                     {e.cancelled_at && (
-                      <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${e.is_no_show ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 ${e.is_no_show ? 'bg-orange-100 text-orange-700' : 'bg-danger-bg text-danger-fg'}`}>
                         <XCircle size={9}  aria-hidden="true" /> {e.is_no_show ? 'No Show' : 'Cancelled'}
                       </span>
                     )}
@@ -192,7 +192,7 @@ export default function AdminEnquiriesMobileCards({
                 <p className="text-dark-muted text-xs truncate mt-0.5">{e.phone}</p>
                 <div className="w-full flex items-center flex-nowrap gap-1.5 mt-1.5 overflow-x-auto no-scrollbar">
                   {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                    <span className="inline-flex items-center text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-green-100 text-green-700 shrink-0">
+                    <span className="inline-flex items-center text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-success-bg text-success-fg shrink-0">
                       Due {formatPrice(paymentBalance(e)!)}
                     </span>
                   )}
@@ -224,7 +224,7 @@ export default function AdminEnquiriesMobileCards({
                   {e.has_child_addon && (
                     <span
                       title="A Child Fare add-on has been added to this booking"
-                      className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-amber-50 text-amber-700 shrink-0"
+                      className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap bg-warning-bg text-warning-fg shrink-0"
                     >
                       <Baby size={9} aria-hidden="true" /> Child
                     </span>
@@ -329,7 +329,7 @@ export default function AdminEnquiriesMobileCards({
                         <div className="min-w-0">
                           <p className="text-dark-muted text-xs">Food Preference</p>
                           <p className={`text-sm truncate flex items-center gap-1 ${
-                            e.food_preference === 'veg' ? 'text-green-700 font-medium' : e.food_preference === 'non_veg' ? 'text-red-700 font-medium' : 'text-dark'
+                            e.food_preference === 'veg' ? 'text-success-fg font-medium' : e.food_preference === 'non_veg' ? 'text-danger-fg font-medium' : 'text-dark'
                           }`}>
                             {(e.food_preference === 'veg' || e.food_preference === 'non_veg') && <FoodMark type={e.food_preference} size={11} />}
                             {e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '—'}
@@ -448,8 +448,8 @@ export default function AdminEnquiriesMobileCards({
                   )}
 
                   {paymentFilterKey(e) === 'partial' && paymentBalance(e) != null && (
-                    <div className="bg-amber-50 rounded-md px-3 py-2">
-                      <p className="text-amber-700 text-xs font-medium">Balance due: {formatPrice(paymentBalance(e)!)}</p>
+                    <div className="bg-warning-bg rounded-md px-3 py-2">
+                      <p className="text-warning-fg text-xs font-medium">Balance due: {formatPrice(paymentBalance(e)!)}</p>
                     </div>
                   )}
 

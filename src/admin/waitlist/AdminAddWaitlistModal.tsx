@@ -44,7 +44,7 @@ export default function AdminAddWaitlistModal({
             className={inputClass}
             placeholder="e.g. Priya Sharma"
           />
-          {formTouched.has('full_name') && formErrors.full_name && <p id="wl-add-name-error" role="alert" className="text-red-500 text-xs mt-1">{formErrors.full_name}</p>}
+          {formTouched.has('full_name') && formErrors.full_name && <p id="wl-add-name-error" role="alert" className="text-danger-fg text-xs mt-1">{formErrors.full_name}</p>}
         </div>
         <div>
           <label htmlFor="wl-add-phone" className="block text-sm font-medium text-dark mb-1">Phone *</label>
@@ -58,7 +58,7 @@ export default function AdminAddWaitlistModal({
             className={inputClass}
             placeholder="e.g. 98765 43210"
           />
-          {formTouched.has('phone') && formErrors.phone && <p id="wl-add-phone-error" role="alert" className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
+          {formTouched.has('phone') && formErrors.phone && <p id="wl-add-phone-error" role="alert" className="text-danger-fg text-xs mt-1">{formErrors.phone}</p>}
         </div>
         <div>
           <label htmlFor="wl-add-email" className="block text-sm font-medium text-dark mb-1">Email</label>
@@ -116,7 +116,7 @@ export default function AdminAddWaitlistModal({
             }}
             options={[{ value: '', label: '— Select a trip —' }, ...allTrips.map(t => ({ value: t.id, label: t.title }))]}
           />
-          {formTouched.has('trip_id') && formErrors.trip_id && <p role="alert" className="text-red-500 text-xs mt-1">{formErrors.trip_id}</p>}
+          {formTouched.has('trip_id') && formErrors.trip_id && <p role="alert" className="text-danger-fg text-xs mt-1">{formErrors.trip_id}</p>}
         </div>
         <div>
           <label htmlFor="wl-add-food" className="block text-sm font-medium text-dark mb-1">Food Preference</label>

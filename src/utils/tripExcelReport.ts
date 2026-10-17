@@ -85,8 +85,8 @@ const COLORS = {
   border: '#D9C3AC', // a shade between background-warm and primary-light, for row separators
   textDark: '#2D2118', // --color-dark
   textMuted: '#4A3728', // --color-dark-muted
-  positive: '#15803D', // matches the app's text-green-700, used for profit/collected figures
-  negative: '#DC2626', // matches the app's text-red-600, used for loss/cancellation figures
+  positive: '#15803D', // matches the app's text-success-fg, used for profit/collected figures
+  negative: '#DC2626', // matches the app's text-danger-fg, used for loss/cancellation figures
 } as const;
 
 function blankRow(cols: number): Row {
@@ -142,7 +142,7 @@ function columnHeaderRow(labels: string[], cols: number): Row {
 // having to redeclare that per call site. `tone` lets a figure like Net
 // Profit or a Balance print in the same green/red the admin UI already
 // uses for positive vs. negative money (see AdminReports.tsx's
-// `t.netProfit < 0 ? 'text-red-600' : 'text-green-700'`).
+// `t.netProfit < 0 ? 'text-danger-fg' : 'text-success-fg'`).
 function dataCell(
   value: string | number,
   opts: { align?: 'left' | 'center' | 'right'; tone?: 'positive' | 'negative'; columnSpan?: number; bold?: boolean } = {}

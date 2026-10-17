@@ -185,7 +185,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                     <button
                       type="button"
                       onClick={() => remove(it.id)}
-                      className="p-2 rounded-md text-primary/70 hover:text-primary hover:bg-white transition-colors flex-shrink-0"
+                      className="p-2 rounded-md text-primary hover:text-primary-dark hover:bg-white transition-colors flex-shrink-0"
                       aria-label={`Remove ${it.name || 'cost line'}`}
                     >
                       <Trash2 size={16} aria-hidden="true" />
@@ -212,7 +212,7 @@ export default function TripCostItemsEditor({ items, travelerCount, options = []
                   </div>
                 )}
                 {overCount && (
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  <p className="text-xs text-warning-fg bg-warning-bg border border-warning-border rounded-md px-3 py-2">
                     {it.quantity} people selected, but only {travelerCount} are booked.
                   </p>
                 )}

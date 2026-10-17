@@ -32,7 +32,7 @@ export default function TripHighlightsSection({
           onClick={() => onHeartLove(highlightCards.length)}
           aria-pressed={heartLoved}
           aria-label={heartLoved ? "Tap to collapse all reasons" : "Tap to fall in love with this trip"}
-          className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          className="relative inline-flex items-center justify-center rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {/* Minimal cue that the heart is tappable, before it's been loved */}
           {!heartLoved && (
@@ -45,7 +45,7 @@ export default function TripHighlightsSection({
           >
             <Heart
               size={20}
-              className={`-rotate-6 transition-colors duration-300 ${heartLoved ? 'text-pink-500 heart-glow' : 'text-primary/70'}`}
+              className={`-rotate-6 transition-colors duration-300 ${heartLoved ? 'text-pink-500 heart-glow' : 'text-primary'}`}
               fill={heartLoved ? '#ec4899' : 'currentColor'}
               fillOpacity={heartLoved ? 1 : 0.15}
             />
@@ -75,7 +75,7 @@ export default function TripHighlightsSection({
                 onClick={() => toggleHighlight(i)}
                 aria-expanded={isOpen}
                 aria-label={`${card.heading} — tap for details`}
-                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 sm:pointer-events-none"
+                className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:pointer-events-none"
               >
                 <TripHighlightIconDisplay icon={card.icon} index={i} filled={isOpen} hoverFill />
               </button>

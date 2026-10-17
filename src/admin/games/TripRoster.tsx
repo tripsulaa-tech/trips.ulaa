@@ -108,7 +108,7 @@ export default function TripRosterPanel({ roster }: { roster: TripRoster }) {
                           {on && <Check size={12} weight="bold" />}
                         </span>
                         <span className="truncate min-w-0 lg:flex-1">{p.full_name}</span>
-                        {p.checked_in_at && <span className="shrink-0 text-[10px] font-semibold text-green-700 bg-green-50 rounded px-1 leading-4" title="Checked in">In</span>}
+                        {p.checked_in_at && <span className="shrink-0 text-[10px] font-semibold text-success-fg bg-success-bg rounded px-1 leading-4" title="Checked in">In</span>}
                       </label>
                     </li>
                   );

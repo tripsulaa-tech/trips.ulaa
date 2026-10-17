@@ -46,7 +46,7 @@ export default function BottomNav() {
               end={to === '/'}
               aria-label={label}
               aria-current={isActive ? 'page' : undefined}
-              className="relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              className="relative flex flex-1 flex-col items-center justify-center gap-1 rounded-[6px] outline-none focus-visible:ring-2 focus-visible:ring-primary"
             >
               <motion.div
                 whileTap={{ scale: 0.88 }}

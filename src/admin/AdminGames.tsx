@@ -331,7 +331,7 @@ function StringListEditor({ items, onChange, max, addLabel, placeholder, minReco
   return (
     <div className="space-y-3">
       {minRecommended !== undefined && items.length < minRecommended && (
-        <p className="text-xs text-amber-700 bg-amber-50 rounded-md px-3 py-2">Only {items.length} here. Aim for at least {minRecommended} so rounds don't repeat too soon.</p>
+        <p className="text-xs text-warning-fg bg-warning-bg rounded-md px-3 py-2">Only {items.length} here. Aim for at least {minRecommended} so rounds don't repeat too soon.</p>
       )}
       <ListToolbar
         count={items.length}
@@ -375,7 +375,7 @@ function StringListEditor({ items, onChange, max, addLabel, placeholder, minReco
                   >
                     {t.trim()
                       ? <span className="line-clamp-2 text-dark flex-1 min-w-0">{t}</span>
-                      : <span className="text-amber-700 flex-1 min-w-0">Empty. Tap to write it.</span>}
+                      : <span className="text-warning-fg flex-1 min-w-0">Empty. Tap to write it.</span>}
                     <Edit2 size={15} className="shrink-0 text-dark-muted sm:opacity-0 sm:group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity" aria-hidden="true" />
                   </button>
                 )}
@@ -385,7 +385,7 @@ function StringListEditor({ items, onChange, max, addLabel, placeholder, minReco
                 onMouseDown={e => e.preventDefault()}
                 onClick={() => removeAt(i)}
                 aria-label={`Delete ${label.toLowerCase()}`}
-                className="shrink-0 w-10 h-12 rounded-md text-dark-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center"
+                className="shrink-0 w-10 h-12 rounded-md text-dark-muted hover:text-red-600 hover:bg-danger-bg flex items-center justify-center"
               >
                 <Trash2 size={18} aria-hidden="true" />
               </button>
@@ -471,7 +471,7 @@ function TruthOrDareEditor({ onDirty }: { onDirty: OnDirty }) {
                   <input aria-label={`Twist ${i + 1} title`} value={t.title} maxLength={60} placeholder="Title, e.g. Hot seat" onChange={e => setDraft(d => ({ ...d, twists: d.twists.map((x, idx) => (idx === i ? { ...x, title: e.target.value } : x)) }))} className={inputClass} />
                   <textarea aria-label={`Twist ${i + 1} text`} rows={2} value={t.text} maxLength={TOD_MAX_PROMPT} placeholder="What the group has to do…" onChange={e => setDraft(d => ({ ...d, twists: d.twists.map((x, idx) => (idx === i ? { ...x, text: e.target.value } : x)) }))} className={`${inputClass} resize-y`} />
                 </div>
-                <button type="button" aria-label={`Delete twist ${i + 1}`} onClick={() => setDraft(d => ({ ...d, twists: d.twists.filter((_, idx) => idx !== i) }))} className="shrink-0 w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
+                <button type="button" aria-label={`Delete twist ${i + 1}`} onClick={() => setDraft(d => ({ ...d, twists: d.twists.filter((_, idx) => idx !== i) }))} className="shrink-0 w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-danger-bg flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
               </div>
             ))}
           </div>
@@ -586,7 +586,7 @@ function CharadesEditor({ onDirty }: { onDirty: OnDirty }) {
                 <p className="text-xs text-dark-muted truncate">{[joinNames(m.heroes), m.director && `dir. ${m.director}`, m.heroines.length ? joinNames(m.heroines) : '', m.comedians.length ? `comedy: ${joinNames(m.comedians)}` : ''].filter(Boolean).join(' · ')}</p>
               </div>
               <button type="button" onClick={() => openEdit(i)} aria-label={`Edit ${m.title}`} className="w-10 h-10 rounded-md text-dark-muted hover:text-primary hover:bg-background-warm flex items-center justify-center"><Edit2 size={18} aria-hidden="true" /></button>
-              <button type="button" onClick={() => void remove(i)} aria-label={`Delete ${m.title}`} className="w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
+              <button type="button" onClick={() => void remove(i)} aria-label={`Delete ${m.title}`} className="w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-danger-bg flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
             </li>
           ))}
           {rows.length === 0 && <li className="px-3 py-6 text-center text-sm text-dark-muted">No films match.</li>}
@@ -702,7 +702,7 @@ function YaaruAvanEditor({ onDirty }: { onDirty: OnDirty }) {
                   <div className="hidden sm:block" aria-label={`Pair ${i + 1} level`}>
                     <Select<string> size="sm" value={p.level} onChange={v => setPair(i, { level: v as typeof p.level })} options={YAARU_AVAN_LEVELS.map(l => ({ value: l, label: LEVELS.find(x => x.id === l)?.label ?? l }))} />
                   </div>
-                  <button type="button" aria-label={`Delete pair ${p.a} and ${p.b}`} onClick={() => setDraft(d => ({ ...d, pairs: d.pairs.filter((_, idx) => idx !== i) }))} className="w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
+                  <button type="button" aria-label={`Delete pair ${p.a} and ${p.b}`} onClick={() => setDraft(d => ({ ...d, pairs: d.pairs.filter((_, idx) => idx !== i) }))} className="w-10 h-10 rounded-md text-dark-muted hover:text-red-600 hover:bg-danger-bg flex items-center justify-center"><Trash2 size={18} aria-hidden="true" /></button>
                 </li>
               ))}
               {rows.length === 0 && <li className="text-sm text-dark-muted py-4 text-center">No pairs match.</li>}
@@ -888,7 +888,7 @@ function TwinEditor({ onDirty }: { onDirty: OnDirty }) {
             const R = (TWIN_ICONS[qn.right.icon] ?? TWIN_ICONS.compass).Icon;
             const imp = importanceOf(Number(qn.weight));
             return (
-              <li key={i} ref={el => { rowRefs.current[i] = el; }} className={`lg:border lg:border-background-warm lg:rounded-lg ${open ? 'lg:col-span-2' : ''} ${showErr ? 'bg-red-50/60' : ''}`}>
+              <li key={i} ref={el => { rowRefs.current[i] = el; }} className={`lg:border lg:border-background-warm lg:rounded-lg ${open ? 'lg:col-span-2' : ''} ${showErr ? 'bg-danger-bg/60' : ''}`}>
                 <div className="flex items-center gap-1 pr-1">
                   <button
                     type="button"
@@ -902,7 +902,7 @@ function TwinEditor({ onDirty }: { onDirty: OnDirty }) {
                       <span className="w-7 h-7 rounded-full bg-background-warm border-2 border-white flex items-center justify-center"><L size={14} weight="duotone" /></span>
                       <span className="w-7 h-7 rounded-full bg-background-warm border-2 border-white flex items-center justify-center"><R size={14} weight="duotone" /></span>
                     </span>
-                    <span className={`min-w-0 flex-1 truncate text-sm font-medium ${showErr ? 'text-red-700' : 'text-dark'}`}>
+                    <span className={`min-w-0 flex-1 truncate text-sm font-medium ${showErr ? 'text-danger-fg' : 'text-dark'}`}>
                       {qn.left.label || '…'} <span className="font-normal text-dark-muted text-xs">or</span> {qn.right.label || '…'}
                     </span>
                     <span className={`hidden min-[400px]:inline shrink-0 text-[11px] font-semibold rounded-full px-2 py-0.5 ${imp === 'high' ? 'bg-primary/15 text-primary' : imp === 'low' ? 'bg-background-warm text-dark-muted' : 'bg-background-warm text-dark'}`}>
@@ -916,7 +916,7 @@ function TwinEditor({ onDirty }: { onDirty: OnDirty }) {
                     disabled={!canRemove}
                     aria-label={`Delete question ${i + 1}`}
                     title={canRemove ? 'Delete this question' : `Keep at least ${TWIN_MIN_QUESTIONS} questions`}
-                    className="shrink-0 w-10 h-11 rounded-md text-dark-muted hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-dark-muted flex items-center justify-center"
+                    className="shrink-0 w-10 h-11 rounded-md text-dark-muted hover:text-red-600 hover:bg-danger-bg disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-dark-muted flex items-center justify-center"
                   >
                     <Trash2 size={18} aria-hidden="true" />
                   </button>
@@ -964,7 +964,7 @@ function TwinEditor({ onDirty }: { onDirty: OnDirty }) {
                     </div>
                   </div>
                 )}
-                {showErr && <p role="alert" className="px-3 pb-2 -mt-1 text-xs text-red-600 pl-[3.25rem]">{err}</p>}
+                {showErr && <p role="alert" className="px-3 pb-2 -mt-1 text-xs text-danger-fg pl-[3.25rem]">{err}</p>}
               </li>
             );
           })}

@@ -618,7 +618,7 @@ export default function GalleryViewer({
                     <Heart
                       key={heartBurstKey}
                       size={17}
-                      className={isFavorite ? 'fill-red-500 text-red-500 heart-burst' : 'text-white'}
+                      className={isFavorite ? 'fill-red-500 text-danger-fg heart-burst' : 'text-white'}
                     />
                   </GlassButton>
                   {items.length > 1 && (
@@ -716,7 +716,7 @@ export default function GalleryViewer({
                   </div>
                   {current.date && <div>{current.date}</div>}
                   {current.photographer && <div>Captured by {current.photographer}</div>}
-                  <div className="pt-2 text-white/40 text-xs">Image {index + 1} of {items.length}</div>
+                  <div className="pt-2 text-white/60 text-xs">Image {index + 1} of {items.length}</div>
                 </div>
               </motion.div>
             )}

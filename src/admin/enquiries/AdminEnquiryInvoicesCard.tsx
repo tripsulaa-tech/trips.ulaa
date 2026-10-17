@@ -45,7 +45,7 @@ function StatusPill({ isPending, forfeited = false }: { isPending: boolean; forf
   const orange = forfeited && !isPending;
   return (
     <span className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 ${
-      isPending ? 'bg-amber-100 text-amber-700' : orange ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+      isPending ? 'bg-warning-bg text-warning-fg' : orange ? 'bg-orange-100 text-orange-700' : 'bg-success-bg text-success-fg'
     }`}>
       <BadgeCheck size={10} aria-hidden="true" /> {isPending ? 'Pending' : orange ? 'Paid · Forfeited' : 'Paid'}
     </span>
@@ -113,7 +113,7 @@ export default function AdminEnquiryInvoicesCard({
                         {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`text-sm font-semibold ${isRefund ? 'text-red-600' : 'text-dark'}`}>
+                        <span className={`text-sm font-semibold ${isRefund ? 'text-danger-fg' : 'text-dark'}`}>
                           {isRefund ? '− ' : ''}{formatPrice(Math.abs(inv.amount))}
                         </span>
                       </td>
@@ -164,7 +164,7 @@ export default function AdminEnquiryInvoicesCard({
                         {' · '}{formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
                       </span>
                     </p>
-                    <span className={`text-sm font-semibold shrink-0 ${isRefund ? 'text-red-600' : 'text-dark'}`}>
+                    <span className={`text-sm font-semibold shrink-0 ${isRefund ? 'text-danger-fg' : 'text-dark'}`}>
                       {isRefund ? '− ' : ''}{formatPrice(Math.abs(inv.amount))}
                     </span>
                   </div>

@@ -103,21 +103,79 @@
 
 
 @theme {
-  --color-primary: #A85A2A;
-  --color-primary-light: #C4703A;
-  --color-primary-dark: #8B4820;
-  --color-secondary: #D98A3A;
-  --color-secondary-dark: #B87531;
-  --color-dark: #2D2118;
-  --color-dark-muted: #4A3728;
-  --color-background: #F8F4EC;
-  --color-background-warm: #F2EBE0;
-  --color-white: #FFFFFF;
-  --color-gold: #C8962A;
-  --color-gold-dark: #B8860B;
-  --color-gold-deep: #8A6508;
+  --color-primary-50: #FBF1EA;
+  --color-primary-100: #F5E0D2;
+  --color-primary-200: #EBC3A8;
+  --color-primary-300: #DDA079;
+  --color-primary-400: #CF8453;
+  --color-primary-500: #C4703A;
+  --color-primary-600: #A85A2A;
+  --color-primary-650: #A15628;                     /* terracotta text on warm beige: 4.55:1 */
+  --color-primary-700: #8B4820;
+  --color-primary-800: #6B3718;
+  --color-primary-900: #4A2710;
+  --color-amber-50: #FDF4E7;
+  --color-amber-100: #FAE5C8;
+  --color-amber-200: #F4CD98;
+  --color-amber-300: #EBB265;
+  --color-amber-400: #E19D4C;
+  --color-amber-500: #D98A3A;
+  --color-amber-600: #B87531;
+  --color-amber-700: #935C26;
+  --color-amber-800: #6F451C;
+  --color-amber-900: #4B2E13;
+  --color-gold-50: #FFFAEA;
+  --color-gold-100: #FFF6CC;
+  --color-gold-200: #F7E08F;
+  --color-gold-300: #F0CE7A;
+  --color-gold-400: #E9C25A;
+  --color-gold-500: #C8962A;
+  --color-gold-600: #B8860B;
+  --color-gold-700: #8A6508;
+  --color-gold-800: #6B4F06;
+  --color-gold-900: #3B2A00;
+  --color-neutral-50: #FAF7F2;
+  --color-neutral-100: #F8F4EC;
+  --color-neutral-200: #F2EBE0;
+  --color-neutral-300: #E8DFD3;
+  --color-neutral-400: #D2C5B2;
+  --color-neutral-500: #8A7864;
+  --color-neutral-600: #6B5A48;
+  --color-neutral-700: #4A3728;
+  --color-neutral-800: #2D2118;
+  --color-neutral-900: #1B130E;
+  --color-success-fg: #1F6F3A;
+  --color-success-bg: #E6F4EA;
+  --color-success-border: #9CD3AC;
+  --color-danger-fg: #B3261E;
+  --color-danger-bg: #FCEAE8;
+  --color-danger-border: #EDA9A3;
+  --color-warning-fg: #8A5300;
+  --color-warning-bg: #FFF2D6;
+  --color-warning-border: #EBC77B;
+  --color-info-fg: #1F5F8B;
+  --color-info-bg: #E6F0F7;
+  --color-info-border: #9DC3DE;
+
+  /* Backwards-compatible aliases (old name → new token) */
+  --color-primary: var(--color-primary-600);
+  --color-primary-light: var(--color-primary-500);
+  --color-primary-dark: var(--color-primary-700);
+  --color-secondary: var(--color-amber-500);        /* decorative only */
+  --color-secondary-dark: var(--color-amber-700);   /* filled buttons with white text */
+  --color-dark: var(--color-neutral-800);
+  --color-dark-muted: var(--color-neutral-700);
+  --color-background: var(--color-neutral-100);
+  --color-background-warm: var(--color-neutral-200);
+  --color-cream: var(--color-neutral-50);
+  --color-gold: var(--color-gold-500);              /* decorative / borders on dark only */
+  --color-gold-dark: var(--color-gold-600);
+  --color-gold-deep: var(--color-gold-700);         /* gold text on light backgrounds */
   --color-footer: #271E18;
-  --color-cream: #FAF7F2;
+  --color-peach: #F4B183;                           /* games: accent on dark */
+  --color-gold-soft: #E9C77B;                       /* countdown card, 3D plane */
+  --color-white: #FFFFFF;
+  --color-surface-dark: var(--color-neutral-900);   /* games background */
 
   --font-display: 'Inter', system-ui, sans-serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -141,6 +199,15 @@
      rounded-2xl  — primary/featured cards (trip cards, contact cards)
      rounded-3xl  — hero/large feature panels
      rounded-full — pills, avatars, icon buttons */
+
+/* Terracotta text on the warm beige sections (bg-background-warm) is 4.26:1, just
+   under WCAG AA. Inside those sections text-primary uses primary-650, a 4% darker
+   shade that reaches 4.55:1. Text on white, cream or page-background cards nested
+   inside a warm section keeps the normal brand colour. */
+:is([class~="bg-background-warm"], [class*="bg-background-warm/"]) :is(.text-primary, [class~="text-primary"]):not(.bg-white, .bg-cream, .bg-background):not(:where([class~="bg-white"] *, [class~="bg-cream"] *, [class~="bg-background"] *)),
+:is([class~="bg-background-warm"], [class*="bg-background-warm/"]):is(.text-primary, [class~="text-primary"]) {
+  color: var(--color-primary-650);
+}
 
 * {
   box-sizing: border-box;
@@ -332,7 +399,7 @@ button, .btn {
   50% { background-position: 100% 50%; }
 }
 .offer-gradient-shift {
-  background-image: linear-gradient(90deg, #DC2626 0%, #EA580C 50%, #DC2626 100%);
+  background-image: linear-gradient(90deg, #DC2626 0%, #C2410C 50%, #DC2626 100%);
   background-size: 200% 100%;
   animation: offer-gradient-shift 3s ease-in-out infinite;
 }
@@ -346,7 +413,7 @@ button, .btn {
   50% { background-position: 100% 50%; }
 }
 .offer-badge-gradient-shift {
-  background-image: linear-gradient(90deg, #CA8A04 0%, #16A34A 50%, #CA8A04 100%);
+  background-image: linear-gradient(90deg, #A16207 0%, #15803D 50%, #A16207 100%);
   background-size: 200% 100%;
   animation: offer-badge-gradient-shift 3s ease-in-out infinite;
 }
@@ -537,12 +604,12 @@ button, .btn {
   50% { background-position: 100% 50%; }
 }
 .premium-gold-text {
-  background-image: linear-gradient(100deg, #7A5200 0%, #A87A0E 30%, #D4A017 50%, #A87A0E 70%, #7A5200 100%);
+  background-image: linear-gradient(100deg, #6B4F06 0%, #8A6508 30%, #A87A0E 50%, #8A6508 70%, #6B4F06 100%);
   background-size: 220% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: #A87A0E;
+  color: #8A6508;
   animation: premium-text-shine 3.5s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {

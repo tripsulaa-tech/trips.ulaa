@@ -230,7 +230,7 @@ export default function AdminMergeTravellerModal({
           )}
 
           {plan?.conflict && conflicts.length === 0 && (
-            <div className="flex items-start gap-2.5 rounded-md bg-amber-50 text-amber-800 px-3 py-3 text-sm" role="alert">
+            <div className="flex items-start gap-2.5 rounded-md bg-warning-bg text-warning-fg px-3 py-3 text-sm" role="alert">
               <Warning size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
               <div>
                 <p className="font-semibold">Too many different phone numbers to keep</p>
@@ -244,7 +244,7 @@ export default function AdminMergeTravellerModal({
           )}
 
           {conflicts.length > 0 && (
-            <div className="flex items-start gap-2.5 rounded-md bg-amber-50 text-amber-800 px-3 py-3 text-sm" role="alert">
+            <div className="flex items-start gap-2.5 rounded-md bg-warning-bg text-warning-fg px-3 py-3 text-sm" role="alert">
               <Warning size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
               <div>
                 <p className="font-semibold">Both contacts already have an active enquiry for the same trip</p>

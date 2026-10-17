@@ -111,7 +111,7 @@ export default function AdminEnquiryHeaderCard({
               </span>
             )}
             {isNotInterested(enquiry) && (
-              <span title={closedReasonLabel(enquiry) ? `Closed — ${closedReasonLabel(enquiry)}` : 'Closed — this was just a query, no booking followed'} className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-red-50 text-red-600">
+              <span title={closedReasonLabel(enquiry) ? `Closed — ${closedReasonLabel(enquiry)}` : 'Closed — this was just a query, no booking followed'} className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-danger-bg text-danger-fg">
                 <UserMinus size={12} className="shrink-0" aria-hidden="true" /> Not Interested{closedReasonLabel(enquiry) ? ` — ${closedReasonLabel(enquiry)}` : ''}
               </span>
             )}
@@ -163,7 +163,7 @@ export default function AdminEnquiryHeaderCard({
                   const cancelled = isCancelled(enquiry);
                   const finished = !cancelled && (enquiry.booking_status === 'completed' || enquiry.journey_stage === 'completed');
                   const noShow = cancelled && enquiry.is_no_show;
-                  const tone = noShow ? 'text-orange-700' : cancelled ? 'text-red-600' : finished ? 'text-dark-muted' : 'text-green-600';
+                  const tone = noShow ? 'text-orange-700' : cancelled ? 'text-danger-fg' : finished ? 'text-dark-muted' : 'text-success-fg';
                   const dot = noShow ? 'bg-orange-600' : cancelled ? 'bg-red-600' : finished ? 'bg-dark-muted' : 'bg-green-600';
                   return (
                     <p className={`inline-flex items-center gap-1.5 text-xs font-button font-semibold ${tone}`}>
@@ -271,7 +271,7 @@ export default function AdminEnquiryHeaderCard({
             )}
             {onEmailBooking && (
               <span
-                className={`text-2xs font-medium whitespace-nowrap ${emailStat ? 'text-green-700' : 'text-dark-muted'}`}
+                className={`text-2xs font-medium whitespace-nowrap ${emailStat ? 'text-success-fg' : 'text-dark-muted'}`}
                 title={emailStat ? `Last sent ${formatDate(emailStat.lastSentAt, { day: 'numeric', month: 'short', year: 'numeric' })}` : 'No booking email sent yet'}
               >
                 {emailStat ? `Emailed ×${emailStat.count} · ${formatDate(emailStat.lastSentAt, { day: 'numeric', month: 'short' })}` : 'Not emailed'}

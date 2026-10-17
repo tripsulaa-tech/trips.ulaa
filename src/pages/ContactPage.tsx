@@ -86,8 +86,8 @@ const WHY_ULAA = [
 // gutter whether or not it currently shows an error.
 const fieldClass = (hasError: boolean) => `
   block w-full rounded-xl border bg-white pl-11 pr-4 py-3.5 font-body text-dark text-[15px]
-  placeholder-dark-muted/50 outline-none transition-colors duration-200
-  ${hasError ? 'border-red-300 focus:border-red-400' : 'border-background-warm focus:border-primary'}
+  placeholder-dark-muted/75 outline-none transition-colors duration-200
+  ${hasError ? 'border-danger-border focus:border-red-400' : 'border-background-warm focus:border-primary'}
 `;
 
 const iconClass = 'pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-dark-muted/50';
@@ -411,7 +411,7 @@ export default function ContactPage() {
                         href={getWhatsAppLink(WHATSAPP_NUMBER)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-md font-button font-semibold text-sm text-green-700 bg-green-50 hover:bg-green-100 transition-colors min-h-[44px]"
+                        className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-md font-button font-semibold text-sm text-success-fg bg-success-bg hover:bg-success-border/50 transition-colors min-h-[44px]"
                       >
                         <WhatsAppIcon className="w-4 h-4" />
                         Chat on WhatsApp instead
@@ -446,7 +446,7 @@ export default function ContactPage() {
                             />
                           </div>
                           {errors.name && (
-                            <p className="mt-1.5 flex items-center gap-1 text-xs text-red-500">
+                            <p className="mt-1.5 flex items-center gap-1 text-xs text-danger-fg">
                               <AlertCircle size={13} /> {errors.name.message}
                             </p>
                           )}
@@ -464,7 +464,7 @@ export default function ContactPage() {
                             />
                           </div>
                           {errors.phone && (
-                            <p className="mt-1.5 flex items-center gap-1 text-xs text-red-500">
+                            <p className="mt-1.5 flex items-center gap-1 text-xs text-danger-fg">
                               <AlertCircle size={13} /> {errors.phone.message}
                             </p>
                           )}
@@ -483,7 +483,7 @@ export default function ContactPage() {
                           />
                         </div>
                         {errors.email && (
-                          <p className="mt-1.5 flex items-center gap-1 text-xs text-red-500">
+                          <p className="mt-1.5 flex items-center gap-1 text-xs text-danger-fg">
                             <AlertCircle size={13} /> {errors.email.message}
                           </p>
                         )}
@@ -507,19 +507,19 @@ export default function ContactPage() {
                         <div className="flex items-center justify-between gap-3 mt-1.5">
                           <span>
                             {errors.message && (
-                              <p className="flex items-center gap-1 text-xs text-red-500">
+                              <p className="flex items-center gap-1 text-xs text-danger-fg">
                                 <AlertCircle size={13} /> {errors.message.message}
                               </p>
                             )}
                           </span>
-                          <span className="text-xs text-dark-muted/60 shrink-0">
+                          <span className="text-xs text-dark-muted/75 shrink-0">
                             {messageLength}/{MESSAGE_SOFT_LIMIT}
                           </span>
                         </div>
                       </div>
 
                       {status === 'error' && (
-                        <div className="flex items-center gap-2 text-red-600 bg-red-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-danger-fg bg-danger-bg rounded-lg p-3">
                           <AlertCircle size={16} />
                           <p className="text-sm">{errorMsg}</p>
                         </div>
@@ -538,7 +538,7 @@ export default function ContactPage() {
                         <ArrowRight size={18} className="absolute right-5" />
                       </Button>
 
-                      <p className="flex items-center justify-center gap-1.5 text-xs text-dark-muted/70 pt-1">
+                      <p className="flex items-center justify-center gap-1.5 text-xs text-dark-muted/75 pt-1">
                         <LockSimple size={13} />
                         We respect your privacy. Your information is safe with us.
                       </p>

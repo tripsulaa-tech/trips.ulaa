@@ -21,7 +21,7 @@ function SaveAndPlusOfferBadges({
   return (
     <div className="flex items-center gap-1.5 mt-0.5">
       {saveAmount != null && (
-        <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+        <span className="bg-success-bg border border-success-border text-success-fg text-2xs font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
           Save {formatPrice(saveAmount)}
         </span>
       )}
@@ -111,7 +111,7 @@ export default function TripStickyBookingBar({
                   )}
                   <span className="text-dark text-2xs font-semibold shrink-0">{formatPrice(activePrice)} total</span>
                   {saveAmount != null && (
-                    <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
+                    <span className="bg-success-bg border border-success-border text-success-fg text-2xs font-button font-medium px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap">
                       Save {formatPrice(saveAmount)}
                     </span>
                   )}

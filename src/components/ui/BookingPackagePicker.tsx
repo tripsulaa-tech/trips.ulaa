@@ -65,7 +65,7 @@ export default function BookingPackagePicker({
                     <CheckCircle
                       size={18}
                       weight={selected ? 'fill' : 'regular'}
-                      className={premium ? 'text-gold' : selected ? 'text-primary' : 'text-dark-muted/50'}
+                      className={premium ? 'text-gold-700' : selected ? 'text-primary' : 'text-dark-muted/60'}
                       aria-hidden="true"
                     />
                     <span className={premium ? 'premium-gold-text' : undefined}>{pkg.name}</span>

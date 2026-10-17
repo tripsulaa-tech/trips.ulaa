@@ -114,7 +114,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
           </div>
           <div className="absolute inset-0 bg-gradient-to-t from-dark/60 via-transparent to-transparent" />
           <div className="absolute top-4 left-4">
-            <span className="bg-gold text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
+            <span className="bg-gold-700 text-white text-xs font-button font-semibold px-3 py-1 rounded-md">
               Coming Soon
             </span>
           </div>
@@ -319,7 +319,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                 {/* Normal cards (no live PLUS OFFER): Save stays inline on
                     the price row, same as before. */}
                 {!showPlusOffer && saveAmount != null && (
-                  <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
+                  <span className="bg-success-bg border border-success-border text-success-fg text-2xs font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
                     Save {formatPrice(saveAmount)}
                   </span>
                 )}
@@ -329,7 +329,7 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
                   divider. */}
               {showPlusOffer && saveAmount != null && (
                 <div className="flex items-center gap-2 flex-wrap mt-1.5">
-                  <span className="bg-green-50 border border-green-200 text-green-700 text-2xs font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
+                  <span className="bg-success-bg border border-success-border text-success-fg text-2xs font-button font-medium px-2 py-0.5 rounded-md whitespace-nowrap">
                     Save {formatPrice(saveAmount)}
                   </span>
                   <span className="text-dark/15">|</span>
@@ -377,18 +377,18 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
             <Link
               to={isFull ? `/trips/${trip.slug}` : `/trips/${trip.slug}?book=1`}
               onClick={(e) => e.stopPropagation()}
-              className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 mb-3 hover:bg-green-100 hover:border-green-300 transition-colors"
+              className="flex items-center gap-2 bg-success-bg border border-success-border rounded-lg px-3 py-2 mb-3 hover:bg-success-border/50 hover:border-green-300 transition-colors"
             >
-              <ReserveShieldIcon className="w-[26px] h-[26px] text-green-700 shrink-0" />
+              <ReserveShieldIcon className="w-[26px] h-[26px] text-success-fg shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-green-700 text-xs font-button font-semibold leading-tight">
+                <p className="text-success-fg text-xs font-button font-semibold leading-tight">
                   Reserve your spot from {formatPrice(trip.advance_amount)}
                 </p>
                 <p className="text-dark text-2xs leading-tight mt-0.5">
                   Secure your trip with a small advance
                 </p>
               </div>
-              <CaretRight size={16} className="text-green-700 shrink-0" />
+              <CaretRight size={16} className="text-success-fg shrink-0" />
             </Link>
           )}
 

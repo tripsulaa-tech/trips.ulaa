@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/generate-sitemap.mjs && tsc -b && vite build",
+    "build": "node scripts/check-contrast.mjs && node scripts/generate-sitemap.mjs && tsc -b && vite build",
+    "check:contrast": "node scripts/check-contrast.mjs",
     "generate:sitemap": "node scripts/generate-sitemap.mjs",
     "lint": "eslint .",
     "preview": "vite preview"

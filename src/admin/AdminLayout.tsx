@@ -378,7 +378,7 @@ function SidebarContent({ userEmail, initial, onNavigate, collapsed = false, onT
       role="button"
       tabIndex={0}
       aria-label={`Reorder ${label}. Use the up and down arrow keys to move it.`}
-      className={`shrink-0 flex items-center justify-center ${roomy ? 'w-7 h-11' : 'w-6 h-8'} -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/50 hover:text-dark-muted rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
+      className={`shrink-0 flex items-center justify-center ${roomy ? 'w-7 h-11' : 'w-6 h-8'} -ml-1 touch-none select-none cursor-grab active:cursor-grabbing text-dark-muted/60 hover:text-dark-muted rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-primary`}
       style={{
         WebkitTouchCallout: 'none',
         WebkitUserDrag: 'none',

@@ -83,8 +83,8 @@ function timelineMeta(entry: ActivityLogEntry): { render: (size: number) => Reac
     // Outline weight here (not phosphorGlyph's filled weight) to match the
     // Percent glyph already used in Payment Overview's Discount tile.
     return action.includes('removed')
-      ? { render: phosphorGlyphRegular(Percent), classes: 'bg-red-50 text-red-600' }
-      : { render: phosphorGlyphRegular(Percent), classes: 'bg-green-50 text-green-600' };
+      ? { render: phosphorGlyphRegular(Percent), classes: 'bg-danger-bg text-danger-fg' }
+      : { render: phosphorGlyphRegular(Percent), classes: 'bg-success-bg text-success-fg' };
   }
   // No-show entries (and the cancel that records one) get their own orange
   // node so they read differently from an ordinary cancellation.
@@ -92,13 +92,13 @@ function timelineMeta(entry: ActivityLogEntry): { render: (size: number) => Reac
     return { render: phosphorGlyph(UserMinus), classes: 'bg-orange-50 text-orange-600' };
   }
   if (action.includes('cancel') || action.includes('removed')) {
-    return { render: phosphorGlyph(XCircle), classes: 'bg-red-50 text-red-600' };
+    return { render: phosphorGlyph(XCircle), classes: 'bg-danger-bg text-danger-fg' };
   }
   if (details.includes('pending')) {
-    return { render: phosphorGlyph(Clock), classes: 'bg-amber-50 text-amber-600' };
+    return { render: phosphorGlyph(Clock), classes: 'bg-warning-bg text-warning-fg' };
   }
   if (action.includes('paid') || action.includes('received') || details.includes('collected')) {
-    return { render: phosphorGlyph(IndianRupee), classes: 'bg-green-50 text-green-600' };
+    return { render: phosphorGlyph(IndianRupee), classes: 'bg-success-bg text-success-fg' };
   }
   // "Enquiry logged (whatsapp)" / "(phone)" / "(website)" etc. (admin-portal
   // entries) and the DB trigger's special-cased "Website enquiry submitted"

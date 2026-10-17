@@ -39,7 +39,7 @@ export default function BulkEditModal({
   onSave: () => void;
   bulkSaving: boolean;
 }) {
-  const errorClass = 'text-red-500 text-xs mt-1';
+  const errorClass = 'text-danger-fg text-xs mt-1';
   // Live version of handleBulkSave's two save-time checks — recomputed on
   // every render so "nothing changed yet" / "this would overpay someone"
   // show up as the admin fills the form, instead of only behind an
@@ -98,12 +98,12 @@ export default function BulkEditModal({
             options={BULK_PACKAGE_OPTIONS}
           />
           {bulkForm.package_type !== BULK_NO_CHANGE && !activeGroupTripId && (
-            <p className="text-amber-600 text-2xs mt-1">
+            <p className="text-warning-fg text-2xs mt-1">
               These enquiries have no linked trip, so no price is available. Enter the amount manually.
             </p>
           )}
           {bulkForm.package_type !== BULK_NO_CHANGE && activeGroupTripId && getTripPrice(activeGroupTripId, bulkForm.package_type) == null && (
-            <p className="text-amber-600 text-2xs mt-1">
+            <p className="text-warning-fg text-2xs mt-1">
               No price is set for this package. Enter the amount manually, or add it under Upcoming Trips.
             </p>
           )}

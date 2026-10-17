@@ -34,7 +34,7 @@ export function ReorderArrows({ drag, index, count, vertical = false, className 
   if (count < 2) return null;
   const Earlier = vertical ? CaretUp : CaretLeft;
   const Later = vertical ? CaretDown : CaretRight;
-  const btn = 'p-1 rounded text-primary/70 hover:text-primary hover:bg-primary/5 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed flex-shrink-0';
+  const btn = 'p-1 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed flex-shrink-0';
   return (
     <span className={`inline-flex items-center gap-0.5 ${className}`}>
       <button type="button" onClick={() => drag.move(index, index - 1)} disabled={index === 0} title="Move earlier" aria-label={`Move item ${index + 1} earlier`} className={btn}>

@@ -322,7 +322,7 @@ export default function TestimonialsSection({
                       )}
                     </div>
                   </div>
-                  <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                  <span className={`shrink-0 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${t.is_published ? 'bg-success-bg text-success-fg' : 'bg-background-warm text-dark-muted'}`}>
                     {t.is_published ? 'Published' : 'Draft'}
                   </span>
                 </div>
@@ -399,7 +399,7 @@ export default function TestimonialsSection({
                       </td>
                       <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.review}</td>
                       <td className="px-4 py-4 text-center">
-                        <span className={`text-xs font-button font-semibold px-3 py-1 rounded-md ${t.is_published ? 'bg-green-100 text-green-700' : 'bg-background-warm text-dark-muted'}`}>
+                        <span className={`text-xs font-button font-semibold px-3 py-1 rounded-md ${t.is_published ? 'bg-success-bg text-success-fg' : 'bg-background-warm text-dark-muted'}`}>
                           {t.is_published ? 'Published' : 'Draft'}
                         </span>
                       </td>

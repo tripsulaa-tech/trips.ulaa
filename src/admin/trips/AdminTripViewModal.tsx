@@ -42,8 +42,8 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
 
             <div className="flex flex-wrap items-center gap-2">
               <span className={`text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${
-                trip.status === 'published' ? 'bg-green-100 text-green-700'
-                : trip.status === 'coming_soon' ? 'bg-amber-100 text-amber-700'
+                trip.status === 'published' ? 'bg-success-bg text-success-fg'
+                : trip.status === 'coming_soon' ? 'bg-warning-bg text-warning-fg'
                 : 'bg-background-warm text-dark-muted'
               }`}>
                 {trip.status === 'published' ? 'Published' : trip.status === 'coming_soon' ? 'Coming Soon' : 'Draft'}
@@ -350,7 +350,7 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
             {trip.trip_finance && (
               <details className="group">
                 <summary className="text-xs font-medium text-dark-muted mb-1 cursor-pointer select-none list-none flex items-center gap-1">
-                  <span className="transition-transform group-open:rotate-90">▶</span> Finances & Profit <span className="text-dark-muted/70">(internal only)</span>
+                  <span className="transition-transform group-open:rotate-90">▶</span> Finances & Profit <span className="text-dark-muted/75">(internal only)</span>
                 </summary>
                 <div className="mt-2 bg-background rounded-md p-3 space-y-1.5 text-sm">
                   {(() => {
