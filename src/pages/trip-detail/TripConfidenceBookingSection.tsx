@@ -5,7 +5,6 @@ import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import SectionTitle from '../../components/ui/SectionTitle';
 import type { UpcomingTrip, TripConfidenceItem, ButtonLabelsConfig } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft, formatDuration, earlyBirdSeatsLabel, earlyBirdRuleNote } from '../../utils/utils-index';
-import { hasPackages } from '../../utils/tripOptions';
 import { getGoogleCalendarUrl, downloadTripIcs } from '../../utils/calendar';
 import {
   Calendar,
@@ -75,7 +74,6 @@ export default function TripConfidenceBookingSection({
   // non-hidden special offer, and only when it says something the green
   // badge doesn't.
   const showSpecialOfferPromo = isSpecialOffer && !trip.hide_special_offer_promo;
-  const basicPackageName = hasPackages(trip.trip_options) ? trip.trip_options.packages[0].name : null;
   const saveAmount = strikeThroughPrice != null && activePrice != null
     ? strikeThroughPrice - activePrice
     : null;
@@ -116,18 +114,18 @@ export default function TripConfidenceBookingSection({
 
       <section className={`bg-white rounded-lg shadow-warm-lg border border-background-warm p-5 py-6 sm:p-8 sm:py-10 sm:pl-10 sm:pr-14 ${hasConfidenceItems ? 'lg:ml-10' : 'max-w-2xl mx-auto w-full'}`}>
         <div className="max-w-xl mx-auto text-center">
-          <SectionTitle variant="plain" align="center" title="Reserve Your Spot" size="sm" titleClassName="mb-5" />
+          <SectionTitle variant="plain" align="center" title="Reserve Your Spot" size="sm" titleClassName="mb-3" />
           {activePrice != null && (
-            <div className="mb-5 pb-5 border-b border-background-warm">
+            <div className="mb-4 pb-4 border-b border-background-warm">
               {strikeThroughPrice != null ? (
                 <>
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="font-display text-3xl font-bold text-primary">{formatPrice(activePrice)}</span>
-                    <span className="text-dark-muted line-through text-lg">{formatPrice(strikeThroughPrice)}</span>
+                  <div className="flex items-baseline justify-center gap-x-2 flex-wrap">
+                    <span className="font-display text-4xl font-bold leading-none text-primary">{formatPrice(activePrice)}</span>
+                    <span className="text-dark-muted line-through text-base leading-none">{formatPrice(strikeThroughPrice)}</span>
+                    <span className="text-dark-muted text-sm leading-none">/ person</span>
                   </div>
-                  <p className="text-dark-muted text-xs mt-1">per person{basicPackageName ? ` · ${basicPackageName} package` : ''}</p>
 
-                  <div className="flex items-center justify-center gap-2 mt-3 flex-wrap">
+                  <div className="flex items-center justify-center gap-2 mt-2.5 flex-wrap">
                     <span className="bg-success-bg border border-success-border text-success-fg text-xs font-button font-medium px-2.5 py-1 rounded-md">
                       Save {formatPrice(saveAmount as number)}
                     </span>
@@ -176,8 +174,10 @@ export default function TripConfidenceBookingSection({
                 </>
               ) : (
                 <>
-                  <span className="font-display text-3xl font-bold text-dark">{formatPrice(activePrice)}</span>
-                  <p className="text-dark-muted text-xs mt-1">per person{basicPackageName ? ` · ${basicPackageName} package` : ''}</p>
+                  <div className="flex items-baseline justify-center gap-x-2">
+                    <span className="font-display text-4xl font-bold leading-none text-dark">{formatPrice(activePrice)}</span>
+                    <span className="text-dark-muted text-sm leading-none">/ person</span>
+                  </div>
                   {deadlinePassed && (
                     <p className="text-dark-muted text-xs mt-1">Early-bird offer has ended</p>
                   )}

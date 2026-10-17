@@ -13,7 +13,6 @@ import { subscribeToTable } from '../services/realtime';
 import type { UpcomingTrip, ButtonLabelsConfig, BookingFormDraft } from '../types/types-index';
 import { publicSeatsLeft, getActivePrice, getStrikeThroughPrice, formatPrice, isOneDayTrip } from '../utils/utils-index';
 import { DEFAULT_BUTTON_LABELS } from '../constants/buttonLabels';
-import { hasPackages } from '../utils/tripOptions';
 
 import TripComingSoon from './trip-detail/TripComingSoon';
 import TripHero from './trip-detail/TripHero';
@@ -23,7 +22,7 @@ import TripItinerarySection from './trip-detail/TripItinerarySection';
 import TripAccommodationSection from './trip-detail/TripAccommodationSection';
 import TripInclusionsSection from './trip-detail/TripInclusionsSection';
 import TripPackagesSection from './trip-detail/TripPackagesSection';
-import { withBasicPricing } from '../utils/tripOptions';
+import { withBasicPricing, hasPackageChoice } from '../utils/tripOptions';
 import TripGallerySection from './trip-detail/TripGallerySection';
 import TripFashionSection from './trip-detail/TripFashionSection';
 import TripConfidenceBookingSection from './trip-detail/TripConfidenceBookingSection';
@@ -441,7 +440,7 @@ export default function TripDetailPage() {
         registerNavLink={registerNavLink}
         hasConfidenceItems={hasConfidenceItems}
         hasDetailsSection={hasDetailsSection}
-        hasPackages={hasPackages(trip.trip_options)}
+        hasPackages={hasPackageChoice(trip)}
       />
 
       {/* Main Content */}

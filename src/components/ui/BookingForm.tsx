@@ -248,6 +248,19 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
   const termsSections = useMemo(() => parseTerms(termsText), [termsText]);
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const scrollBodyRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // After a failed submit: scroll the FIRST missed/invalid field (top to
+  // bottom) into view and focus it, so the visitor sees exactly what to fix.
+  // Waits a tick so React has rendered the error messages first.
+  const focusFirstError = () => {
+    window.setTimeout(() => {
+      const el = formRef.current?.querySelector<HTMLElement>('[aria-invalid="true"], [data-error-anchor="true"]');
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.focus({ preventScroll: true });
+    }, 60);
+  };
   const chipBarRef = useRef<HTMLDivElement>(null);
   const chipRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const [activeSectionNum, setActiveSectionNum] = useState<string | null>(null);
@@ -321,6 +334,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     // instead, so a bad phone/email/name shows its error message live as
     // the user types rather than only surfacing on save.
     mode: 'onChange',
+    shouldFocusError: false, // focusFirstError() picks the first one in page order
     defaultValues: {
       full_name: initialDraft?.full_name ?? '',
       // BookingFormData types age as a number, but the input itself never
@@ -432,6 +446,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     if (bookingMode === 'group') {
       if (!Number.isInteger(groupSize) || groupSize < MIN_GROUP_SIZE || groupSize > MAX_GROUP_SIZE) {
         setGroupSizeError(`Enter a number of people between ${MIN_GROUP_SIZE} and ${MAX_GROUP_SIZE}.`);
+        focusFirstError();
         return;
       }
     }
@@ -440,6 +455,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     const groupVegCountClamped = Math.min(Math.max(groupVegCount, 0), groupSize);
     if (bookingMode === 'solo' && !foodPreference) {
       setFoodPreferenceError('Please let us know your food preference.');
+      focusFirstError();
       return;
     }
     setFoodPreferenceError('');
@@ -670,7 +686,12 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
 
   return (
     <>
-    <form onSubmit={handleSubmit(onSubmit)} noValidate className="grid grid-cols-1 md:grid-cols-[17rem_1fr] bg-cream">
+    <form ref={formRef} onSubmit={e => {
+      // Food preference isn't a react-hook-form field: flag it up front so it
+      // shows together with any other missed fields instead of one at a time.
+      if (bookingMode === 'solo' && !foodPreference) setFoodPreferenceError('Please let us know your food preference.');
+      void handleSubmit(onSubmit, focusFirstError)(e);
+    }} noValidate className="grid grid-cols-1 md:grid-cols-[17rem_1fr] bg-cream">
       <HoneypotField inputRef={honeypotRef} />
 
       {/* ── Ticket stub (left on desktop, top on phones) ── */}
@@ -796,8 +817,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             <>
               <label id={ids.foodPreference} className="block text-[10px] md:text-[11px] font-semibold uppercase tracking-[0.14em] text-dark-muted/80 mb-1.5">Food preference *</label>
               <div
-                className="flex gap-2"
+                className={`flex gap-2 rounded-lg transition-shadow ${foodPreferenceError ? 'ring-2 ring-danger-fg/60 ring-offset-2 ring-offset-cream' : ''}`}
                 role="group"
+                tabIndex={-1}
+                data-error-anchor={foodPreferenceError ? 'true' : undefined}
                 aria-labelledby={ids.foodPreference}
                 aria-describedby={foodPreferenceError ? `${ids.foodPreference}-error` : undefined}
               >
@@ -1029,8 +1052,10 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         </div>
       </div>
 
-      {/* Package (only for trips that offer packages) */}
-      {packagesOn && (
+      {/* Package picker: only when there is a real choice. With a single
+          package left (e.g. Early Bird sold out) it is preselected and the
+          price is shown on the trip page, so the picker is skipped. */}
+      {packagesOn && tripOptions!.packages.length > 1 && (
         <BookingPackagePicker
           config={tripOptions!}
           base={packageBase ?? noPackageBase}
@@ -1049,9 +1074,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         <textarea
           id={ids.message}
           {...register('message')}
-          rows={3}
-          placeholder="Any questions or special requirements..."
-          className={`${inputClass} resize-none`}
+          rows={2}
+          placeholder="Any questions or requirements..."
+          className={`${inputClass} resize-none field-sizing-content min-h-[3.5rem] max-h-40`}
         />
       </div>
 

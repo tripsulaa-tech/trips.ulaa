@@ -250,6 +250,15 @@ export function hasPackages(cfg?: TripOptionsConfig | null): cfg is TripOptionsC
   return !!cfg && cfg.packages.length > 0;
 }
 
+// "Choose your package" only makes sense when there is a real choice: more
+// than one package still open to book. A lone package (e.g. Basic after the
+// early-bird seats sold out) is already covered by the booking card's price.
+export function hasPackageChoice(trip: UpcomingTrip): boolean {
+  const cfg = trip.trip_options;
+  if (!hasPackages(cfg)) return false;
+  return (bookablePackages(cfg, getPackageBase(trip))?.packages.length ?? 0) > 1;
+}
+
 // Splits `groupSize` seats across packages. The first package takes
 // whatever is left after the others' counts (mirrors how the form's
 // veg/non-veg split works), so the counts always add up to the group.

@@ -16,7 +16,7 @@ import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
 import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
-import { getPackageBase, hasPackages, isPackageSoldOut, withBasicPricing } from '../../utils/tripOptions';
+import { withBasicPricing } from '../../utils/tripOptions';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
 import type { TripHighlightIconType } from '../../constants/tripHighlightIcons';
 import Button from './Button';
@@ -139,13 +139,6 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   // Trips with packages show the first package's (Basic) price on the card;
   // Premium etc. are picked on the trip page / booking form.
   const priced = withBasicPricing(trip);
-  // Badge names the package the price belongs to: the first one still open
-  // (same pick as withBasicPricing), so a sold-out Early Bird doesn't keep its
-  // name next to Normal's price.
-  const pkgBase = getPackageBase(trip);
-  const basicPackageName = hasPackages(trip.trip_options)
-    ? (trip.trip_options.packages.find(p => !isPackageSoldOut(p, pkgBase)) ?? trip.trip_options.packages[0]).name
-    : null;
   const { activePrice, isEarlyBird, isSpecialOffer } = getActivePrice(priced.price, priced.early_bird_price, priced.early_bird_deadline, priced.special_offer_price, priced.special_offer_date, priced.special_offer_end_date, priced.early_bird_seats, priced.early_bird_seats_taken);
   const earlySeatsLabel = isEarlyBird ? earlyBirdSeatsLabel(priced) : null;
   const strikeThroughPrice = getStrikeThroughPrice(activePrice, priced.price, isEarlyBird, trip.strike_through_price, isSpecialOffer);
@@ -308,11 +301,6 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-display text-2xl font-bold text-primary">{formatPrice(activePrice)}</span>
                 <span className="text-xs font-medium text-dark-muted">/person</span>
-                {/* "Early Bird" package chip is intentionally hidden on cards (the
-                    price/strike-through already conveys it); other package names stay. */}
-                {basicPackageName && !/early\s*bird/i.test(basicPackageName) && (
-                  <span className="text-2xs font-medium text-dark-muted bg-background-warm px-1.5 py-0.5 rounded">{basicPackageName}</span>
-                )}
                 {strikeThroughPrice != null && (
                   <span className="text-gray-400 line-through text-sm">{formatPrice(strikeThroughPrice)}</span>
                 )}

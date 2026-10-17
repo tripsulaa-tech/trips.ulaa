@@ -2,7 +2,7 @@ import SectionTitle from '../../components/ui/SectionTitle';
 import Button from '../../components/ui/Button';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
 import { formatPrice, earlyBirdSeatsLabel } from '../../utils/utils-index';
-import { getPackageBase, hasOwnPrice, includedOptions, isPackageSoldOut, packageListPrice, packageQuote, packagePriceLabel } from '../../utils/tripOptions';
+import { bookablePackages, getPackageBase, hasPackageChoice, hasOwnPrice, includedOptions, isPackageSoldOut, packageListPrice, packageQuote, packagePriceLabel } from '../../utils/tripOptions';
 import { CheckCircle, Star } from '@phosphor-icons/react';
 
 interface TripPackagesSectionProps {
@@ -17,6 +17,8 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
   const cfg = trip.trip_options;
   const base = getPackageBase(trip);
   if (!cfg || cfg.packages.length === 0) return null;
+  // Only one package left to book: nothing to choose, so skip the whole section.
+  if (!hasPackageChoice(trip)) return null;
   // Nothing to price from: no trip price and no package has its own price.
   if (base.active == null && !cfg.packages.some(hasOwnPrice)) return null;
 
@@ -28,6 +30,9 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
   // "Most popular" on an early-bird-only package lasts only while its seats do.
   const hasHighlight = cfg.packages.some(p => p.highlight && !isPackageSoldOut(p, base));
   const seatsLabel = earlyBirdSeatsLabel(trip);
+  // A sold-out early-bird package is hidden entirely: travellers only see what
+  // they can still book. (Kept if hiding it would leave nothing to show.)
+  const shown = bookablePackages(cfg, base)?.packages ?? cfg.packages;
 
   return (
     <section id="packages" className="scroll-mt-44">
@@ -38,8 +43,8 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
         title="Choose Your Package"
         titleClassName="mb-4"
       />
-      <div className={`grid gap-4 grid-cols-1 ${cfg.packages.length >= 3 ? 'md:grid-cols-3' : cfg.packages.length === 2 ? 'md:grid-cols-2' : ''}`}>
-        {cfg.packages.map(pkg => {
+      <div className={`grid gap-4 grid-cols-1 ${shown.length >= 3 ? 'md:grid-cols-3' : shown.length === 2 ? 'md:grid-cols-2' : 'max-w-xl'}`}>
+        {shown.map(pkg => {
           const extras = includedOptions(pkg, cfg);
           // Early-bird pricing only reaches packages flagged for it (e.g.
           // Premium); the others always show the regular trip price.

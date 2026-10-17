@@ -1,7 +1,7 @@
 import { CheckCircle, Minus, Plus } from '@phosphor-icons/react';
-import type { TripOptionsConfig } from '../../types/types-index';
+import type { TripOptionsConfig, TripPackage } from '../../types/types-index';
 import { formatPrice } from '../../utils/utils-index';
-import { hasOwnPrice, includedOptions, isPremiumPackage, packagePriceLabel, packageQuote, seatPackageAssignments, type PackageBase } from '../../utils/tripOptions';
+import { hasOwnPrice, includedOptions, isPackageSoldOut, isPremiumPackage, packagePriceLabel, packageQuote, seatPackageAssignments, type PackageBase } from '../../utils/tripOptions';
 
 interface BookingPackagePickerProps {
   config: TripOptionsConfig;
@@ -35,6 +35,10 @@ export default function BookingPackagePicker({
     return packageQuote(pkg, config, base);
   };
   const labelOf = (id: string) => packagePriceLabel(quoteOf(id), formatPrice);
+  // Gold treatment: Premium packages AND the one marked "Most popular" (while
+  // its seats last), same golden look as the package cards on the trip page.
+  const isPopular = (pkg: TripPackage) => !!pkg.highlight && !isPackageSoldOut(pkg, base);
+  const isGold = (pkg: TripPackage) => isPremiumPackage(pkg.name) || isPopular(pkg);
   const hasBase = base.active != null || config.packages.some(hasOwnPrice);
 
   if (mode === 'solo') {
@@ -46,7 +50,7 @@ export default function BookingPackagePicker({
           {config.packages.map((pkg, i) => {
             const selected = chosen === pkg.id;
             const extras = includedOptions(pkg, config);
-            const premium = isPremiumPackage(pkg.name);
+            const premium = isGold(pkg);
             return (
               <button
                 key={pkg.id}
@@ -55,7 +59,7 @@ export default function BookingPackagePicker({
                 aria-checked={selected}
                 onClick={() => onPackageChange(pkg.id)}
                 className={`text-left rounded-lg border-2 px-3 sm:px-4 py-3 transition-colors ${config.packages.length % 2 === 1 && i === config.packages.length - 1 ? 'sm:col-span-2' : ''} ${
-                  isPremiumPackage(pkg.name)
+                  premium
                     ? `premium-gold-border ${selected ? 'premium-gold-border--selected' : ''}`
                     : selected ? 'border-primary bg-primary/10' : 'border-background-warm hover:border-primary/40'
                 }`}
@@ -103,18 +107,18 @@ export default function BookingPackagePicker({
     <div>
       <p className="block text-sm font-medium text-dark mb-1">Package — how many people for each? *</p>
       <div className="grid gap-2">
-        <div className={`flex items-center justify-between gap-3 rounded-lg border-2 px-4 py-2.5 ${isPremiumPackage(first.name) ? 'premium-gold-border' : 'border-background-warm'}`}>
+        <div className={`flex items-center justify-between gap-3 rounded-lg border-2 px-4 py-2.5 ${isGold(first) ? 'premium-gold-border' : 'border-background-warm'}`}>
           <div>
-            <span className={`font-medium ${isPremiumPackage(first.name) ? 'premium-gold-text' : 'text-dark'}`}>{first.name}</span>
-            <span className={`text-sm font-semibold ml-2 ${isPremiumPackage(first.name) ? 'premium-gold-text' : 'text-primary'}`}>{labelOf(first.id)}</span>
+            <span className={`font-medium ${isGold(first) ? 'premium-gold-text' : 'text-dark'}`}>{first.name}</span>
+            <span className={`text-sm font-semibold ml-2 ${isGold(first) ? 'premium-gold-text' : 'text-primary'}`}>{labelOf(first.id)}</span>
           </div>
           <span className="text-sm text-dark-muted">{countOf(first.id)} {countOf(first.id) === 1 ? 'person' : 'people'} (the rest)</span>
         </div>
         {rest.map(pkg => (
-          <div key={pkg.id} className={`flex items-center justify-between gap-3 rounded-lg border-2 px-4 py-2.5 ${isPremiumPackage(pkg.name) ? 'premium-gold-border' : 'border-background-warm'}`}>
+          <div key={pkg.id} className={`flex items-center justify-between gap-3 rounded-lg border-2 px-4 py-2.5 ${isGold(pkg) ? 'premium-gold-border' : 'border-background-warm'}`}>
             <div>
-              <span className={`font-medium ${isPremiumPackage(pkg.name) ? 'premium-gold-text' : 'text-dark'}`}>{pkg.name}</span>
-              <span className={`text-sm font-semibold ml-2 ${isPremiumPackage(pkg.name) ? 'premium-gold-text' : 'text-primary'}`}>{labelOf(pkg.id)}</span>
+              <span className={`font-medium ${isGold(pkg) ? 'premium-gold-text' : 'text-dark'}`}>{pkg.name}</span>
+              <span className={`text-sm font-semibold ml-2 ${isGold(pkg) ? 'premium-gold-text' : 'text-primary'}`}>{labelOf(pkg.id)}</span>
             </div>
             <div className="flex items-center gap-2">
               <button
