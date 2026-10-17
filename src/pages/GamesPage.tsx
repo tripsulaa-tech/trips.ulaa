@@ -19,8 +19,8 @@ export default function GamesPage() {
 
   return (
     <Layout>
-      <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
-<section className="relative overflow-hidden rounded-lg bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream">
+      <div className="pt-20">
+<section className="relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream">
         <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-[28rem] h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
         <span className="absolute -top-10 -right-16 w-56 h-56 rounded-full bg-gold/20 blur-3xl pointer-events-none" aria-hidden="true" />
         <div className="relative max-w-[1344px] mx-auto px-4 sm:px-6 lg:px-8 pt-36 pb-12 sm:pt-44 sm:pb-16 text-center">

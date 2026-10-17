@@ -83,8 +83,8 @@ export default function BrowseShell<T>({
   return (
     <>
       {/* Hero */}
-      <div className="px-1 sm:px-1.5 pt-20 pb-1.5">
-      <div className="relative h-80 md:h-96 overflow-hidden rounded-lg">
+      <div className="pt-20">
+      <div className="relative h-80 md:h-96 overflow-hidden">
         <img src={localSiteImage(hero.image)} alt={hero.imageAlt} className="w-full h-full object-cover" loading="eager" fetchPriority="high" />
         <div className="absolute inset-0 bg-gradient-to-b from-dark/60 to-dark/80" />
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 sm:px-6 lg:px-8">

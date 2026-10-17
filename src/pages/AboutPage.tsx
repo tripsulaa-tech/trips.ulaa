@@ -174,10 +174,10 @@ export default function AboutPage() {
       {/* ══════════════════════════════════════════════════════════════
           1. HERO BANNER — identical layout to home HeroSection
       ══════════════════════════════════════════════════════════════ */}
-<div className="px-1 sm:px-1.5 pt-20 pb-1.5">
+<div className="pt-20">
       <section
         ref={heroContainerRef}
-        className="relative isolate transform-gpu overflow-hidden rounded-lg min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
+        className="relative isolate transform-gpu overflow-hidden min-h-[60vh] sm:min-h-[82vh] lg:min-h-[85vh]"
       >
         {/* Background (static inside the frame) */}
         <div className="absolute inset-0 overflow-hidden">

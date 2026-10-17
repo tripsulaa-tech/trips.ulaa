@@ -219,7 +219,7 @@ export default function AlbumPage() {
           to a bottom-weighted scrim (title legibility) plus a light top
           scrim so the sticky navbar doesn't float over a bright sky.
          --------------------------------------------------------------- */}
-      <section className="relative mx-1 sm:mx-1.5 mt-20 rounded-lg h-[60vh] min-h-[440px] md:h-[70vh] md:min-h-[560px] lg:h-[calc(100svh-5.4rem)] lg:min-h-[640px] overflow-hidden">
+      <section className="relative mt-20 h-[60vh] min-h-[440px] md:h-[70vh] md:min-h-[560px] lg:h-[calc(100svh-5.4rem)] lg:min-h-[640px] overflow-hidden">
         <img
           src={album.cover_image || PLACEHOLDER_IMAGE}
           alt={album.title}

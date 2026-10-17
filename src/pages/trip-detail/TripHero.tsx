@@ -174,7 +174,7 @@ export default function TripHero({
           cover_image is used instead, sized to aspect-[9/8] (the ratio the
           Cover Image Editor's crop is framed at) and anchored to the top,
           with bg-dark filling the rest. */}
-      <div className="sm:hidden relative mx-1 mt-20 mb-3 rounded-lg min-h-[max(440px,calc(100svh-10.6rem))] flex flex-col overflow-hidden bg-dark">
+      <div className="sm:hidden relative mt-20 mb-3 min-h-[max(440px,calc(100svh-10.6rem))] flex flex-col overflow-hidden bg-dark">
         <img
           src={trip.hero_mobile_image || trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.title}
@@ -202,7 +202,7 @@ export default function TripHero({
           the cover photo fills the card and the title, description, buttons and
           trip facts all sit INSIDE it, over a dark fade from the bottom. The card
           grows only if the content (e.g. an expanded description) needs more room. */}
-      <div className="hidden sm:flex relative mx-1.5 mt-20 mb-5 rounded-lg overflow-hidden bg-dark min-h-[max(520px,calc(100svh-5.4rem))]">
+      <div className="hidden sm:flex relative mt-20 mb-5 overflow-hidden bg-dark min-h-[max(520px,calc(100svh-5.4rem))]">
         <img
           src={trip.cover_image || PLACEHOLDER_IMAGE}
           alt={trip.title}

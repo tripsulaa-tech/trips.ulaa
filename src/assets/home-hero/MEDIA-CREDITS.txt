@@ -13,3 +13,7 @@ not a claim that this location is a currently bookable ULAA destination.
 
 Both MP4 files are served locally by the application build. No stock-site
 hotlinks, external player, API key, or new runtime dependency is required.
+
+Hero video 3: Mixkit, "Happy friends running in nature" (item 36913)
+License: Mixkit Stock Video Free License - https://mixkit.co/license/
+Adaptations: silent edit, desktop encode, portrait crop, still posters.
