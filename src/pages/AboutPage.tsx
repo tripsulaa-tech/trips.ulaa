@@ -18,6 +18,7 @@ import Layout from '../components/layout/Layout';
 import Button from '../components/ui/Button';
 import MobileMemoryWall from '../sections/about/MobileMemoryWall';
 import TestimonialCard from '../components/ui/TestimonialCard';
+import TestimonialsDesktopSlider from '../components/ui/TestimonialsDesktopSlider';
 import { getSiteContent, getTestimonials, getCompletedTrips } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
@@ -535,12 +536,8 @@ export default function AboutPage() {
                 </p>
               )}
             </motion.div>
-            {/* Desktop / tablet grid */}
-            <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {testimonials.map((testimonial, i) => (
-                <TestimonialCard key={testimonial.id} testimonial={testimonial} index={i} />
-              ))}
-            </div>
+            {/* Desktop / tablet: grid for up to 3, slides one card at a time when there are more */}
+            <TestimonialsDesktopSlider items={testimonials} theme="light" />
 
             {/* Mobile carousel — only the active card is rendered, swipeable,
                 same behaviour as the home page's testimonials carousel */}

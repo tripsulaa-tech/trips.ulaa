@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import SectionTitle from '../../components/ui/SectionTitle';
 import TestimonialCard from '../../components/ui/TestimonialCard';
+import TestimonialsDesktopSlider from '../../components/ui/TestimonialsDesktopSlider';
 import { getTestimonials, getSiteContent } from '../../services/api';
 import type { Testimonial, TestimonialsSectionContent } from '../../types/types-index';
 import { DEFAULT_TESTIMONIALS_SECTION } from '../../constants/testimonials-section';
@@ -20,8 +21,8 @@ export default function Testimonials() {
 
   useEffect(() => {
     getTestimonials()
-      .then(data => setTestimonials((data.length > 0 ? data : DEMO_TESTIMONIALS).slice(0, 3)))
-      .catch(() => setTestimonials(DEMO_TESTIMONIALS.slice(0, 3)));
+      .then(data => setTestimonials(data.length > 0 ? data : DEMO_TESTIMONIALS))
+      .catch(() => setTestimonials(DEMO_TESTIMONIALS));
     getSiteContent<TestimonialsSectionContent>('testimonials_section')
       .then(data => { if (data) setSectionText(data); })
       .catch(() => {});
@@ -69,12 +70,8 @@ export default function Testimonials() {
           />
         </div>
 
-        {/* Desktop grid */}
-        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {testimonials.map((t, i) => (
-            <TestimonialCard key={t.id} testimonial={t} index={i} />
-          ))}
-        </div>
+        {/* Desktop: grid for up to 3, slides one card at a time when there are more */}
+        <TestimonialsDesktopSlider items={testimonials} theme="dark" />
 
         {/* Mobile carousel — only the active card is rendered, so the
             section height always matches that card, not the tallest one */}
