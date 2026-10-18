@@ -69,3 +69,15 @@ These two need Supabase (everyone uses their own phone), so they are the excepti
   - Answers and pairings are private in the database. A phone only gets its own twin(s).
   - The question ORDER in `findMyTwinEngine.ts` must match the weights in `_ft_score` in the SQL.
   - To add a prompt, add a line to `PROMPTS` (round N uses prompt N).
+
+## Retriever update
+
+Apply `supabase/migration/add_yaaru_avan_retriever.sql` after the existing Yaaru Avan migrations (including `yaaru_avan_rename_special_columns.sql` and `yaaru_avan_no_pickpocket_joyfool_revenger.sql`), then deploy the edited app files. Finish active rounds first. The SQL is transactional and can be rerun. No SQL is needed for one-phone play.
+
+Retriever uses one special slot and is dealt to one Tourist only, including when drawn by a Tourist Falafel Vendor. The round must start with at least two Strangers; Pickpockets do not count. Fewer than two disables its picker entry and excludes it from both deals and Vendor draws.
+
+An active Retriever can return only the Tourist directly voted out, once per round. Skipping preserves the power for a later vote. A returned player keeps their word, votes and describes again; any Lover remains out. Revenge victims and indirect Lover exits cannot be retrieved. The restored elimination stops counting toward Joy Fool/Duelists scoring. The win check runs after the decision, before the next stop. Pickpocket last guesses still resolve first. Elimination reveals the Retriever and says its power is lost.
+
+On one phone, every survivor receives a private handoff during the decision so the Retriever is not named publicly. Online, only the Retriever receives action buttons; after 30 seconds the window closes without using the power. Returning players are announced to everyone. Server-side room locking and round/stop/target checks protect against duplicate or stale requests. Every new round resets the power.
+
+Validation: TypeScript and ESLint pass for the updated files. Local tests passed for 2,000 one-phone deals and 100 online deals, role eligibility and uniqueness, revival/skip/reuse, privacy, stale requests, timeout, early elimination, win timing, Lovers, Joy Fool/Duelists scoring, and new-round resets. The migration applied successfully twice in a local PGlite database built from the supplied prerequisite migrations. Live Supabase and multi-device play were not tested. The complete Vite build is blocked by assets absent from the supplied archive (including game images, fonts and home-hero videos); retain those assets from your existing project.

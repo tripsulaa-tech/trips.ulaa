@@ -11,7 +11,7 @@ import { SITE_ORIGIN } from '../../constants/site';
 import type { Role } from './yaaruAvanEngine';
 import type { SpecialId } from './yaaruAvanSpecials';
 
-export type OnlinePhase = 'lobby' | 'deal' | 'describe' | 'vote' | 'tiebreak' | 'offboard' | 'guess' | 'revenger' | 'roundEnd' | 'final';
+export type OnlinePhase = 'lobby' | 'deal' | 'describe' | 'vote' | 'tiebreak' | 'offboard' | 'guess' | 'revenger' | 'retrieve' | 'retrieved' | 'roundEnd' | 'final';
 type OnlineOutcome = 'tourists' | 'strangers' | 'pickpocket-steal';
 
 interface OnlineRoom {
@@ -37,6 +37,9 @@ interface OnlineRoom {
   dare: string | null;
   out_player: string | null;
   offboard_at: string | null;
+  retrieve_deadline?: string | null;
+  /** How many words the Tourists' word has (set while a Pickpocket guesses), so the guess box can be split. */
+  guess_words?: number | null;
   guess_text: string | null;
   guess_match: boolean | null;
   outcome: OnlineOutcome | null;
@@ -63,6 +66,8 @@ interface OnlineRoom {
     redo?: boolean;
     /** Tied again after that: the host (leader) decides instead of the Goddess. */
     host_pick?: boolean;
+    /** Name of the Retriever, set once the power is used (the power is then spent). */
+    retriever?: string;
     /** Lovers: the partner who left right after them. */
     lover?: string | null;
     /** Set when this exit came from a Revenge by that player. */
@@ -109,6 +114,8 @@ export interface OnlineState {
     /** Name of my Duelist or Lover. */
     partner: string | null;
     can_vote: boolean;
+    can_retrieve?: boolean;
+    retrieval_used?: boolean;
   };
   room: OnlineRoom;
   players: OnlinePlayer[];
@@ -137,6 +144,8 @@ const MESSAGES: Record<string, string> = {
   already_guessed: 'You already sent your guess.',
   bad_target: 'You cannot pick that player.',
   not_your_turn: 'It is not your turn to speak.',
+  not_retriever: 'Only the active Retriever can make this choice.',
+  stale_retrieval: 'That retrieval window has already closed.',
   tied_cannot_vote: 'You were tied, so the other players decide this vote.',
 };
 
@@ -213,6 +222,8 @@ export const online = {
   setLocked: (code: string, locked: boolean) => rpc('yaaru_avan_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
   kick: (code: string, player: string) => rpc('yaaru_avan_kick', { p_code: code, p_token: t(), p_player: player }),
   leave: (code: string) => rpc('yaaru_avan_leave', { p_code: code, p_token: t() }),
+  /** Players removed earlier in this game, with the points they will get back if they rejoin by name. */
+  benched: (code: string) => rpc<{ name: string; points: number }[]>('yaaru_avan_benched', { p_code: code, p_token: t() }),
   startRound: (code: string, dare: string | null, reset = false) =>
     rpc('yaaru_avan_start_round', { p_code: code, p_token: t(), p_dare: dare, p_reset: reset }),
   ready: (code: string) => rpc('yaaru_avan_ready', { p_code: code, p_token: t() }),
@@ -225,6 +236,9 @@ export const online = {
   judgeGuess: (code: string, correct: boolean) => rpc('yaaru_avan_judge_guess', { p_code: code, p_token: t(), p_correct: correct }),
   tiebreak: (code: string, pick: string) => rpc('yaaru_avan_tiebreak', { p_code: code, p_token: t(), p_pick: pick }),
   revenge: (code: string, victim: string) => rpc('yaaru_avan_revenge', { p_code: code, p_token: t(), p_victim: victim }),
+  retrieve: (code: string, use: boolean, round: number, stop: number, target: string) =>
+    rpc('yaaru_avan_retrieve', { p_code: code, p_token: t(), p_use: use, p_round: round, p_stop: stop, p_target: target }),
+  advanceRetrieval: (code: string) => rpc('yaaru_avan_advance_retrieval', { p_code: code, p_token: t() }),
   endGame: (code: string) => rpc('yaaru_avan_end_game', { p_code: code, p_token: t() }),
   toLobby: (code: string) => rpc('yaaru_avan_to_lobby', { p_code: code, p_token: t() }),
 };

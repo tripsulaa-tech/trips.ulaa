@@ -29,7 +29,7 @@ import {
   online, OnlineError, joinLink, normalizeCode, loadOnlineSession, saveOnlineSession, clearOnlineSession,
 } from './yaaruAvanRoomApi';
 import type { OnlinePhase } from './yaaruAvanRoomApi';
-import { describeSpecial, specialDisplayName, SPECIALS, maxSpecials } from './yaaruAvanSpecials';
+import { describeSpecial, specialDisplayName, SPECIALS, maxSpecials, roleLocked } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
 import { useOnlineRoom } from './useOnlineRoom';
 import { useYaaruAvanContentSync } from './useGameContentSync';
@@ -280,14 +280,15 @@ const ALL_SPECIAL_IDS: readonly SpecialId[] = SPECIALS.map(d => d.id);
 const pickedSpecials = (room: { specials: boolean; special_ids: SpecialId[] | null }): SpecialId[] =>
   !room.specials ? [] : room.special_ids ? ALL_SPECIAL_IDS.filter(id => room.special_ids!.includes(id)) : [...ALL_SPECIAL_IDS];
 
-function SpecialPicker({ initial, players, busy, onSave, onCancel }: {
-  initial: SpecialId[]; players: number; busy: boolean;
+function SpecialPicker({ initial, players, strangers, busy, onSave, onCancel }: {
+  initial: SpecialId[]; players: number; strangers: number; busy: boolean;
   onSave: (ids: SpecialId[]) => void; onCancel: () => void;
 }) {
   const [draft, setDraft] = useState<SpecialId[]>(initial);
   const on = new Set(draft);
   const toggle = (id: SpecialId) => setDraft(ALL_SPECIAL_IDS.filter(x => (x === id ? !on.has(x) : on.has(x))));
   const slots = maxSpecials(players);
+  const readyCount = draft.filter(id => !roleLocked(id, players, strangers)).length;
 
   return (
     <div className="text-left">
@@ -300,24 +301,37 @@ function SpecialPicker({ initial, players, busy, onSave, onCancel }: {
         {players >= 3 ? ` (${slots} with ${players} players)` : ''}. Duelists and Lovers use two players.
       </p>
 
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-cream/50 tabular-nums">{draft.length} of {ALL_SPECIAL_IDS.length} ticked</span>
-        <span className="flex gap-3 text-xs font-bold">
-          <button type="button" onClick={() => setDraft([...ALL_SPECIAL_IDS])} className="text-gold-300 hover:underline">Tick all</button>
-          <button type="button" onClick={() => setDraft([])} className="text-cream/60 hover:underline">Clear</button>
-        </span>
-      </div>
-
-      <SpecialList on={on} onToggle={toggle} players={players} />
+      <SpecialList on={on} onToggle={toggle} onSetAll={ids => setDraft(ALL_SPECIAL_IDS.filter(x => ids.includes(x)))} players={players} strangers={strangers} />
 
       <button type="button" disabled={busy} onClick={() => onSave(draft)} className={`${primaryBtn} disabled:opacity-60`}>
-        <Check size={18} weight="bold" /> {draft.length === 0 ? 'Done (no special roles)' : `Done (${draft.length} ticked)`}
+        <Check size={18} weight="bold" /> {readyCount === 0 ? 'Done (no special roles)' : `Done (${readyCount} ticked)`}
       </button>
     </div>
   );
 }
 
 // ───────────────────────────── The room ─────────────────────────────
+
+/** The Pickpocket's typed guess: one box per word of the Tourists' word (1 word = 1 box, 2 words = 2 boxes). */
+function WordBoxes({ count, busy, onSend }: { count: number; busy: boolean; onSend: (text: string) => void }) {
+  const n = Math.max(1, Math.min(count || 1, 6));
+  const [vals, setVals] = useState<string[]>(() => Array(n).fill(''));
+  const filled = vals.every(v => v.trim().length > 0);
+  const send = () => { if (filled && !busy) onSend(vals.map(v => v.trim()).join(' ').slice(0, 40)); };
+  return (
+    <form onSubmit={e => { e.preventDefault(); send(); }}>
+      <div className="space-y-2 mb-3">
+        {vals.map((v, i) => (
+          <input key={i} value={v} autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={30}
+            onChange={e => setVals(prev => prev.map((x, k) => (k === i ? e.target.value : x)))}
+            placeholder={n > 1 ? `Word ${i + 1}` : 'Type your guess'} aria-label={n > 1 ? `Word ${i + 1} of ${n}` : 'Your guess'}
+            className={`${inputCls} text-center`} />
+        ))}
+      </div>
+      <button type="submit" disabled={!filled || busy} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>Send my guess</button>
+    </form>
+  );
+}
 
 function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onLeft: () => void; onExit: () => void }) {
   const reduce = useReducedMotion();
@@ -329,11 +343,11 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const [holding, setHolding] = useState(false);
   const [seenRound, setSeenRound] = useState(0);
   const [pick, setPick] = useState<{ key: string; id: string } | null>(null);
-  const [guessDraft, setGuessDraft] = useState('');
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [pickingSpecials, setPickingSpecials] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [sittingOut, setSittingOut] = useState<{ name: string; points: number }[]>([]);
   const noticeTimer = useRef<number | null>(null);
 
   const room = state?.room ?? null;
@@ -362,6 +376,15 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     finally { setBusy(false); }
   }, [busy, ensure, refresh, flash]);
 
+  // ── Players removed earlier in this game (they keep their points and can rejoin by name) ──
+  const playerCount = players.length;
+  useEffect(() => {
+    if (phase !== 'lobby') return;
+    let cancelled = false;
+    online.benched(code).then(list => { if (!cancelled) setSittingOut(Array.isArray(list) ? list : []); }).catch(() => { if (!cancelled) setSittingOut([]); });
+    return () => { cancelled = true; };
+  }, [phase, code, playerCount]);
+
   // ── Sounds when the phase changes ──
   const prevPhase = useRef<OnlinePhase | null>(null);
   const outcome = room?.outcome ?? null;
@@ -387,6 +410,15 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     let repeat: number | undefined;
     const first = window.setTimeout(() => { call(); repeat = window.setInterval(() => { if (document.visibilityState === 'visible') call(); }, 5000); }, 4300);
     return () => { window.clearTimeout(first); if (repeat) window.clearInterval(repeat); };
+  }, [phase, code, refresh]);
+
+  // Any phone may expire a missed decision or advance the public return reveal.
+  useEffect(() => {
+    if (phase !== 'retrieve' && phase !== 'retrieved') return;
+    const call = () => { void online.advanceRetrieval(code).then(refresh).catch(() => undefined); };
+    call();
+    const timer = window.setInterval(call, 2000);
+    return () => window.clearInterval(timer);
   }, [phase, code, refresh]);
 
   // ── Things that need the word and role ──
@@ -416,7 +448,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       <div className="relative text-center pt-8">
         <div className="w-16 h-16 mx-auto mb-3 rounded-[22px] bg-white/10 border border-white/15 text-cream/70 flex items-center justify-center" aria-hidden="true"><Question size={34} weight="bold" /></div>
         <h2 className="font-display text-2xl font-extrabold text-white">This room has ended</h2>
-        <p className="text-sm text-cream/60 mt-1 mb-5 px-4">Rooms close a few hours after they open, or when the host removes you.</p>
+        <p className="text-sm text-cream/60 mt-1 mb-5 px-4">Rooms close a few hours after they open. If the host removed you, join again with the same name to get your points back.</p>
         <button type="button" onClick={onLeft} className={primaryBtn}>Start or join another</button>
         <button type="button" onClick={onExit} className="mt-3 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">Back</button>
       </div>
@@ -538,6 +570,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
         <SpecialPicker
           initial={pickedSpecials(room)}
           players={n}
+          strangers={eff.strangers}
           busy={busy}
           onCancel={() => setPickingSpecials(false)}
           onSave={ids => {
@@ -583,13 +616,31 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{p.name}{p.id === me.id && <span className="ml-1.5 text-[10px] font-semibold text-cream/55">you</span>}</span>
                 {p.id === room.host_id && <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gold-300"><Crown size={12} weight="fill" /> Host</span>}
                 {isHost && p.id !== me.id && (
-                  <button type="button" onClick={() => void act(() => online.kick(room.code, p.id))} className="w-7 h-7 rounded-full text-cream/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label={`Remove ${p.name}`}>
+                  <button type="button" onClick={() => void act(() => online.kick(room.code, p.id))} className="w-7 h-7 rounded-full text-cream/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label={`Remove ${p.name}`} title={room.round_no > 0 ? 'Remove (keeps their points)' : 'Remove'}>
                     <X size={13} weight="bold" />
                   </button>
                 )}
               </li>
             ))}
           </ul>
+
+          {sittingOut.length > 0 && (
+            <div className={`${glass} px-3 py-2.5 mb-3`}>
+              <p className={eyebrow}>Sitting out</p>
+              <ul className="mt-1 space-y-0.5">
+                {sittingOut.map(s => (
+                  <li key={s.name} className="flex items-center justify-between gap-2 text-sm text-cream/70">
+                    <span className="min-w-0 truncate font-semibold">{s.name}</span>
+                    <span className="tabular-nums text-xs text-cream/50">{s.points} pt{s.points === 1 ? '' : 's'}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-cream/50 mt-1.5">They keep their points. They can join again with the same name{isHost ? ' (unlock the room if it is locked)' : ''}.</p>
+            </div>
+          )}
+          {isHost && room.round_no > 0 && sittingOut.length === 0 && (
+            <p className="text-[11px] text-cream/50 mb-3">Removing someone keeps their points. They can join again later with the same name.</p>
+          )}
 
           {isHost ? (
             <>
@@ -884,6 +935,29 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       )}
 
       {/* ── Offboard reveal ── */}
+      {phase === 'retrieve' && out && (
+        <div className="text-center pt-6">
+          <p className={eyebrow}>Private role check</p>
+          {me.can_retrieve ? <>
+            <h2 className="font-display text-2xl font-extrabold text-white mt-2">Bring {out.name} back?</h2>
+            <p className="text-sm text-cream/65 my-4">You are the Retriever. You have 30 seconds to use your one return this round. Skipping or timing out keeps it for a later vote.</p>
+            <button type="button" disabled={busy} className={`${primaryBtn} mb-3 disabled:opacity-60`}
+              onClick={() => void act(() => online.retrieve(code, true, room.round_no, room.stop_no, out.id))}>Retrieve {out.name}</button>
+            <button type="button" disabled={busy} className={`${ghostBtn} disabled:opacity-60`}
+              onClick={() => void act(() => online.retrieve(code, false, room.round_no, room.stop_no, out.id))}>Skip this vote</button>
+          </> : waiting('A private role decision is in progress. The game will continue shortly.')}
+        </div>
+      )}
+      {phase === 'retrieved' && out && (
+        <div className="text-center pt-6">
+          <p className={eyebrow}>The Retriever</p>
+          <h2 className="font-display text-3xl font-extrabold text-white mt-2">{iAmOut ? 'You are' : `${out.name} is`} back!</h2>
+          <p className="text-sm text-cream/65 my-4">Same word, back in the vote.</p>
+          <p className="text-sm font-bold text-gold-300 mb-4">{room.last_result?.retriever ?? 'Someone'} was the Retriever. The power is now used.</p>
+          {waiting('Continuing…')}
+        </div>
+      )}
+
       {phase === 'offboard' && out && room.last_result?.role && (
         <div className="text-center pt-4 min-h-[22rem]">
           <p className={eyebrow}>Offboarding</p>
@@ -899,6 +973,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <p className="font-display text-3xl font-extrabold leading-tight">{roleName(room.last_result.role)}</p>
             {outSpecial && <p className="text-xs font-bold mt-1 opacity-80">and {outSpecial}</p>}
           </motion.div>
+          {room.last_result.special === 'retriever' && <p className="mt-3 text-sm font-bold text-gold-300">The Retriever’s power is lost.</p>}
           {revengeBy && <p className="mt-3 text-xs font-bold text-gold-300">Revenger! {revengeBy} took them down.</p>}
           {bounceFromName && <p className="mt-3 text-xs font-bold text-gold-300">Boomerang! {bounceFromName}'s votes bounced back onto them.</p>}
           {loverName && <p className="mt-3 text-sm font-bold text-gold-300">{loverName} was in love with {out.name} and leaves too.</p>}
@@ -941,9 +1016,8 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               </>
             ) : (
               <>
-                <p className="text-sm text-cream/65 mt-2 mb-4 px-4">Guess the {guessWordOwner} word. One shot.</p>
-                <input value={guessDraft} onChange={e => setGuessDraft(e.target.value.slice(0, 40))} onKeyDown={e => { if (e.key === 'Enter' && guessDraft.trim() && !busy) void act(() => online.submitGuess(room.code, guessDraft)); }} maxLength={40} placeholder="Type your guess" aria-label="Your guess" className={`${inputCls} text-center mb-3`} />
-                <button type="button" disabled={!guessDraft.trim() || busy} onClick={() => void act(() => online.submitGuess(room.code, guessDraft))} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>Send my guess</button>
+                <p className="text-sm text-cream/65 mt-2 mb-4 px-4">Guess the {guessWordOwner} word. One box per word. One shot.</p>
+                <WordBoxes count={room.guess_words ?? 1} busy={busy} onSend={text => void act(() => online.submitGuess(room.code, text))} />
               </>
             )
           ) : room.guess_text ? (

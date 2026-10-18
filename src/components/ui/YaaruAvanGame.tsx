@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
   Play, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
   Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle,
-  XCircle, MagicWand, Gift, Question, ArrowRight, DeviceMobile, ChatCircleDots,
+  XCircle, MagicWand, Gift, Question, ArrowRight, DeviceMobile, ChatCircleDots, Sliders,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
 import yaaruAvanCat from '../../assets/yaaru-avan-cat.png';
@@ -22,7 +22,7 @@ import { LEVELS, CATEGORY_LABEL } from './yaaruAvanWords';
 import type { Level } from './yaaruAvanWords';
 import {
   MIN_PLAYERS, MAX_PLAYERS, POINTS, maxPickpockets, countsFor, rolesValid, recommendedRoles, clampRoles, describeOrder,
-  dealRound, drawPair, drawDare, checkWinner, roundPoints,
+  dealRound, drawPair, drawDare, checkWinner, roundPoints, eligibleRetriever, retrieveTourist,
   computeAwards, emptyStats, loadSetup, saveSetup, uniqueNames, shuffle,
 } from './yaaruAvanEngine';
 import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './yaaruAvanEngine';
@@ -46,7 +46,7 @@ const MUTE_KEY = 'ulaa:packbag:muted'; // shared with the other games: one sound
 const REVEAL_MS = 1900;
 
 type Phase =
-  | 'idle' | 'online' | 'rules' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'revenger' | 'roundEnd' | 'final';
+  | 'idle' | 'online' | 'rules' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'retrieve' | 'retrieved' | 'revenger' | 'roundEnd' | 'tweak' | 'final';
 
 const ROLE_LABEL: Record<Role, string> = { tourist: 'Tourist', stranger: 'Stranger', pickpocket: 'Pickpocket' };
 const ROLE_TONE: Record<Role, string> = {
@@ -82,6 +82,43 @@ const rowsFor = (preset: string[] | undefined, saved: string[]): string[] => {
   while (rows.length < MIN_PLAYERS) rows.push('');
   return rows;
 };
+
+/** Pickpocket's typed guess: one box per word of the Tourists' word (1 word = 1 box, 2 words = 2 boxes). */
+const normGuess = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+function editDistance(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)] as number[]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+/** Spelling does not matter much: a word that is one letter off (4+ letters) still counts. */
+const guessMatches = (typed: string[], answer: string): boolean => {
+  const want = answer.split(/\s+/).filter(Boolean);
+  if (typed.length !== want.length) return false;
+  return want.every((w, i) => {
+    const a = normGuess(typed[i]); const b = normGuess(w);
+    return a.length > 0 && (a === b || (b.length >= 4 && editDistance(a, b) <= 1));
+  });
+};
+function GuessBoxes({ answer, onSubmit }: { answer: string; onSubmit: (correct: boolean) => void }) {
+  const count = Math.max(1, answer.split(/\s+/).filter(Boolean).length);
+  const [vals, setVals] = useState<string[]>(() => Array(count).fill(''));
+  const filled = vals.every(v => v.trim().length > 0);
+  return (
+    <form className="mb-4" onSubmit={e => { e.preventDefault(); if (filled) onSubmit(guessMatches(vals, answer)); }}>
+      <div className="space-y-2 mb-3">
+        {vals.map((v, i) => (
+          <input key={i} type="text" value={v} autoComplete="off" autoCapitalize="none" spellCheck={false}
+            onChange={e => setVals(prev => prev.map((x, k) => (k === i ? e.target.value : x)))}
+            placeholder={count > 1 ? `Word ${i + 1}` : 'Type your guess'} aria-label={count > 1 ? `Word ${i + 1} of ${count}` : 'Your guess'}
+            className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-center text-lg font-bold text-white placeholder:text-cream/40 focus:outline-none focus:border-gold-300" />
+        ))}
+      </div>
+      <button type="submit" disabled={!filled} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>Submit guess</button>
+    </form>
+  );
+}
 
 export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', className = '', compact = false, thumb = false, row = false, players: presetPlayers, defaultOpen = false }: YaaruAvanGameProps) {
   useYaaruAvanContentSync();
@@ -129,9 +166,17 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // partner. `guessQueue` holds the Pickpockets still waiting for their guess; `guessAfter` is the
   // player whose elimination started it (the one a Revenger revenge or the next stop follows).
   const [guessQueue, setGuessQueue] = useState<number[]>([]);
+  const voteExitRef = useRef(true);
+  const retrievalLock = useRef(false);
+  const [retrievePos, setRetrievePos] = useState(0);
+  const [retrieveOpen, setRetrieveOpen] = useState(false);
+  const [retrieveYes, setRetrieveYes] = useState(false);
   const [guessAfter, setGuessAfter] = useState<number | null>(null);
   // Boomerang: after the votes bounce, only the players who cast them can be voted out.
   const [bounce, setBounce] = useState<number[] | null>(null);
+  // Boomerang secrecy: only once the host tries to offboard the Boomerang with nobody ticked as a voter
+  // do we ask for the voters (the seat index it was asked for). Never shown before that.
+  const [boomerangAskFor, setBoomerangAskFor] = useState<number | null>(null);
   // Vote tied: the Goddess of Justice (if one was dealt) decides, even if she is already out.
   const [tieOpen, setTieOpen] = useState(false);
   // Tie with no Goddess (Undercover FAQ): the tied players describe once more, then the others vote
@@ -241,6 +286,11 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     const pair = drawPair(level, { tripTitle: no === 1 ? tripTitle : undefined });
     const r = dealRound(list, countsFor(list.length, strangers, pickpockets), pair,
       useSpecials && specialIds.length > 0 ? { enabled: specialIds, count: maxSpecials(list.length) } : undefined);
+    setGuessQueue([]);
+    setGuessAfter(null);
+    setRetrieveOpen(false);
+    setRetrieveYes(false);
+    retrievalLock.current = false;
     setRound(r);
     setSeats(r.seats);
     setRoundNo(no);
@@ -257,8 +307,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   };
 
   // A new stop, as in Undercover: everyone describes their word in turn, then the group
-  // talks it out and votes. The round starts at a random seat; after that, at the seat
-  // after the player who just left.
+  // talks it out and votes. The speaking order is shuffled fresh every stop.
   const startStop = (stop: number, from: number, list: Seat[] = seats) => {
     const order = describeOrder(list, from, stop);
     setBounce(null);
@@ -287,7 +336,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // No Goddess and the vote is tied: the tied players each describe once more, then the other
   // players vote again, and only the tied players can be voted out.
   const startTieBreak = () => {
-    const order = [...tickTied].sort((a, b) => a - b);
+    const order = shuffle(tickTied);
     if (order.length < 2) return;
     setTiedIdx(order);
     setTickTied([]);
@@ -336,21 +385,21 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const goddessLine = goddessSeat
     ? `⚖️ ${goddessSeat.name} is the Goddess of Justice. ${goddessSeat.alive ? 'She' : 'She is out, but she still'} decides any tied vote.`
     : null;
-  // Undercover rule: a Boomerang's first majority bounces the votes back onto the voters,
-  // so at least one player still aboard must be ticked as a voter before we can go on.
-  const boomerangNeedsVoters = selected !== null
-    && activeSpecial(seats[selected]) === 'boomerang' && !seats[selected].boomerangUsed
+  // Undercover rule: a Boomerang's first majority bounces the votes back onto the voters, so at least one
+  // player still aboard must be ticked as a voter. We only say so AFTER the host tried to offboard the
+  // Boomerang without any (so the role is never given away beforehand).
+  const boomerangNeedsVoters = selected !== null && boomerangAskFor === selected
     && !voters.some(vi => vi !== selected && seats[vi]?.alive);
   const toggleVoter = (i: number) => setVoters(v => (v.includes(i) ? v.filter(x => x !== i) : [...v, i]));
 
   // Takes a player offboard. Lovers go together: their partner leaves right after them.
   const eliminate = (list: Seat[], idx: number, stop: number): Seat[] => {
-    let n = list.filter(s => s.outOrder !== undefined).length;
-    const next = list.map((s, i) => (i === idx ? { ...s, alive: false, outStop: stop, outOrder: ++n } : s));
+    let n = Math.max(0, ...list.map(s => s.lastOutOrder ?? s.outOrder ?? 0));
+    const next = list.map((s, i) => (i === idx ? { ...s, alive: false, outStop: stop, outOrder: ++n, lastOutOrder: n } : s));
     const me = next[idx];
     if (activeSpecial(me) === 'lovers' && me.partner) {
       const pi = next.findIndex(s => s.name === me.partner && s.alive);
-      if (pi >= 0) next[pi] = { ...next[pi], alive: false, outStop: stop, outOrder: ++n };
+      if (pi >= 0) next[pi] = { ...next[pi], alive: false, outStop: stop, outOrder: ++n, lastOutOrder: n };
     }
     return next;
   };
@@ -365,8 +414,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     if (activeSpecial(out) === 'boomerang' && !out.boomerangUsed) {
       const bounced = voters.filter(vi => vi !== selected && seats[vi]?.alive);
       // Like Undercover, the votes bounce back onto the voters, so the voters must be known.
-      // (The button is disabled until one is ticked; this is the safety net.)
-      if (bounced.length === 0) return;
+      // If none are ticked yet we ask for them now (not before, so the role stays secret).
+      if (bounced.length === 0) { setBoomerangAskFor(selected); return; }
       const marked = seats.map((s, i) => (i === selected ? { ...s, boomerangUsed: true } : s));
       setSeats(marked);
       setLastOut(selected);
@@ -458,7 +507,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     buzz([40, 60, 40]);
   };
 
-  const afterReveal = (list: Seat[], outIdx: number) => {
+  const afterReveal = (list: Seat[], outIdx: number, votedOut = true) => {
+    voteExitRef.current = votedOut;
     const out = list[outIdx];
     // Undercover: Mr. White always gets a last guess when eliminated. That includes a Pickpocket
     // who leaves right after their Lover. The player who was voted out guesses first.
@@ -476,15 +526,44 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   };
 
   // Everything that can follow someone leaving: a win, a Revenge, or the next stop.
-  const afterGuess = (list: Seat[], outIdx: number) => {
+  const afterGuess = (list: Seat[], outIdx: number, retrievalResolved = false) => {
+    if (!retrievalResolved && eligibleRetriever(list, outIdx, voteExitRef.current) >= 0) {
+      setLastOut(outIdx);
+      setRetrievePos(0);
+      setRetrieveOpen(false);
+      setRetrieveYes(false);
+      retrievalLock.current = false;
+      setPhase('retrieve');
+      return;
+    }
     const w = checkWinner(list);
     if (w) { finishRound(list, w === 'tourists' ? 'tourists' : 'strangers'); return; }
     const out = list[outIdx];
-    if (activeSpecial(out) === 'revenger' && !out.revengeDone && list.some(s => s.alive)) {
+    if (!out.alive && activeSpecial(out) === 'revenger' && !out.revengeDone && list.some(s => s.alive)) {
       setPhase('revenger');
       return;
     }
     startStop(stopNo + 1, outIdx + 1, list);
+  };
+
+  // Every survivor gets the same private handoff, so the Retriever is not named publicly.
+  const retrievalNext = (usePower: boolean) => {
+    if (lastOut === null || !retrieveOpen || retrievalLock.current) return;
+    retrievalLock.current = true;
+    const actor = aliveIdx[retrievePos];
+    const use = retrieveYes || (usePower && actor === eligibleRetriever(seats, lastOut, voteExitRef.current));
+    setRetrieveYes(use);
+    setRetrieveOpen(false);
+    if (retrievePos + 1 < aliveIdx.length) {
+      setRetrievePos(p => p + 1);
+      return;
+    }
+    const restored = use ? retrieveTourist(seats, lastOut, voteExitRef.current) : null;
+    if (restored) {
+      setSeats(restored);
+      setPhase('retrieved');
+      play('gold');
+    } else afterGuess(seats, lastOut, true);
   };
 
   // Pickpocket's last chance: the group judges the spoken guess.
@@ -521,10 +600,27 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setPhase('offboard');
     play('power');
     buzz([30, 40, 30]);
-    later(REVEAL_MS, () => afterReveal(updated, victim));
+    later(REVEAL_MS, () => afterReveal(updated, victim, false));
   };
 
   const nextRound = () => { ensure(); beginRound(players, roundNo + 1); };
+
+  // Between rounds: change who is playing or any setting, and keep the scores.
+  // A removed player sits out: they leave the scoreboard but their points are kept, so adding
+  // the same name back in a later round (any capital letters) brings them back with their score.
+  const openTweak = () => { setNames([...players]); setPhase('tweak'); };
+  const continueSession = () => {
+    ensure();
+    const known = Object.keys(stats);
+    const cleaned = uniqueNames(filled.map(n => known.find(k => k.toLowerCase() === n.toLowerCase()) ?? n));
+    setPlayers(cleaned);
+    setStats(prev => {
+      const next = { ...prev };
+      cleaned.forEach(n => { if (!next[n]) next[n] = emptyStats(); });
+      return next;
+    });
+    beginRound(cleaned, roundNo + 1);
+  };
 
   const endSession = () => { clearTimers(); setPhase('final'); play('win'); };
 
@@ -679,11 +775,12 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
           {phase === 'rules' && <YaaruAvanRules onBack={() => setPhase('idle')} />}
 
           {/* ── Setup ── */}
-          {phase === 'setup' && (
+          {(phase === 'setup' || phase === 'tweak') && (
             <div className="relative">
               <div className="pr-12 mb-3">
-                <p className={eyebrow}>Step 1</p>
-                <h2 className="font-display text-2xl font-extrabold text-white leading-tight">Who is travelling?</h2>
+                <p className={eyebrow}>{phase === 'tweak' ? `Before round ${roundNo + 1}` : 'Step 1'}</p>
+                <h2 className="font-display text-2xl font-extrabold text-white leading-tight">{phase === 'tweak' ? 'Who is still playing?' : 'Who is travelling?'}</h2>
+                {phase === 'tweak' && <p className="text-xs text-cream/55 mt-1">Remove a traveller to sit them out, or add them back later with the same name to bring their points back. You can also change roles, level and specials.</p>}
               </div>
               <div className="space-y-1.5 mb-2">
                 {names.map((n, i) => (
@@ -790,14 +887,16 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 <SpecialList
                   on={new Set(specialIds)}
                   players={playerCount}
+                  strangers={strangers}
+                  onSetAll={ids => setSpecialIds(ENABLED_SPECIALS.filter(x => ids.includes(x)))}
                   onToggle={id => setSpecialIds(ids => ENABLED_SPECIALS.filter(x => (x === id ? !ids.includes(x) : ids.includes(x))))}
                 />
               )}
 
-              <button type="button" onClick={startSession} disabled={!valid} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
-                <Play size={18} weight="fill" /> Deal boarding passes
+              <button type="button" onClick={phase === 'tweak' ? continueSession : startSession} disabled={!valid} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>
+                <Play size={18} weight="fill" /> {phase === 'tweak' ? `Deal round ${roundNo + 1}` : 'Deal boarding passes'}
               </button>
-              <button type="button" onClick={() => setPhase('idle')} className="mt-3 w-full text-xs font-semibold text-cream/50 hover:text-cream transition-colors">Back</button>
+              <button type="button" onClick={() => setPhase(phase === 'tweak' ? 'roundEnd' : 'idle')} className="mt-3 w-full text-xs font-semibold text-cream/50 hover:text-cream transition-colors">Back</button>
             </div>
           )}
 
@@ -1010,7 +1109,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                   {seats[selected as number].name} is the Boomerang. Tick everyone who voted for them above, so their votes can bounce back.
                 </p>
               )}
-              <button type="button" onClick={confirmOffboard} disabled={selected === null || boomerangNeedsVoters} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>
+              <button type="button" onClick={confirmOffboard} disabled={selected === null} className={`${primaryBtn} disabled:opacity-40 disabled:pointer-events-none`}>
                 <Airplane size={18} weight="fill" /> {selected === null ? 'Pick someone' : `Offboard ${seats[selected].name}`}
               </button>
             </div>
@@ -1041,7 +1140,36 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 <p className="font-display text-3xl font-extrabold leading-tight">{ROLE_LABEL[out.role]}</p>
                 {out.special && describeSpecial(out) && <p className="text-xs font-bold mt-1 opacity-80">and {specialLabel(out)}</p>}
               </motion.div>
+              {activeSpecial(out) === 'retriever' && <p className="text-sm font-bold text-gold-300 mt-4">The Retriever’s power is lost.</p>}
               {lover && <p className="text-sm font-bold text-gold-300 mt-4">{lover.name} was in love with {out.name} and leaves too.</p>}
+            </div>
+          )}
+
+          {phase === 'retrieve' && out && lastOut !== null && (
+            <div className="text-center pt-6">
+              <p className={eyebrow}>Private role check</p>
+              {!retrieveOpen ? <>
+                <h2 className="font-display text-2xl font-extrabold text-white mt-2">Pass to {seats[aliveIdx[retrievePos]]?.name}</h2>
+                <p className="text-sm text-cream/65 my-4">Everyone still aboard gets a private check. Keep the screen to yourself.</p>
+                <button type="button" className={primaryBtn} onClick={() => { retrievalLock.current = false; setRetrieveOpen(true); }}>I have the phone</button>
+              </> : aliveIdx[retrievePos] === eligibleRetriever(seats, lastOut) ? <>
+                <h2 className="font-display text-2xl font-extrabold text-white mt-2">Bring {out.name} back?</h2>
+                <p className="text-sm text-cream/65 my-4">You are the Retriever. Use your one return this round, or save it for a later vote.</p>
+                <button type="button" className={`${primaryBtn} mb-3`} onClick={() => retrievalNext(true)}>Retrieve {out.name}</button>
+                <button type="button" className={ghostBtn} onClick={() => retrievalNext(false)}>Skip this vote</button>
+              </> : <>
+                <p className="text-sm text-cream/65 my-4">No action for you this time. Hide the screen before passing it on.</p>
+                <button type="button" className={primaryBtn} onClick={() => retrievalNext(false)}>Hide and continue</button>
+              </>}
+            </div>
+          )}
+          {phase === 'retrieved' && out && (
+            <div className="text-center pt-6">
+              <p className={eyebrow}>The Retriever</p>
+              <h2 className="font-display text-3xl font-extrabold text-white mt-2">{out.name} is back!</h2>
+              <p className="text-sm text-cream/65 my-4">Same word, back in the vote.</p>
+              <p className="text-sm font-bold text-gold-300 mb-4">{seats.find(x => activeSpecial(x) === 'retriever' && x.retrievalUsed)?.name ?? 'Someone'} was the Retriever. The power is now used.</p>
+              <button type="button" className={primaryBtn} onClick={() => { if (lastOut !== null) afterGuess(seats, lastOut, true); }}>Continue</button>
             </div>
           )}
 
@@ -1060,8 +1188,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">Last chance</span>
               <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{out.name} was the Pickpocket</h2>
               {activeSpecial(out) === 'lovers' && <p className="text-xs font-bold text-gold-300 mt-1">They left with their Lover, and still get a last guess.</p>}
-              <p className="text-sm text-cream/65 mt-2 mb-5 px-4">{out.name}, say your guess for the Tourists' word out loud. The group decides if it is right.</p>
-              <p className="text-xs text-cream/55 mb-5 px-4">Close enough counts. Spelling does not matter.</p>
+              <p className="text-sm text-cream/65 mt-2 mb-4 px-4">{out.name}, type your guess for the Tourists' word. One box per word.</p>
+              <GuessBoxes key={`${out.name}-${lastOut}`} answer={seats.find(x => x.word)?.word ?? ''} onSubmit={judgeGuess} />
+              <p className="text-xs text-cream/55 mb-3 px-4">Prefer to say it out loud? Let the group decide:</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => judgeGuess(false)} className={`${ghostBtn} !py-4`}><XCircle size={20} weight="fill" className="text-rose-300" /> Wrong</button>
                 <button type="button" onClick={() => judgeGuess(true)} className={`${primaryBtn} !py-4`}><CheckCircle size={20} weight="fill" /> Correct</button>
@@ -1155,6 +1284,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               <p className="text-[11px] text-cream/55 mb-3">Points: Tourists +{POINTS.touristWin}, a winning Stranger +{POINTS.strangerSurvive}, a winning Pickpocket +{POINTS.pickpocketSurvive} (lasting to the end or guessing the Tourists' word).{seats.some(s => s.special) ? ' Special-role bonuses are added on top.' : ''}</p>
 
               <button type="button" onClick={nextRound} className={`${primaryBtn} mb-2.5`}><Play size={18} weight="fill" /> Play next round</button>
+              <button type="button" onClick={openTweak} className={`${ghostBtn} mb-2.5`}><Sliders size={16} weight="bold" /> Change players or settings</button>
               <button type="button" onClick={endSession} className={ghostBtn}><Trophy size={16} weight="fill" /> End game and see awards</button>
             </div>
           )}

@@ -121,8 +121,8 @@ export default function YaaruAvanRules({ onBack }: { onBack: () => void }) {
         <p className={`${p} mb-2`}>
           The host can switch these on. A special role sits on top of a normal role, so a Tourist, Stranger or Pickpocket
           can have one. Each player gets at most one, and there is at most one special per 3 players (5 players gives 1,
-          9 players gives 3). A pair, like the Lovers, counts as one. They stay secret, except the Goddess of Justice,
-          who is announced to everyone once the words are dealt.
+          9 players gives 3). A pair, like the Lovers, counts as one. The Joy Fool and the Revenger are never given to a Pickpocket. The Retriever is Tourist-only and needs 2+ Strangers at the deal; Pickpockets do not count. They stay secret, except the Goddess of Justice,
+          who is announced to everyone once the words are dealt, and the Retriever, who is revealed once the power is used.
         </p>
         <div className="space-y-2">
           {SPECIALS.map(s => (
@@ -138,7 +138,14 @@ export default function YaaruAvanRules({ onBack }: { onBack: () => void }) {
         <p className={`${p} mt-2`}>
           Bonus points from specials: the Joy Fool gets +{CLOWN_POINTS} if they are the first player voted out. Of the
           Duelists, the first one voted out loses {RIVAL_POINTS} and the other gains {RIVAL_POINTS}. These are added on
-          top of the normal round points.
+          top of the normal round points. A retrieved elimination no longer counts for either bonus.
+        </p>
+        <p className={`${p} mt-2`}>
+          A round runs from dealing words until one side wins; a game can contain several rounds.
+          The Retriever can bring back only the Tourist just voted out, never an earlier player,
+          a revenge victim or a Lover who left with their partner. A returned Lover comes back alone.
+          The returned Tourist keeps their word and can describe and vote again. A fresh round resets the power.
+          If the Retriever leaves, everyone sees their role and that the power is lost.
         </p>
       </Section>
 

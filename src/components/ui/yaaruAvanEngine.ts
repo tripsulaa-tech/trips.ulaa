@@ -4,7 +4,7 @@
 
 import { DARES, WORD_PAIRS } from './yaaruAvanWords';
 import type { Category, Level, WordPair } from './yaaruAvanWords';
-import { assignSpecials } from './yaaruAvanSpecials';
+import { assignSpecials, activeSpecial } from './yaaruAvanSpecials';
 import type { SoloSpecialId, SpecialId } from './yaaruAvanSpecials';
 
 export type Role = 'tourist' | 'stranger' | 'pickpocket';
@@ -76,6 +76,8 @@ export interface Seat {
   outStop?: number;          // stop at which they were voted out (unset while aboard)
   outOrder?: number;         // 1 = first voted out this round, 2 = next, ...
   boomerangUsed?: boolean;      // Return Ticket already used this round
+  retrievalUsed?: boolean;   // a successful return consumes the power
+  lastOutOrder?: number;     // retained after revival to keep elimination numbering monotonic
   revengeDone?: boolean;     // Revenge already taken this round
 }
 
@@ -111,7 +113,10 @@ export function dealRound(names: string[], c: RoleCounts, pair: WordPair, specia
   ]);
   const order = shuffle(names);
   const seatNos = seatNumbers(order.length);
-  const extra = specials ? assignSpecials(order, specials.enabled, specials.count) : null;
+  const roleByName = new Map(order.map((n, i) => [n, roles[i]] as const));
+  const extra = specials
+    ? assignSpecials(order, specials.enabled, specials.count, Math.random, n => roleByName.get(n) === 'pickpocket', n => roleByName.get(n) === 'stranger')
+    : null;
   const seats: Seat[] = order.map((name, i) => ({
     name,
     role: roles[i],
@@ -121,6 +126,24 @@ export function dealRound(names: string[], c: RoleCounts, pair: WordPair, specia
     ...(extra?.get(name) ?? {}),
   }));
   return { seats, touristWord, strangerWord, pair };
+}
+
+/** Only the direct vote victim can return; revenge and a Lover's partner are excluded. */
+export function eligibleRetriever(seats: readonly Seat[], victim: number, votedOut = true): number {
+  const out = seats[victim];
+  if (!votedOut || !out || out.alive || out.role !== 'tourist'
+      || seats.filter(s => s.role === 'stranger').length < 2) return -1;
+  return seats.findIndex(s => s.alive && s.role === 'tourist'
+    && activeSpecial(s) === 'retriever' && !s.retrievalUsed);
+}
+
+/** Restore only this Tourist. Keep their word, partner and already-used powers. */
+export function retrieveTourist(seats: readonly Seat[], victim: number, votedOut = true): Seat[] | null {
+  const retriever = eligibleRetriever(seats, victim, votedOut);
+  if (retriever < 0) return null;
+  return seats.map((s, i) => i === victim
+    ? { ...s, alive: true, lastOutOrder: s.lastOutOrder ?? s.outOrder, outStop: undefined, outOrder: undefined }
+    : i === retriever ? { ...s, retrievalUsed: true } : s);
 }
 
 // ── Winning ──
@@ -146,20 +169,13 @@ export function checkWinner(seats: Seat[]): Side | null {
   return null;
 }
 
-/** Speaking order for the description round: the players still aboard, going round
- *  the table from seat `from`. Returns indexes into `seats`. */
-export function describeOrder(seats: Seat[], from: number, _stopNo: number): number[] {
-  const n = seats.length;
-  if (n === 0) return [];
-  const start = ((from % n) + n) % n;
-  const out: number[] = [];
-  for (let k = 0; k < n; k++) {
-    const i = (start + k) % n;
-    const s = seats[i];
-    if (!s.alive) continue;
-    out.push(i);
-  }
-  return out;
+/** Speaking order for the description round: the players still aboard, in a fresh random
+ *  order every stop. Returns indexes into `seats`. (`_from` and `_stopNo` are kept so callers
+ *  do not change.) */
+export function describeOrder(seats: Seat[], _from: number, _stopNo: number): number[] {
+  const alive: number[] = [];
+  seats.forEach((s, i) => { if (s.alive) alive.push(i); });
+  return shuffle(alive);
 }
 
 // ── Scoring ──

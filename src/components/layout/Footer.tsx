@@ -107,7 +107,7 @@ export default function Footer() {
         </div>
 
         {/* Nav row */}
-        <div className="mt-8 grid grid-cols-4">
+        <div className="mt-8 grid" style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}>
           {navItems.map(({ label, to, icon: Icon }, i) => (
             <Link
               key={to}
