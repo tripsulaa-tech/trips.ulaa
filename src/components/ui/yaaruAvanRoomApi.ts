@@ -24,6 +24,8 @@ interface OnlineRoom {
   level: 'easy' | 'medium' | 'hard';
   dares: boolean;
   hide_counts: boolean;
+  /** On: a Pickpocket may be picked at random to speak first. Off (default): a Pickpocket never opens the round. */
+  pickpocket_can_start?: boolean;
   specials: boolean;
   /** Which specials the host ticked. null = all of them. */
   special_ids: SpecialId[] | null;
@@ -228,6 +230,7 @@ export const online = {
       p_code: code, p_token: t(), p_strangers: s.strangers, p_pickpockets: s.pickpockets, p_level: s.level,
       p_hide_counts: s.hideCounts, p_dares: s.dares, p_specials: s.specials, p_special_ids: s.specialIds,
     }),
+  setPickpocketFirst: (code: string, on: boolean) => rpc('yaaru_avan_set_pickpocket_first', { p_code: code, p_token: t(), p_on: on }),
   setLocked: (code: string, locked: boolean) => rpc('yaaru_avan_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
   kick: (code: string, player: string) => rpc('yaaru_avan_kick', { p_code: code, p_token: t(), p_player: player }),
   leave: (code: string) => rpc('yaaru_avan_leave', { p_code: code, p_token: t() }),

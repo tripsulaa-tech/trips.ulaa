@@ -173,14 +173,14 @@ export function checkWinner(seats: Seat[]): Side | null {
 /** Speaking order for the description round: the players still aboard, in a fresh random
  *  order every stop. Returns indexes into `seats`. (`_from` and `_stopNo` are kept so callers
  *  do not change.) */
-export function describeOrder(seats: Seat[], _from: number, _stopNo: number, strangerCanStart = false): number[] {
+export function describeOrder(seats: Seat[], _from: number, _stopNo: number, pickpocketCanStart = false): number[] {
   const alive: number[] = [];
   seats.forEach((s, i) => { if (s.alive) alive.push(i); });
   const order = shuffle(alive);
-  if (!strangerCanStart && order.length > 0 && seats[order[0]].role === 'stranger') {
-    // Off: a Stranger never speaks first. Swap a random non-Stranger into the opening slot
-    // (only impossible when every player still aboard is a Stranger).
-    const others = order.filter(i => seats[i].role !== 'stranger');
+  if (!pickpocketCanStart && order.length > 0 && seats[order[0]].role === 'pickpocket') {
+    // Off: a Pickpocket never speaks first. Swap a random non-Pickpocket into the opening slot
+    // (only impossible when every player still aboard is a Pickpocket).
+    const others = order.filter(i => seats[i].role !== 'pickpocket');
     if (others.length > 0) {
       const first = shuffle(others)[0];
       return [first, ...order.filter(i => i !== first)];
@@ -325,8 +325,8 @@ export interface SavedSetup {
   specials: boolean;
   /** One-phone only: each description round a random player describes by gestures. */
   meme: boolean;
-  /** On: a Stranger can speak first (random). Off: a Stranger never speaks first. */
-  strangerCanStart: boolean;
+  /** On: a Pickpocket can speak first (random). Off: a Pickpocket never speaks first. */
+  pickpocketCanStart: boolean;
 }
 
 const DEFAULT_SETUP: SavedSetup = {
@@ -338,7 +338,7 @@ const DEFAULT_SETUP: SavedSetup = {
   dares: false,
   specials: false,
   meme: false,
-  strangerCanStart: false,
+  pickpocketCanStart: false,
 };
 
 export function loadSetup(): SavedSetup {
@@ -359,7 +359,7 @@ export function loadSetup(): SavedSetup {
       dares: !!v.dares,
       specials: !!v.specials,
       meme: !!v.meme,
-      strangerCanStart: !!v.strangerCanStart,
+      pickpocketCanStart: !!v.pickpocketCanStart,
     };
   } catch { return DEFAULT_SETUP; }
 }

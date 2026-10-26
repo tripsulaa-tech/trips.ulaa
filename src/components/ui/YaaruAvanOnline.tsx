@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
-  Play, ArrowRight, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
+  Play, ArrowRight, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Vibrate, Trophy, Plus, Minus, X,
   Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle, XCircle, MagicWand,
   Gift, Question, Copy, LockSimple, LockSimpleOpen, WifiSlash, DeviceMobile, Hash, UsersThree, ChatCircleDots,
   CaretRight, Check, ArrowLeft,
@@ -13,6 +13,7 @@ import { getWhatsAppLink } from '../../utils/utils-index';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
+import { haptic, hapticsEnabled, setHapticsEnabled } from './haptics';
 import { Confetti } from './gameParts';
 import {
   GOLD_GRAD_TEXT, primaryBtn as basePrimaryBtn, ghostBtn as baseGhostBtn, iconBtn as baseIconBtn, glass as baseGlass, eyebrow, shareCardImage, cleanName,
@@ -62,6 +63,8 @@ interface Audio {
   ensure: () => void;
   muted: boolean;
   toggleMute: () => void;
+  hapticsOn: boolean;
+  toggleHaptics: () => void;
 }
 
 interface YaaruAvanOnlineProps {
@@ -87,7 +90,15 @@ export default function YaaruAvanOnline({ tripTitle, initialCode, onExit }: Yaar
     setMuted(next);
     try { localStorage.setItem(MUTE_KEY, next ? '1' : '0'); } catch { /* not remembered */ }
   };
-  const audio: Audio = { play, ensure, muted, toggleMute };
+  const [hapticsOn, setHapticsOn] = useState<boolean>(() => hapticsEnabled());
+  const toggleHaptics = () => {
+    const next = !hapticsOn;
+    setHapticsEnabled(next);
+    const effective = hapticsEnabled();
+    setHapticsOn(effective);
+    if (effective) haptic('success');
+  };
+  const audio: Audio = { play, ensure, muted, toggleMute, hapticsOn, toggleHaptics };
 
   // Resume the saved room (unless a join link points somewhere else).
   const wanted = initialCode ? normalizeCode(initialCode) : '';
@@ -341,7 +352,7 @@ function WordBoxes({ count, busy, onSend }: { count: number; busy: boolean; onSe
 
 function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onLeft: () => void; onExit: () => void }) {
   const reduce = useReducedMotion();
-  const { play, ensure, muted, toggleMute } = audio;
+  const { play, ensure, muted, toggleMute, hapticsOn, toggleHaptics } = audio;
   const { state, problem, offline, refresh } = useOnlineRoom(code);
 
   const [notice, setNotice] = useState('');
@@ -409,7 +420,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     else if (phase === 'revenger') play('power');
     else if (phase === 'roundEnd') play(outcome === 'tourists' ? 'win' : 'gold');
     else if (phase === 'final') play('win');
-    try { navigator.vibrate?.(phase === 'offboard' ? [30, 40, 30] : 20); } catch { /* no haptics */ }
+    haptic(phase === 'offboard' ? 'end' : 'tick');
   }, [phase, outcome, play]);
 
   // ── After the offboard reveal, any phone nudges the game on (first one wins) ──
@@ -577,6 +588,9 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
         <button type="button" onClick={toggleMute} className={`${iconBtn} !w-8 !h-8`} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>
           {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />}
         </button>
+        <button type="button" onClick={toggleHaptics} className={`${iconBtn} !w-8 !h-8`} aria-pressed={hapticsOn} aria-label={hapticsOn ? 'Turn haptics off' : 'Turn haptics on'}>
+          <Vibrate size={14} weight={hapticsOn ? 'fill' : 'regular'} />
+        </button>
       </div>
 
       {notice && <p role="alert" className="rounded-lg bg-rose-400/15 border border-rose-300/30 text-rose-100 text-xs font-semibold px-3 py-2 mb-3">{notice}</p>}
@@ -715,6 +729,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <div className={`${glass} divide-y divide-white/10 mb-4`}>
                 <Toggle on={room.hide_counts} onChange={v => void saveSettings({ hideCounts: v })} disabled={busy} title="Hide the counts" desc="Only you can see the role split. Nobody else knows if a Pickpocket exists." />
                 <Toggle on={room.dares} onChange={v => void saveSettings({ dares: v })} disabled={busy} title="Trip dares" desc="The losing side gets a silly dare." />
+                <Toggle on={!!room.pickpocket_can_start} onChange={v => void act(() => online.setPickpocketFirst(room.code, v))} disabled={busy} title="Pickpocket can speak first" desc="On: a Pickpocket may randomly open the description round. Off: a Pickpocket never speaks first." />
                 <button type="button" onClick={() => { ensure(); setPickingSpecials(true); }} className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors">
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-bold text-white leading-tight">Special roles</span>
@@ -755,7 +770,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           <BoardingPass name={meP?.name ?? ''} seat={meP?.seat ?? null} word={me.word} tripTitle={room.trip_title} holding={holding} special={mySpecial} />
           <HoldButton
             holding={holding}
-            onChange={v => { setHolding(v); if (v) { setSeenRound(room.round_no); play('flip'); try { navigator.vibrate?.(20); } catch { /* no haptics */ } } }}
+            onChange={v => { setHolding(v); if (v) { setSeenRound(room.round_no); play('flip'); } }}
             className="mt-5"
           />
           {!meP?.ready ? (

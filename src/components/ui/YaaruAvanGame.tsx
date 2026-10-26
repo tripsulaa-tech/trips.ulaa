@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import {
-  Play, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Trophy, Plus, Minus, X,
+  Play, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Vibrate, Trophy, Plus, Minus, X,
   Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle,
   XCircle, MagicWand, Gift, Question, ArrowRight, DeviceMobile, ChatCircleDots, Sliders,
 } from '@phosphor-icons/react';
@@ -11,7 +11,7 @@ import { SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
-import { hapticsEnabled } from './haptics';
+import { haptic, hapticsEnabled, setHapticsEnabled } from './haptics';
 import { Confetti, GameTile } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn as basePrimaryBtn, ghostBtn as baseGhostBtn, glass as baseGlass, eyebrow, shareCardImage, cleanName } from './gameUi';
 import YaaruAvanOnline from './YaaruAvanOnline';
@@ -144,8 +144,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [useSpecials, setUseSpecials] = useState(initial.specials);
   // Mr. Meme (one phone only): each description round a random player describes by gestures.
   const [useMeme, setUseMeme] = useState(initial.meme);
-  // On: a Stranger can randomly speak first. Off: a Stranger never speaks first.
-  const [strangerCanStart, setStrangerCanStart] = useState(initial.strangerCanStart);
+  // On: a Pickpocket can randomly speak first. Off: a Pickpocket never speaks first.
+  const [pickpocketCanStart, setPickpocketCanStart] = useState(initial.pickpocketCanStart);
   // Which special roles are ticked in the role list (all of them to start with).
   const [specialIds, setSpecialIds] = useState<SpecialId[]>([...ENABLED_SPECIALS]);
   const [muted, setMuted] = useState<boolean>(() => {
@@ -235,21 +235,28 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // Persist setup as it changes. A roster handed in by the host is not
   // remembered as this device's own list of names.
   useEffect(() => {
-    saveSetup({ names: hasPreset ? initial.names : names, strangers, pickpockets, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme, strangerCanStart });
-  }, [names, strangers, pickpockets, hideCounts, level, useDares, useSpecials, useMeme, strangerCanStart, hasPreset, initial.names]);
+    saveSetup({ names: hasPreset ? initial.names : names, strangers, pickpockets, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme, pickpocketCanStart });
+  }, [names, strangers, pickpockets, hideCounts, level, useDares, useSpecials, useMeme, pickpocketCanStart, hasPreset, initial.names]);
 
   useEffect(() => () => {
     timersRef.current.forEach(id => window.clearTimeout(id));
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
   }, []);
 
+  const [hapticsOn, setHapticsOn] = useState<boolean>(() => hapticsEnabled());
+  const toggleHaptics = () => {
+    const next = !hapticsOn;
+    setHapticsEnabled(next);
+    const effective = hapticsEnabled();
+    setHapticsOn(effective);
+    if (effective) haptic('success');
+  };
   const toggleMute = () => {
     const next = !muted;
     mutedRef.current = next;
     setMuted(next);
     try { localStorage.setItem(MUTE_KEY, next ? '1' : '0'); } catch { /* not remembered */ }
   };
-  const buzz = (ms: number | number[]) => { if (!hapticsEnabled()) return; try { navigator.vibrate?.(ms); } catch { /* no haptics */ } };
 
   // Keep role counts valid when players are added or removed.
   const adjustRoles = (n: number, s: number, l: number) => {
@@ -320,7 +327,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // A new stop, as in Undercover: everyone describes their word in turn, then the group
   // talks it out and votes. The speaking order is shuffled fresh every stop.
   const startStop = (stop: number, from: number, list: Seat[] = seats) => {
-    const order = describeOrder(list, from, stop, strangerCanStart);
+    const order = describeOrder(list, from, stop, pickpocketCanStart);
     setBounce(null);
     setTiedIdx(null);
     setTickTied([]);
@@ -435,7 +442,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
       setVoters([]);
       setPhase('saved');
       play('gold');
-      buzz([30, 40, 30]);
+      haptic('end');
       if (bounced.length === 1) {
         // One voter: the whole bounce lands on them, no second vote (same as the online rooms).
         const target = bounced[0];
@@ -446,7 +453,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
           setLastOut(target);
           setPhase('offboard');
           play('power');
-          buzz([30, 40, 30]);
+          haptic('end');
           later(REVEAL_MS, () => afterReveal(updated, target));
         });
         return;
@@ -491,7 +498,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setLastOut(selected);
     setPhase('offboard');
     play('power');
-    buzz([30, 40, 30]);
+    haptic('end');
     later(REVEAL_MS, () => afterReveal(updated, selected));
   };
 
@@ -516,7 +523,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setDare(useDares ? drawDare() : null);
     setPhase('roundEnd');
     play(result === 'tourists' ? 'win' : 'gold');
-    buzz([40, 60, 40]);
+    haptic('win');
   };
 
   const afterReveal = (list: Seat[], outIdx: number, votedOut = true) => {
@@ -612,7 +619,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setLastOut(victim);
     setPhase('offboard');
     play('power');
-    buzz([30, 40, 30]);
+    haptic('end');
     later(REVEAL_MS, () => afterReveal(updated, victim, false));
   };
 
@@ -657,7 +664,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setLastOut(victim);
     setPhase('offboard');
     play('power');
-    buzz([30, 40, 30]);
+    haptic('end');
     later(REVEAL_MS, () => afterReveal(updated, victim, false));
   };
 
@@ -817,6 +824,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               <button type="button" onClick={toggleMute} className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                 {muted ? <SpeakerSlash size={14} /> : <SpeakerHigh size={14} />} Sound {muted ? 'off' : 'on'}
               </button>
+              <button type="button" onClick={toggleHaptics} aria-pressed={hapticsOn} className="mt-3 ml-4 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
+                <Vibrate size={14} weight={hapticsOn ? 'fill' : 'regular'} /> Haptics {hapticsOn ? 'on' : 'off'}
+              </button>
               <button type="button" onClick={() => { ensure(); setPhase('rules'); }} className="mt-3 ml-4 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                 <Question size={14} /> How to play
               </button>
@@ -927,7 +937,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                   { k: 'hide', on: hideCounts, set: setHideCounts, t: 'Hide the counts', d: 'Nobody knows if a Pickpocket exists. Much more tense.' },
                   { k: 'dare', on: useDares, set: setUseDares, t: 'Trip dares', d: 'The losing side draws a silly dare.' },
                   { k: 'special', on: useSpecials, set: setUseSpecials, t: 'Special roles', d: 'The Joy Fool, Boomerang, Revenger, Lovers and more. Up to one per 3 players.' },
-                  { k: 'first', on: strangerCanStart, set: setStrangerCanStart, t: 'Stranger can speak first', d: 'On: a Stranger may randomly start the description round. Off: a Stranger never starts first.' },
+                  { k: 'first', on: pickpocketCanStart, set: setPickpocketCanStart, t: 'Pickpocket can speak first', d: 'On: a Pickpocket may randomly start the description round. Off: a Pickpocket never starts first.' },
                 ].map(o => (
                   <button key={o.k} type="button" role="switch" aria-checked={o.on} onClick={() => o.set(!o.on)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left">
                     <span className="flex-1 min-w-0">
