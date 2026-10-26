@@ -13,6 +13,9 @@ export const WHATSAPP_NUMBER = CONTACT_PHONE_E164.replace(/\D/g, '');
 export const INSTAGRAM_HANDLE = 'ulaa.trips';
 export const INSTAGRAM_URL = `https://www.instagram.com/${INSTAGRAM_HANDLE}`;
 export const LOGO_URL = `${SITE_ORIGIN}/ULAA-logo.png`;
+/** The picture shown when the site link is shared (WhatsApp, Instagram, Facebook, X). The main logo is
+ *  transparent, so it vanishes on dark chat backgrounds; this one sits on the cream brand background. */
+export const SHARE_IMAGE_URL = `${SITE_ORIGIN}/ULAA-share.png`;
 /** Header and footer logos are fixed files in /public. They are not stored in the database and
  *  cannot be changed from the admin: to change them, replace the files and redeploy. */
 export const HEADER_LOGO_SRC = '/ULAA-logo-Header.png';
