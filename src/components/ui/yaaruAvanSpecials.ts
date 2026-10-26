@@ -8,7 +8,7 @@
 export type SpecialId =
   | 'joyFool' | 'duelists'                           // Batch 1
   | 'boomerang' | 'goddess' | 'ghost' // Batch 2
-  | 'revenger' | 'falafelVendor' | 'lovers' | 'retriever';           // Batch 3
+  | 'revenger' | 'falafelVendor' | 'lovers' | 'retriever' | 'sniper';           // Batch 3
 
 /** Specials that sit on one player. The Duelists and Lovers need two. */
 export type SoloSpecialId = Exclude<SpecialId, 'duelists' | 'lovers'>;
@@ -32,10 +32,11 @@ export const SPECIALS: readonly SpecialDef[] = [
   { id: 'falafelVendor', name: 'The Falafel Vendor', emoji: '🧆', batch: 3, pair: false },
   { id: 'revenger', name: 'The Revenger', emoji: '🦸', batch: 3, pair: false },
   { id: 'duelists', name: 'The Duelists', emoji: '🤠', batch: 1, pair: true },
+  { id: 'sniper', name: 'The Sniper', emoji: '🎯', batch: 3, pair: false },
 ];
 
 /** Never dealt to a Pickpocket (they get no word and already have a last guess). */
-export const NOT_FOR_PICKPOCKET: readonly SpecialId[] = ['joyFool', 'revenger'];
+export const NOT_FOR_PICKPOCKET: readonly SpecialId[] = ['joyFool', 'revenger', 'sniper'];
 
 /** Smallest group each special can appear in. Anything not listed has no minimum. */
 export const MIN_PLAYERS: Partial<Record<SpecialId, number>> = {
@@ -43,6 +44,7 @@ export const MIN_PLAYERS: Partial<Record<SpecialId, number>> = {
   revenger: 5,
   duelists: 5,
   lovers: 5,
+  sniper: 4,
 };
 
 /** True when a role cannot be dealt yet: Retriever needs 2+ Strangers, others need a minimum group size. */
@@ -59,6 +61,7 @@ export const SPECIAL_BLURB: Record<SpecialId, string> = {
   lovers: 'Two players are secretly in love. If one lover is eliminated, the other is automatically eliminated too. This role is available when playing with 5 or more players.',
   falafelVendor: 'At the start of each game, the Falafel Vendor receives a random special ability. Use it wisely and discover what surprises await! Available with 4 or more players.',
   revenger: 'When the Revenger is eliminated, she can immediately eliminate one other player of her choice. Available with 5 or more players.',
+  sniper: 'Once per round, during a vote, the Sniper can take a solo shot at one player. No majority is needed. If the target is a Stranger or a Pickpocket, they are offboarded at once. If the target is a Tourist, the shot backfires and the Sniper is offboarded instead. Available with 4 or more players.',
   duelists: 'Two players are secretly paired in a duel. When one duelist is eliminated, they lose 2 points, while the surviving duelist earns 2 bonus points. Available with 5 or more players.',
 };
 

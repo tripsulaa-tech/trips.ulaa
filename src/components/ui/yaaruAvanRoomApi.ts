@@ -72,6 +72,10 @@ interface OnlineRoom {
     lover?: string | null;
     /** Set when this exit came from a Revenge by that player. */
     revenge_by?: string;
+    /** Set when this exit was a Sniper's shot: the Sniper, their target, and whether the target was not a Tourist. */
+    sniper?: string;
+    sniper_target?: string;
+    sniper_hit?: boolean;
     votes: Array<{ from: string; to: string }>;
   } | null;
   round_summary: {
@@ -116,6 +120,9 @@ export interface OnlineState {
     can_vote: boolean;
     can_retrieve?: boolean;
     retrieval_used?: boolean;
+    /** Sniper: it is a normal vote, I am the Sniper, still aboard, and my shot this round is unspent. */
+    can_snipe?: boolean;
+    sniper_used?: boolean;
   };
   room: OnlineRoom;
   players: OnlinePlayer[];
@@ -147,6 +154,8 @@ const MESSAGES: Record<string, string> = {
   not_retriever: 'Only the active Retriever can make this choice.',
   stale_retrieval: 'That retrieval window has already closed.',
   tied_cannot_vote: 'You were tied, so the other players decide this vote.',
+  not_sniper: 'Only the Sniper can take this shot.',
+  sniper_spent: 'Your shot is already used this round.',
 };
 
 export class OnlineError extends Error {
@@ -235,6 +244,7 @@ export const online = {
   submitGuess: (code: string, text: string) => rpc('yaaru_avan_submit_guess', { p_code: code, p_token: t(), p_text: text }),
   judgeGuess: (code: string, correct: boolean) => rpc('yaaru_avan_judge_guess', { p_code: code, p_token: t(), p_correct: correct }),
   tiebreak: (code: string, pick: string) => rpc('yaaru_avan_tiebreak', { p_code: code, p_token: t(), p_pick: pick }),
+  snipe: (code: string, target: string) => rpc('yaaru_avan_snipe', { p_code: code, p_token: t(), p_target: target }),
   revenge: (code: string, victim: string) => rpc('yaaru_avan_revenge', { p_code: code, p_token: t(), p_victim: victim }),
   retrieve: (code: string, use: boolean, round: number, stop: number, target: string) =>
     rpc('yaaru_avan_retrieve', { p_code: code, p_token: t(), p_use: use, p_round: round, p_stop: stop, p_target: target }),

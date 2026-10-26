@@ -1,5 +1,7 @@
 import { Check, Users } from '@phosphor-icons/react';
-import { glass } from './gameUi';
+import { glass as baseGlass } from './gameUi';
+
+const glass = baseGlass.replace('rounded-2xl', 'rounded-lg');
 import { MIN_PLAYERS, SPECIALS, SPECIAL_BLURB, maxSpecials, roleLocked } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
 
@@ -13,6 +15,7 @@ const SPECIAL_TONE: Record<SpecialId, string> = {
   revenger: 'from-fuchsia-300 to-pink-400',
   falafelVendor: 'from-yellow-200 to-amber-300',
   lovers: 'from-pink-300 to-rose-400',
+  sniper: 'from-red-300 to-rose-500',
 };
 
 /**
@@ -21,10 +24,11 @@ const SPECIAL_TONE: Record<SpecialId, string> = {
  * (Lovers 5+, Falafel Vendor 4+ ...) is flagged "Needs N players", and the deal skips it
  * until enough people are in, so the host can tick it now and it joins in later.
  */
-export default function SpecialList({ on, onToggle, onSetAll, players, strangers = 0 }: { on: ReadonlySet<SpecialId>; onToggle: (id: SpecialId) => void; onSetAll?: (ids: SpecialId[]) => void; players?: number; strangers?: number }) {
+export default function SpecialList({ on, onToggle, onSetAll, players, strangers = 0, meme, onMemeToggle }: { on: ReadonlySet<SpecialId>; onToggle: (id: SpecialId) => void; onSetAll?: (ids: SpecialId[]) => void; players?: number; strangers?: number; meme?: boolean; onMemeToggle?: () => void }) {
+  const roles = SPECIALS;
   const short = (id: SpecialId) => roleLocked(id, players, strangers);
   // Roles whose condition is not met are locked and never count as ticked.
-  const available = SPECIALS.filter(d => !short(d.id));
+  const available = roles.filter(d => !short(d.id));
   const ticked = available.filter(d => on.has(d.id));
   const active = ticked.length;
   return (
@@ -47,7 +51,7 @@ export default function SpecialList({ on, onToggle, onSetAll, players, strangers
         </div>
       )}
     <ul className={`${glass} divide-y divide-white/10 mb-4`}>
-      {SPECIALS.map(def => {
+      {roles.map(def => {
         const needs = MIN_PLAYERS[def.id] ?? 0;
         const unavailable = short(def.id);
         const checked = on.has(def.id) && !unavailable;
@@ -57,14 +61,14 @@ export default function SpecialList({ on, onToggle, onSetAll, players, strangers
           <li key={def.id}>
             <button type="button" role="checkbox" aria-checked={checked} disabled={unavailable} onClick={() => onToggle(def.id)}
               className="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-white/[0.04] transition-colors disabled:cursor-not-allowed disabled:hover:bg-transparent">
-              <span className={`w-11 h-11 rounded-xl bg-gradient-to-br ${SPECIAL_TONE[def.id]} text-2xl leading-none flex items-center justify-center shrink-0 shadow-md ${unavailable ? 'opacity-50' : ''}`} aria-hidden="true">
+              <span className={`w-11 h-11 rounded-lg bg-gradient-to-br ${SPECIAL_TONE[def.id]} text-2xl leading-none flex items-center justify-center shrink-0 shadow-md ${unavailable ? 'opacity-50' : ''}`} aria-hidden="true">
                 {def.emoji}
               </span>
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-bold text-white leading-tight">{def.name}</span>
                 <span className={`block text-[12px] leading-snug mt-0.5 text-cream/60`}>{SPECIAL_BLURB[def.id]}</span>
                 {isShort && (
-                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-amber-300/15 border border-warning-border/30 px-2 py-0.5 text-[10px] font-bold text-amber-100">
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-amber-300/15 border border-warning-border/30 px-2 py-0.5 text-[10px] font-bold text-amber-100">
                     <Users size={11} weight="bold" aria-hidden="true" />
                     {lackStrangers ? `Needs 2+ Strangers · you have ${strangers} (Pickpockets do not count)` : `Needs ${needs}+ players · you have ${players}`}
                   </span>
@@ -77,6 +81,21 @@ export default function SpecialList({ on, onToggle, onSetAll, players, strangers
           </li>
         );
       })}
+      {onMemeToggle && (
+        <li key="meme">
+          <button type="button" role="checkbox" aria-checked={!!meme} onClick={onMemeToggle}
+            className="w-full flex items-center gap-3 px-3 py-3 text-left hover:bg-white/[0.04] transition-colors">
+            <span className="w-11 h-11 rounded-lg bg-gradient-to-br from-violet-300 to-purple-400 text-2xl leading-none flex items-center justify-center shrink-0 shadow-md" aria-hidden="true">🎭</span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-bold text-white leading-tight">Mr. Meme</span>
+              <span className="block text-[12px] leading-snug mt-0.5 text-cream/60">Each description round, a random player describes their word with gestures, not words. Only switch on if everyone can see each other.</span>
+            </span>
+            <span className={`w-6 h-6 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${meme ? 'bg-primary border-primary text-white' : 'border-white/30 text-transparent'}`} aria-hidden="true">
+              <Check size={14} weight="bold" />
+            </span>
+          </button>
+        </li>
+      )}
     </ul>
     </>
   );

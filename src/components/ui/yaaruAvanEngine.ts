@@ -79,6 +79,7 @@ export interface Seat {
   retrievalUsed?: boolean;   // a successful return consumes the power
   lastOutOrder?: number;     // retained after revival to keep elimination numbering monotonic
   revengeDone?: boolean;     // Revenge already taken this round
+  sniperUsed?: boolean;      // The Sniper's one shot this round is spent
 }
 
 function seatNumbers(n: number): string[] {
@@ -172,15 +173,16 @@ export function checkWinner(seats: Seat[]): Side | null {
 /** Speaking order for the description round: the players still aboard, in a fresh random
  *  order every stop. Returns indexes into `seats`. (`_from` and `_stopNo` are kept so callers
  *  do not change.) */
-export function describeOrder(seats: Seat[], _from: number, _stopNo: number, strangerFirst = false): number[] {
+export function describeOrder(seats: Seat[], _from: number, _stopNo: number, strangerCanStart = false): number[] {
   const alive: number[] = [];
   seats.forEach((s, i) => { if (s.alive) alive.push(i); });
   const order = shuffle(alive);
-  if (strangerFirst) {
-    // A random Stranger still aboard speaks first; everyone else keeps their shuffled order.
-    const strangers = order.filter(i => seats[i].role === 'stranger');
-    if (strangers.length > 0) {
-      const first = shuffle(strangers)[0];
+  if (!strangerCanStart && order.length > 0 && seats[order[0]].role === 'stranger') {
+    // Off: a Stranger never speaks first. Swap a random non-Stranger into the opening slot
+    // (only impossible when every player still aboard is a Stranger).
+    const others = order.filter(i => seats[i].role !== 'stranger');
+    if (others.length > 0) {
+      const first = shuffle(others)[0];
       return [first, ...order.filter(i => i !== first)];
     }
   }
@@ -323,8 +325,8 @@ export interface SavedSetup {
   specials: boolean;
   /** One-phone only: each description round a random player describes by gestures. */
   meme: boolean;
-  /** A Stranger always speaks first in the description round. */
-  strangerFirst: boolean;
+  /** On: a Stranger can speak first (random). Off: a Stranger never speaks first. */
+  strangerCanStart: boolean;
 }
 
 const DEFAULT_SETUP: SavedSetup = {
@@ -336,7 +338,7 @@ const DEFAULT_SETUP: SavedSetup = {
   dares: false,
   specials: false,
   meme: false,
-  strangerFirst: false,
+  strangerCanStart: false,
 };
 
 export function loadSetup(): SavedSetup {
@@ -357,7 +359,7 @@ export function loadSetup(): SavedSetup {
       dares: !!v.dares,
       specials: !!v.specials,
       meme: !!v.meme,
-      strangerFirst: !!v.strangerFirst,
+      strangerCanStart: !!v.strangerCanStart,
     };
   } catch { return DEFAULT_SETUP; }
 }

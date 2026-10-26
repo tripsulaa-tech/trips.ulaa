@@ -13,7 +13,7 @@ import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
 import { hapticsEnabled } from './haptics';
 import { Confetti, GameTile } from './gameParts';
-import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, glass, eyebrow, shareCardImage, cleanName } from './gameUi';
+import { GOLD_GRAD_TEXT, primaryBtn as basePrimaryBtn, ghostBtn as baseGhostBtn, glass as baseGlass, eyebrow, shareCardImage, cleanName } from './gameUi';
 import YaaruAvanOnline from './YaaruAvanOnline';
 import SpecialList from './YaaruAvanSpecialList';
 import YaaruAvanRules from './YaaruAvanRules';
@@ -29,6 +29,11 @@ import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './yaaruAvanEn
 import { ENABLED_SPECIALS, describeSpecial, activeSpecial, maxSpecials, specialBonus, specialLabel } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
 import { useYaaruAvanContentSync } from './useGameContentSync';
+
+// Same corner radius as the buttons on the admin pages (rounded-md). Local to this game, so other games keep theirs.
+const primaryBtn = basePrimaryBtn.replace('rounded-2xl', 'rounded-md');
+const ghostBtn = baseGhostBtn.replace('rounded-2xl', 'rounded-md');
+const glass = baseGlass.replace('rounded-2xl', 'rounded-lg');
 
 // "Yaaru Avan?": a group bluffing game for Coming Soon trips. Two ways to play:
 // pass-and-play on one phone (this file), or online with a room code where
@@ -46,7 +51,7 @@ const MUTE_KEY = 'ulaa:packbag:muted'; // shared with the other games: one sound
 const REVEAL_MS = 1900;
 
 type Phase =
-  | 'idle' | 'online' | 'rules' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'retrieve' | 'retrieved' | 'revenger' | 'roundEnd' | 'tweak' | 'final';
+  | 'idle' | 'online' | 'rules' | 'setup' | 'pass' | 'ticket' | 'describe' | 'vote' | 'offboard' | 'guess' | 'saved' | 'retrieve' | 'retrieved' | 'revenger' | 'sniper' | 'roundEnd' | 'tweak' | 'final';
 
 const ROLE_LABEL: Record<Role, string> = { tourist: 'Tourist', stranger: 'Stranger', pickpocket: 'Pickpocket' };
 const ROLE_TONE: Record<Role, string> = {
@@ -112,7 +117,7 @@ function GuessBoxes({ answer, onSubmit }: { answer: string; onSubmit: (correct: 
           <input key={i} type="text" value={v} autoComplete="off" autoCapitalize="none" spellCheck={false}
             onChange={e => setVals(prev => prev.map((x, k) => (k === i ? e.target.value : x)))}
             placeholder={count > 1 ? `Word ${i + 1}` : 'Type your guess'} aria-label={count > 1 ? `Word ${i + 1} of ${count}` : 'Your guess'}
-            className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-center text-lg font-bold text-white placeholder:text-cream/40 focus:outline-none focus:border-gold-300" />
+            className="w-full rounded-lg bg-white/10 border border-white/20 px-4 py-3 text-center text-lg font-bold text-white placeholder:text-cream/40 focus:outline-none focus:border-gold-300" />
         ))}
       </div>
       <button type="submit" disabled={!filled} className={`${primaryBtn} disabled:opacity-50 disabled:pointer-events-none`}>Submit guess</button>
@@ -139,8 +144,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [useSpecials, setUseSpecials] = useState(initial.specials);
   // Mr. Meme (one phone only): each description round a random player describes by gestures.
   const [useMeme, setUseMeme] = useState(initial.meme);
-  // A Stranger always speaks first in the description round.
-  const [strangerFirst, setStrangerFirst] = useState(initial.strangerFirst);
+  // On: a Stranger can randomly speak first. Off: a Stranger never speaks first.
+  const [strangerCanStart, setStrangerCanStart] = useState(initial.strangerCanStart);
   // Which special roles are ticked in the role list (all of them to start with).
   const [specialIds, setSpecialIds] = useState<SpecialId[]>([...ENABLED_SPECIALS]);
   const [muted, setMuted] = useState<boolean>(() => {
@@ -161,6 +166,10 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [descPos, setDescPos] = useState(0);
   // Seat index of this stop's Mr. Meme (null when Mr. Meme is off).
   const [memeIdx, setMemeIdx] = useState<number | null>(null);
+  // The Sniper's solo shot: who is shooting (null while still choosing), a warning, and the line shown at the offboarding.
+  const [sniperShooter, setSniperShooter] = useState<number | null>(null);
+  const [sniperErr, setSniperErr] = useState<string | null>(null);
+  const [sniperNote, setSniperNote] = useState<string | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [voters, setVoters] = useState<number[]>([]);
   const [lastOut, setLastOut] = useState<number | null>(null);
@@ -226,8 +235,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // Persist setup as it changes. A roster handed in by the host is not
   // remembered as this device's own list of names.
   useEffect(() => {
-    saveSetup({ names: hasPreset ? initial.names : names, strangers, pickpockets, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme, strangerFirst });
-  }, [names, strangers, pickpockets, hideCounts, level, useDares, useSpecials, useMeme, strangerFirst, hasPreset, initial.names]);
+    saveSetup({ names: hasPreset ? initial.names : names, strangers, pickpockets, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme, strangerCanStart });
+  }, [names, strangers, pickpockets, hideCounts, level, useDares, useSpecials, useMeme, strangerCanStart, hasPreset, initial.names]);
 
   useEffect(() => () => {
     timersRef.current.forEach(id => window.clearTimeout(id));
@@ -311,7 +320,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // A new stop, as in Undercover: everyone describes their word in turn, then the group
   // talks it out and votes. The speaking order is shuffled fresh every stop.
   const startStop = (stop: number, from: number, list: Seat[] = seats) => {
-    const order = describeOrder(list, from, stop, strangerFirst);
+    const order = describeOrder(list, from, stop, strangerCanStart);
     setBounce(null);
     setTiedIdx(null);
     setTickTied([]);
@@ -410,6 +419,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     if (selected === null) return;
     ensure();
     setTieOpen(false);
+    setSniperNote(null);
     const out = seats[selected];
     // Boomerang (Return Ticket): the first majority against them is not an elimination.
     // The votes bounce back onto the players who cast them, who are voted on instead.
@@ -595,8 +605,54 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const confirmRevenge = (victim: number) => {
     if (lastOut === null) return;
     ensure();
+    setSniperNote(null);
     const marked = seats.map((s, i) => (i === lastOut ? { ...s, revengeDone: true } : s));
     const updated = eliminate(marked, victim, stopNo);
+    setSeats(updated);
+    setLastOut(victim);
+    setPhase('offboard');
+    play('power');
+    buzz([30, 40, 30]);
+    later(REVEAL_MS, () => afterReveal(updated, victim, false));
+  };
+
+  // The Sniper (one shot per round, during a vote): the group says who is shooting, the host checks it,
+  // then the shooter names a target. A Stranger or Pickpocket goes offboard at once; a Tourist makes it
+  // backfire and the Sniper goes offboard instead. It is not a vote, so the Retriever cannot undo it.
+  const pickShooter = (i: number) => {
+    const s = seats[i];
+    if (activeSpecial(s) !== 'sniper' || s.sniperUsed) {
+      setSniperErr(`${s.name} cannot take the shot (not the Sniper, or the shot is already spent this round). Nobody goes offboard.`);
+      play('bad');
+      return;
+    }
+    setSniperErr(null);
+    setSniperShooter(i);
+    play('flip');
+  };
+
+  const confirmShot = (target: number) => {
+    if (sniperShooter === null) return;
+    ensure();
+    const shooter = sniperShooter;
+    const marked = seats.map((s, i) => (i === shooter ? { ...s, sniperUsed: true } : s));
+    const hit = marked[target].role !== 'tourist';
+    const victim = hit ? target : shooter;
+    const who = marked[shooter].name;
+    setStats(st => {
+      const cur = { ...(st[who] ?? emptyStats()) };
+      if (hit) cur.correctVotes += 1; else cur.wrongVotes += 1;
+      return { ...st, [who]: cur };
+    });
+    const updated = eliminate(marked, victim, stopNo);
+    setSniperNote(hit
+      ? `${who} took the shot at ${marked[target].name} and hit.`
+      : `${who} shot ${marked[target].name}, a Tourist. The shot backfired and ${who} goes offboard instead.`);
+    setSniperShooter(null);
+    setSniperErr(null);
+    setSelected(null);
+    setVoters([]);
+    setBounce(null);
     setSeats(updated);
     setLastOut(victim);
     setPhase('offboard');
@@ -694,7 +750,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const lover = out && activeSpecial(out) === 'lovers' && out.partner
     ? seats.find(s => s.name === out.partner && s.outStop === out.outStop && (s.outOrder ?? 0) === (out.outOrder ?? 0) + 1)
     : undefined;
-  const stepBtn = 'w-9 h-9 rounded-full bg-white/10 border border-white/15 text-cream flex items-center justify-center hover:bg-white/15 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition';
+  const stepBtn = 'w-9 h-9 rounded-md bg-white/10 border border-white/15 text-cream flex items-center justify-center hover:bg-white/15 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition';
 
   const countLine = hideCounts
     ? `${seats.length} players. Roles are secret.`
@@ -732,7 +788,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               >
                 <img src={yaaruAvanCat} alt="" className="w-12 h-12 object-contain" draggable={false} />
               </motion.div>
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {MAX_PLAYERS} players</span>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-md px-3 py-1 mb-2">Group game · {MIN_PLAYERS} to {MAX_PLAYERS} players</span>
               <h2 className="font-display text-4xl md:text-5xl font-extrabold text-white leading-tight">Yaaru Avan?</h2>
               <p className="text-sm text-cream/60 mt-1 mb-4 px-4">Play on one phone, or online with a room code. Someone is faking it. Can you spot them?</p>
               </div>
@@ -796,9 +852,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                       aria-label={`Traveller ${i + 1} name`}
                       onChange={e => setName(i, e.target.value)}
                       onBlur={onNameBlur}
-                      className="flex-1 min-w-0 rounded-xl bg-white/[0.07] border border-white/15 focus:border-gold-300/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/55 outline-none transition-colors"
+                      className="flex-1 min-w-0 rounded-lg bg-white/[0.07] border border-white/15 focus:border-gold-300/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/55 outline-none transition-colors"
                     />
-                    <button type="button" onClick={() => removePlayer(i)} className="w-8 h-8 shrink-0 rounded-full text-cream/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label={`Remove traveller ${i + 1}`}>
+                    <button type="button" onClick={() => removePlayer(i)} className="w-8 h-8 shrink-0 rounded-md text-cream/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label={`Remove traveller ${i + 1}`}>
                       <X size={14} weight="bold" />
                     </button>
                   </div>
@@ -814,7 +870,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               <p className={eyebrow}>Step 2</p>
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-display text-lg font-extrabold text-white">Pick the roles</h3>
-                <button type="button" onClick={useRecommended} disabled={playerCount < MIN_PLAYERS} className="inline-flex items-center gap-1 rounded-full bg-gold/15 border border-gold/30 text-gold-300 text-[11px] font-bold px-2.5 py-1 hover:bg-gold/25 disabled:opacity-40 transition-colors">
+                <button type="button" onClick={useRecommended} disabled={playerCount < MIN_PLAYERS} className="inline-flex items-center gap-1 rounded-md bg-gold/15 border border-gold/30 text-gold-300 text-[11px] font-bold px-2.5 py-1 hover:bg-gold/25 disabled:opacity-40 transition-colors">
                   <MagicWand size={12} weight="fill" /> Recommended
                 </button>
               </div>
@@ -860,7 +916,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                     role="radio"
                     aria-checked={level === l.id}
                     onClick={() => setLevel(l.id)}
-                    className={`rounded-xl border py-2 text-sm font-bold transition-colors ${level === l.id ? 'bg-gradient-to-b from-primary-light to-primary border-transparent text-white' : 'bg-white/[0.06] border-white/10 text-cream/70 hover:bg-white/10'}`}
+                    className={`rounded-md border py-2 text-sm font-bold transition-colors ${level === l.id ? 'bg-gradient-to-b from-primary-light to-primary border-transparent text-white' : 'bg-white/[0.06] border-white/10 text-cream/70 hover:bg-white/10'}`}
                   >{l.label}</button>
                 ))}
               </div>
@@ -871,11 +927,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                   { k: 'hide', on: hideCounts, set: setHideCounts, t: 'Hide the counts', d: 'Nobody knows if a Pickpocket exists. Much more tense.' },
                   { k: 'dare', on: useDares, set: setUseDares, t: 'Trip dares', d: 'The losing side draws a silly dare.' },
                   { k: 'special', on: useSpecials, set: setUseSpecials, t: 'Special roles', d: 'The Joy Fool, Boomerang, Revenger, Lovers and more. Up to one per 3 players.' },
-                  // Mr. Meme lives inside Special roles: it only shows (and only applies) while Special roles is on.
-                  ...(useSpecials ? [{ k: 'meme', on: useMeme, set: setUseMeme, t: 'Mr. Meme', d: 'Each description round, a random player describes their word with gestures, not words. Only switch on if everyone can see each other.', sub: true }] : []),
-                  { k: 'first', on: strangerFirst, set: setStrangerFirst, t: 'Stranger speaks first', d: 'A Stranger always starts the description round. The rest follow in random order.' },
+                  { k: 'first', on: strangerCanStart, set: setStrangerCanStart, t: 'Stranger can speak first', d: 'On: a Stranger may randomly start the description round. Off: a Stranger never starts first.' },
                 ].map(o => (
-                  <button key={o.k} type="button" role="switch" aria-checked={o.on} onClick={() => o.set(!o.on)} className={`w-full flex items-center gap-3 py-2.5 text-left ${'sub' in o && o.sub ? 'pl-7 pr-3 bg-white/[0.03]' : 'px-3'}`}>
+                  <button key={o.k} type="button" role="switch" aria-checked={o.on} onClick={() => o.set(!o.on)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left">
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm font-bold text-white leading-tight">{o.t}</span>
                       <span className="block text-[11px] text-cream/50">{o.d}</span>
@@ -892,6 +946,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                   on={new Set(specialIds)}
                   players={playerCount}
                   strangers={strangers}
+                  meme={useMeme}
+                  onMemeToggle={() => setUseMeme(v => !v)}
                   onSetAll={ids => setSpecialIds(ENABLED_SPECIALS.filter(x => ids.includes(x)))}
                   onToggle={id => setSpecialIds(ids => ENABLED_SPECIALS.filter(x => (x === id ? !ids.includes(x) : ids.includes(x))))}
                 />
@@ -930,7 +986,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
             <div className="relative pt-4">
               <p className={`${eyebrow} text-center`}>Boarding pass · {passSeat.name}</p>
               <div className="mt-4 mx-auto max-w-[19rem] select-none">
-                <div className="rounded-3xl bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-dark shadow-[0_18px_40px_rgba(0,0,0,0.45)] overflow-hidden">
+                <div className="rounded-lg bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-dark shadow-[0_18px_40px_rgba(0,0,0,0.45)] overflow-hidden">
                   <div className="flex items-center justify-between px-4 pt-3 pb-2">
                     <span className="font-display text-sm font-extrabold tracking-wider text-primary-dark">ULAA AIR</span>
                     <span className="text-[10px] font-bold uppercase tracking-widest text-dark/70">{tripTitle.length > 20 ? `${tripTitle.slice(0, 19)}…` : tripTitle}</span>
@@ -1005,13 +1061,13 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
               </div>
               <motion.div key={descPos} initial={reduce ? false : { scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                className="rounded-3xl bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-dark px-5 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
-                <span className="mx-auto w-11 h-11 rounded-2xl bg-dark/90 text-gold-300 flex items-center justify-center mb-2" aria-hidden="true"><ChatCircleDots size={24} weight="duotone" /></span>
+                className="rounded-lg bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-dark px-5 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
+                <span className="mx-auto w-11 h-11 rounded-lg bg-dark/90 text-gold-300 flex items-center justify-center mb-2" aria-hidden="true"><ChatCircleDots size={24} weight="duotone" /></span>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-dark/70">{descPos === 0 ? 'Starts' : `Speaker ${descPos + 1} of ${descOrder.length}`}</p>
                 <p className="font-display text-3xl font-extrabold leading-tight break-words">{seats[descOrder[descPos]].name}</p>
                 <p className="text-xs font-bold text-dark/70 mt-1">Seat {seats[descOrder[descPos]].seat}</p>
                 {memeIdx !== null && descOrder[descPos] === memeIdx && (
-                  <p className="mt-2 inline-block rounded-full bg-dark/90 text-gold-300 text-xs font-bold px-3 py-1">🎭 Mr. Meme: gestures only, no talking</p>
+                  <p className="mt-2 inline-block rounded-md bg-dark/90 text-gold-300 text-xs font-bold px-3 py-1">🎭 Mr. Meme: gestures only, no talking</p>
                 )}
               </motion.div>
               {tiedIdx && (
@@ -1023,7 +1079,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               )}
               <ol className="flex flex-wrap justify-center gap-1.5 mt-4" aria-label="Speaking order">
                 {descOrder.map((i, k) => (
-                  <li key={i} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${k === descPos ? 'bg-gold/25 border-gold/60 text-gold-300' : k < descPos ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
+                  <li key={i} className={`rounded-md px-2.5 py-1 text-[11px] font-bold border ${k === descPos ? 'bg-gold/25 border-gold/60 text-gold-300' : k < descPos ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
                     {k < descPos && <CheckCircle size={11} weight="fill" className="inline -mt-0.5 mr-1" />}{seats[i].name}
                   </li>
                 ))}
@@ -1053,7 +1109,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                     type="button"
                     onClick={() => { setSelected(i); setVoters(v => v.filter(x => x !== i)); play('flip'); }}
                     aria-pressed={selected === i}
-                    className={`rounded-2xl border px-3 py-3 text-left transition ${selected === i ? 'bg-gradient-to-br from-primary-light to-primary border-transparent text-white shadow-[0_8px_20px_rgba(168,90,42,0.5)]' : 'bg-white/[0.06] border-white/10 text-cream hover:bg-white/10'}`}
+                    className={`rounded-md border px-3 py-3 text-left transition ${selected === i ? 'bg-gradient-to-br from-primary-light to-primary border-transparent text-white shadow-[0_8px_20px_rgba(168,90,42,0.5)]' : 'bg-white/[0.06] border-white/10 text-cream hover:bg-white/10'}`}
                   >
                     <span className="block font-display text-base font-extrabold leading-tight truncate">{seats[i].name}</span>
                     <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {seats[i].seat}</span>
@@ -1067,7 +1123,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                   <div className="flex flex-wrap gap-1.5">
                     {voterIdx.filter(i => i !== selected && !(tiedIdx && !bounce && tiedIdx.includes(i))).map(i => (
                       <button key={i} type="button" onClick={() => toggleVoter(i)} aria-pressed={voters.includes(i)}
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-bold border transition-colors ${voters.includes(i) ? 'bg-gold/25 border-gold/60 text-gold-300' : 'bg-white/[0.06] border-white/15 text-cream/70'}`}>
+                        className={`rounded-md px-2.5 py-1 text-[11px] font-bold border transition-colors ${voters.includes(i) ? 'bg-gold/25 border-gold/60 text-gold-300' : 'bg-white/[0.06] border-white/15 text-cream/70'}`}>
                         {seats[i].name}
                       </button>
                     ))}
@@ -1075,13 +1131,21 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 </div>
               )}
 
+              {useSpecials && specialIds.includes('sniper') && !tiedIdx && !bounce && (
+                <div className="mb-3">
+                  <button type="button" onClick={() => { setSniperShooter(null); setSniperErr(null); setPhase('sniper'); play('flip'); }}
+                    className="text-xs font-bold text-gold-300 underline underline-offset-2">
+                    Sniper taking a shot?
+                  </button>
+                </div>
+              )}
               <div className="mb-4">
                 <button type="button" onClick={() => setTieOpen(o => !o)} aria-expanded={tieOpen}
                   className="text-xs font-bold text-gold-300 underline underline-offset-2">
                   {tieOpen ? 'Hide tie-break' : 'Vote tied?'}
                 </button>
                 {tieOpen && (
-                  <div className="text-xs text-cream/80 leading-snug mt-1.5 rounded-xl bg-white/[0.06] border border-white/10 px-3 py-2">
+                  <div className="text-xs text-cream/80 leading-snug mt-1.5 rounded-lg bg-white/[0.06] border border-white/10 px-3 py-2">
                     {goddessSeat ? (
                       <p>{goddessSeat.name} is the Goddess of Justice{goddessSeat.alive ? '' : ' (already out, but she still decides)'}. She picks who goes offboard from the tied players. Tap that person above.</p>
                     ) : tiedIdx || bounce ? (
@@ -1093,7 +1157,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                           {candidateIdx.map(i => (
                             <button key={i} type="button" aria-pressed={tickTied.includes(i)}
                               onClick={() => setTickTied(t => (t.includes(i) ? t.filter(x => x !== i) : [...t, i]))}
-                              className={`rounded-full px-2.5 py-1 text-[11px] font-bold border transition-colors ${tickTied.includes(i) ? 'bg-gold/25 border-gold/60 text-gold-300' : 'bg-white/[0.06] border-white/15 text-cream/70'}`}>
+                              className={`rounded-md px-2.5 py-1 text-[11px] font-bold border transition-colors ${tickTied.includes(i) ? 'bg-gold/25 border-gold/60 text-gold-300' : 'bg-white/[0.06] border-white/15 text-cream/70'}`}>
                               {seats[i].name}
                             </button>
                           ))}
@@ -1119,6 +1183,30 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
             </div>
           )}
 
+          {/* ── Sniper: solo shot ── */}
+          {phase === 'sniper' && (
+            <div className="relative">
+              <div className="pr-12 mb-3">
+                <p className={eyebrow}>Round {roundNo} · Stop {stopNo}</p>
+                <h2 className="font-display text-2xl font-extrabold text-white leading-tight">{sniperShooter === null ? 'Who is the Sniper?' : `${seats[sniperShooter].name}, pick your target`}</h2>
+                <p className="text-xs text-cream/60">{sniperShooter === null
+                  ? 'The Sniper says so out loud, then taps their own name. One shot per round, no vote needed.'
+                  : 'A Stranger or Pickpocket goes offboard at once. A Tourist makes the shot backfire, and you go offboard instead.'}</p>
+              </div>
+              {sniperErr && <p className="text-xs font-bold text-gold-300 leading-snug mb-3">{sniperErr}</p>}
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                {aliveIdx.filter(i => sniperShooter === null || i !== sniperShooter).map(i => (
+                  <button key={i} type="button" onClick={() => (sniperShooter === null ? pickShooter(i) : confirmShot(i))}
+                    className="rounded-md border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98]">
+                    <span className="block font-display text-base font-extrabold leading-tight truncate">{seats[i].name}</span>
+                    <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {seats[i].seat}</span>
+                  </button>
+                ))}
+              </div>
+              <button type="button" onClick={() => { setSniperShooter(null); setSniperErr(null); setPhase('vote'); }} className={ghostBtn}>Back to the vote</button>
+            </div>
+          )}
+
           {/* ── Offboard animation + role reveal ── */}
           {phase === 'offboard' && out && (
             <div className="relative text-center pt-10 min-h-[22rem]">
@@ -1138,12 +1226,13 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 initial={{ scale: 0.5, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: reduce ? 0 : REVEAL_MS / 1000 * 0.55, type: 'spring', stiffness: 240, damping: 14 }}
-                className={`inline-block rounded-2xl bg-gradient-to-br ${ROLE_TONE[out.role]} px-6 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.4)]`}
+                className={`inline-block rounded-lg bg-gradient-to-br ${ROLE_TONE[out.role]} px-6 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.4)]`}
               >
                 <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Was a</p>
                 <p className="font-display text-3xl font-extrabold leading-tight">{ROLE_LABEL[out.role]}</p>
                 {out.special && describeSpecial(out) && <p className="text-xs font-bold mt-1 opacity-80">and {specialLabel(out)}</p>}
               </motion.div>
+              {sniperNote && <p className="text-sm font-bold text-gold-300 mt-4">{sniperNote}</p>}
               {activeSpecial(out) === 'retriever' && <p className="text-sm font-bold text-gold-300 mt-4">The Retriever’s power is lost.</p>}
               {lover && <p className="text-sm font-bold text-gold-300 mt-4">{lover.name} was in love with {out.name} and leaves too.</p>}
             </div>
@@ -1189,7 +1278,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               >
                 <Question size={46} weight="bold" />
               </motion.div>
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">Last chance</span>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-md px-3 py-1 mb-2">Last chance</span>
               <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{out.name} was the Pickpocket</h2>
               {activeSpecial(out) === 'lovers' && <p className="text-xs font-bold text-gold-300 mt-1">They left with their Lover, and still get a last guess.</p>}
               <p className="text-sm text-cream/65 mt-2 mb-4 px-4">{out.name}, type your guess for the Tourists' word. One box per word.</p>
@@ -1231,7 +1320,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               <div className="grid grid-cols-2 gap-2">
                 {aliveIdx.map(i => (
                   <button key={i} type="button" onClick={() => confirmRevenge(i)}
-                    className="rounded-2xl border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98]">
+                    className="rounded-md border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98]">
                     <span className="block font-display text-base font-extrabold leading-tight truncate">{seats[i].name}</span>
                     <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {seats[i].seat}</span>
                   </button>
@@ -1245,7 +1334,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
             <div className="relative text-center pt-2">
               {!reduce && outcome !== 'tourists' && <Confetti />}
               {!reduce && outcome === 'tourists' && <Confetti />}
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Round {roundNo} over</span>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-md px-3 py-1 mb-2">Round {roundNo} over</span>
               <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
                 {outcome === 'tourists' ? 'Tourists win!' : outcome === 'strangers' ? 'The Strangers got away!' : 'The Pickpocket stole it!'}
               </h2>
@@ -1268,7 +1357,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               <ul className={`${glass} text-left divide-y divide-white/10 mb-3`}>
                 {[...seats].sort((x, y) => (gained[y.name] ?? 0) - (gained[x.name] ?? 0)).map(s => (
                   <li key={s.name} className="flex items-center gap-2.5 px-3 py-2">
-                    <span className={`w-6 h-6 shrink-0 rounded-full bg-gradient-to-br ${ROLE_TONE[s.role]} flex items-center justify-center`} aria-hidden="true">
+                    <span className={`w-6 h-6 shrink-0 rounded-md bg-gradient-to-br ${ROLE_TONE[s.role]} flex items-center justify-center`} aria-hidden="true">
                       {s.role === 'tourist' ? <Eye size={13} weight="bold" /> : s.role === 'stranger' ? <Ticket size={13} weight="bold" /> : <Skull size={13} weight="bold" />}
                     </span>
                     <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{s.name}</span>
@@ -1279,7 +1368,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               </ul>
 
               {dare && (
-                <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-3 text-left">
+                <div className="rounded-lg bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-3 text-left">
                   <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300"><Gift size={11} weight="fill" /> Trip dare for the {outcome === 'tourists' ? 'Strangers' : 'Tourists'}</p>
                   <p className="text-sm font-bold text-white mt-0.5">{dare}</p>
                 </div>
@@ -1297,7 +1386,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
           {phase === 'final' && (
             <div className="relative text-center pt-1">
               {!reduce && <Confetti />}
-              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">{roundNo} round{roundNo === 1 ? '' : 's'} played</span>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-md px-3 py-1 mb-2">{roundNo} round{roundNo === 1 ? '' : 's'} played</span>
               <div className="w-16 h-16 mx-auto mb-2 rounded-[22px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_12px_30px_rgba(200,150,42,0.45)]" aria-hidden="true">
                 <Crown size={36} weight="fill" />
               </div>
@@ -1342,7 +1431,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                   <span className="block text-sm font-bold text-white">{sharing ? 'Preparing…' : 'Share the result card'}</span>
                   <span className="block text-xs text-cream/55">Post it in the group chat.</span>
                 </span>
-                <span className="w-10 h-10 shrink-0 rounded-full bg-gradient-to-b from-primary-light to-primary text-white flex items-center justify-center group-hover:scale-105 transition-transform" aria-hidden="true">
+                <span className="w-10 h-10 shrink-0 rounded-md bg-gradient-to-b from-primary-light to-primary text-white flex items-center justify-center group-hover:scale-105 transition-transform" aria-hidden="true">
                   <ShareNetwork size={18} weight="bold" />
                 </span>
               </button>

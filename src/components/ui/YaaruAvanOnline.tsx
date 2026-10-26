@@ -15,7 +15,7 @@ import { buildScoreCard } from './packBagScoreCard';
 import { useSynth } from './gameAudio';
 import { Confetti } from './gameParts';
 import {
-  GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, shareCardImage, cleanName,
+  GOLD_GRAD_TEXT, primaryBtn as basePrimaryBtn, ghostBtn as baseGhostBtn, iconBtn as baseIconBtn, glass as baseGlass, eyebrow, shareCardImage, cleanName,
   loadPlayerName, savePlayerName, MAX_NAME,
 } from './gameUi';
 import { LEVELS, CATEGORY_LABEL } from './yaaruAvanWords';
@@ -34,6 +34,12 @@ import type { SpecialId } from './yaaruAvanSpecials';
 import { useOnlineRoom } from './useOnlineRoom';
 import { useYaaruAvanContentSync } from './useGameContentSync';
 
+// Same corner radius as the buttons on the admin pages (rounded-md). Local to this game, so other games keep theirs.
+const primaryBtn = basePrimaryBtn.replace('rounded-2xl', 'rounded-md');
+const ghostBtn = baseGhostBtn.replace('rounded-2xl', 'rounded-md');
+const glass = baseGlass.replace('rounded-2xl', 'rounded-lg');
+const iconBtn = baseIconBtn.replace('rounded-full', 'rounded-md');
+
 // "Yaaru Avan?" online: every player uses their own phone. The rules and secrets
 // live in Supabase (see add_yaaru_avan_online.sql); this file is only the screens.
 // The group talks it out aloud (in person or on a call). The phone handles the
@@ -48,8 +54,8 @@ const ROLE_TONE: Record<Role, string> = {
   pickpocket: 'from-rose-300 to-rose-500 text-rose-950',
 };
 
-const inputCls = 'w-full rounded-xl bg-white/[0.07] border border-white/15 focus:border-gold-300/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/55 outline-none transition-colors';
-const stepBtn = 'w-9 h-9 rounded-full bg-white/10 border border-white/15 text-cream flex items-center justify-center hover:bg-white/15 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition';
+const inputCls = 'w-full rounded-lg bg-white/[0.07] border border-white/15 focus:border-gold-300/70 focus:bg-white/10 px-3 py-2.5 text-[15px] font-semibold text-white placeholder:text-cream/55 outline-none transition-colors';
+const stepBtn = 'w-9 h-9 rounded-md bg-white/10 border border-white/15 text-cream flex items-center justify-center hover:bg-white/15 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition';
 
 interface Audio {
   play: ReturnType<typeof useSynth>['play'];
@@ -189,7 +195,7 @@ function BoardingPass({ name, seat, word, tripTitle, holding, special }: {
 }) {
   return (
     <div className="mx-auto max-w-[19rem] select-none">
-      <div className="rounded-3xl bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-dark shadow-[0_18px_40px_rgba(0,0,0,0.45)] overflow-hidden">
+      <div className="rounded-lg bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-dark shadow-[0_18px_40px_rgba(0,0,0,0.45)] overflow-hidden">
         <div className="flex items-center justify-between px-4 pt-3 pb-2">
           <span className="font-display text-sm font-extrabold tracking-wider text-primary-dark">ULAA AIR</span>
           <span className="text-[10px] font-bold uppercase tracking-widest text-dark/70">{tripTitle.length > 20 ? `${tripTitle.slice(0, 19)}…` : tripTitle}</span>
@@ -346,6 +352,9 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [pickingSpecials, setPickingSpecials] = useState(false);
+  // The Sniper's shot: whether the target list is open, and who is lined up (nothing fires until "Fire").
+  const [sniperOpen, setSniperOpen] = useState(false);
+  const [sniperPick, setSniperPick] = useState<string | null>(null);
   const [showRules, setShowRules] = useState(false);
   const [sittingOut, setSittingOut] = useState<{ name: string; points: number }[]>([]);
   const noticeTimer = useRef<number | null>(null);
@@ -509,6 +518,14 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const revengeBy = room.last_result?.revenge_by ? byId.get(room.last_result.revenge_by)?.name : undefined;
   const loverName = room.last_result?.lover ? byId.get(room.last_result.lover)?.name : undefined;
   const bounceFromName = room.last_result?.bounce_from ? byId.get(room.last_result.bounce_from)?.name : undefined;
+  // The Sniper is named to everyone at the offboarding, like the one-phone game.
+  const sniperName = room.last_result?.sniper ? byId.get(room.last_result.sniper)?.name : undefined;
+  const sniperTargetName = room.last_result?.sniper_target ? byId.get(room.last_result.sniper_target)?.name : undefined;
+  const sniperLine = sniperName && sniperTargetName
+    ? (room.last_result?.sniper_hit
+        ? `${sniperName} took the shot at ${sniperTargetName} and hit.`
+        : `${sniperName} shot ${sniperTargetName}, a Tourist. The shot backfired and ${sniperName} goes offboard instead.`)
+    : null;
   const goddessId = room.last_result?.tiebreak ? room.last_result.leader : undefined;
   const goddess = goddessId ? byId.get(goddessId) : undefined;
   const hostPick = !!room.last_result?.host_pick;
@@ -516,7 +533,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const boomerangName = room.last_result?.saved ? (room.last_result.name ?? 'Someone') : null;
   const bounceNames = (room.last_result?.bounce_names ?? []).join(' and ');
   const boomerangBanner = boomerangName && (
-    <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3 text-left">
+    <div className="rounded-lg bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3 text-left">
       <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300">The Boomerang</p>
       <p className="text-sm font-bold text-white">
         {boomerangName} stays aboard. The votes bounced back onto {bounceNames || 'the voters'}{bounceNames ? `, so ${bounceNames} are now tied.` : '. Vote again.'}
@@ -537,7 +554,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const guessWordOwner = "Tourists'";
 
   const hostBanner = !isHost && state.host_away && (
-    <div className="rounded-2xl bg-rose-400/10 border border-rose-300/30 px-3 py-2.5 mb-3 text-left">
+    <div className="rounded-lg bg-rose-400/10 border border-rose-300/30 px-3 py-2.5 mb-3 text-left">
       <p className="text-xs text-rose-100"><WifiSlash size={13} weight="bold" className="inline -mt-0.5 mr-1" />{hostName} seems to be away, so the game is paused.</p>
       <button type="button" onClick={() => void act(() => online.claimHost(room.code))} className="mt-1.5 text-xs font-bold text-gold-300 hover:text-white transition-colors">Take over as host</button>
     </div>
@@ -552,7 +569,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     <div className="relative">
       {/* Top bar */}
       <div className="flex items-center gap-2 pr-12 mb-3">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 px-2.5 py-1 text-[11px] font-bold text-cream/80">
+        <span className="inline-flex items-center gap-1.5 rounded-md bg-white/10 border border-white/15 px-2.5 py-1 text-[11px] font-bold text-cream/80">
           <Hash size={12} weight="bold" /> <span className="font-display tracking-[0.2em] text-gold-300">{room.code}</span>
         </span>
         {offline && <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-300"><WifiSlash size={13} weight="bold" /> Reconnecting…</span>}
@@ -562,7 +579,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
         </button>
       </div>
 
-      {notice && <p role="alert" className="rounded-xl bg-rose-400/15 border border-rose-300/30 text-rose-100 text-xs font-semibold px-3 py-2 mb-3">{notice}</p>}
+      {notice && <p role="alert" className="rounded-lg bg-rose-400/15 border border-rose-300/30 text-rose-100 text-xs font-semibold px-3 py-2 mb-3">{notice}</p>}
       {hostBanner}
 
       {/* ── Lobby: special roles picker (host) ── */}
@@ -616,7 +633,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{p.name}{p.id === me.id && <span className="ml-1.5 text-[10px] font-semibold text-cream/55">you</span>}</span>
                 {p.id === room.host_id && <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-gold-300"><Crown size={12} weight="fill" /> Host</span>}
                 {isHost && p.id !== me.id && (
-                  <button type="button" onClick={() => void act(() => online.kick(room.code, p.id))} className="w-7 h-7 rounded-full text-cream/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label={`Remove ${p.name}`} title={room.round_no > 0 ? 'Remove (keeps their points)' : 'Remove'}>
+                  <button type="button" onClick={() => void act(() => online.kick(room.code, p.id))} className="w-7 h-7 rounded-md text-cream/40 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors" aria-label={`Remove ${p.name}`} title={room.round_no > 0 ? 'Remove (keeps their points)' : 'Remove'}>
                     <X size={13} weight="bold" />
                   </button>
                 )}
@@ -650,7 +667,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-display text-lg font-extrabold text-white">Pick the roles</h3>
-                <button type="button" disabled={n < MIN_PLAYERS} onClick={() => { const r = recommendedRoles(n); void saveSettings({ strangers: r.strangers, pickpockets: r.pickpockets }); }} className="inline-flex items-center gap-1 rounded-full bg-gold/15 border border-gold/30 text-gold-300 text-[11px] font-bold px-2.5 py-1 hover:bg-gold/25 disabled:opacity-40 transition-colors">
+                <button type="button" disabled={n < MIN_PLAYERS} onClick={() => { const r = recommendedRoles(n); void saveSettings({ strangers: r.strangers, pickpockets: r.pickpockets }); }} className="inline-flex items-center gap-1 rounded-md bg-gold/15 border border-gold/30 text-gold-300 text-[11px] font-bold px-2.5 py-1 hover:bg-gold/25 disabled:opacity-40 transition-colors">
                   <MagicWand size={12} weight="fill" /> Recommended
                 </button>
               </div>
@@ -690,7 +707,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <div className="grid grid-cols-3 gap-1.5 mb-1" role="radiogroup" aria-label="Difficulty">
                 {LEVELS.map(l => (
                   <button key={l.id} type="button" role="radio" aria-checked={room.level === l.id} disabled={busy} onClick={() => void saveSettings({ level: l.id })}
-                    className={`rounded-xl border py-2 text-sm font-bold transition-colors ${room.level === l.id ? 'bg-gradient-to-b from-primary-light to-primary border-transparent text-white' : 'bg-white/[0.06] border-white/10 text-cream/70 hover:bg-white/10'}`}>{l.label}</button>
+                    className={`rounded-md border py-2 text-sm font-bold transition-colors ${room.level === l.id ? 'bg-gradient-to-b from-primary-light to-primary border-transparent text-white' : 'bg-white/[0.06] border-white/10 text-cream/70 hover:bg-white/10'}`}>{l.label}</button>
                 ))}
               </div>
               <p className="text-[11px] text-cream/50 mb-4">{LEVELS.find(l => l.id === room.level)?.hint}.</p>
@@ -752,7 +769,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
           <ul className="flex flex-wrap justify-center gap-1.5 mt-4" aria-label="Who is ready">
             {players.map(p => (
-              <li key={p.id} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${p.ready ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
+              <li key={p.id} className={`rounded-md px-2.5 py-1 text-[11px] font-bold border ${p.ready ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
                 {p.ready && <CheckCircle size={11} weight="fill" className="inline -mt-0.5 mr-1" />}{p.name}
               </li>
             ))}
@@ -778,15 +795,15 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <p className="text-xs text-cream/70 leading-snug mt-1">{countLine}</p>
             </div>
             {tieRedo && (
-              <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3 text-left">
+              <div className="rounded-lg bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3 text-left">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300">Tie-break</p>
                 <p className="text-sm font-bold text-white">{boomerangName ? `The Boomerang's votes bounced back onto ${tieNames}, so they are tied.` : `${tieNames} got the same number of votes.`} {iAmTied ? 'You each' : 'They each'} describe once more, then the other players vote again.</p>
               </div>
             )}
             {speaker && (
               <motion.div key={room.describe_pos} initial={reduce ? false : { scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-                className="rounded-3xl bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-dark px-5 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
-                <span className="mx-auto w-11 h-11 rounded-2xl bg-dark/90 text-gold-300 flex items-center justify-center mb-2" aria-hidden="true"><ChatCircleDots size={24} weight="duotone" /></span>
+                className="rounded-lg bg-gradient-to-br from-[#FFF6DD] to-gold-300 text-dark px-5 py-5 shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
+                <span className="mx-auto w-11 h-11 rounded-lg bg-dark/90 text-gold-300 flex items-center justify-center mb-2" aria-hidden="true"><ChatCircleDots size={24} weight="duotone" /></span>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-dark/70">{room.describe_pos === 0 ? 'Starts' : `Speaker ${room.describe_pos + 1} of ${order.length}`}</p>
                 <p className="font-display text-3xl font-extrabold leading-tight break-words">{myTurn ? 'You' : speaker.name}</p>
                 <p className="text-xs font-bold text-dark/70 mt-1">Seat {speaker.seat}</p>
@@ -794,7 +811,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             )}
             <ol className="flex flex-wrap justify-center gap-1.5 mt-4" aria-label="Speaking order">
               {order.map((id, k) => (
-                <li key={id} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${k === room.describe_pos ? 'bg-gold/25 border-gold/60 text-gold-300' : k < room.describe_pos ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
+                <li key={id} className={`rounded-md px-2.5 py-1 text-[11px] font-bold border ${k === room.describe_pos ? 'bg-gold/25 border-gold/60 text-gold-300' : k < room.describe_pos ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
                   {k < room.describe_pos && <CheckCircle size={11} weight="fill" className="inline -mt-0.5 mr-1" />}{byId.get(id)?.name ?? '...'}
                 </li>
               ))}
@@ -860,7 +877,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           {boomerangBanner}
 
           {room.last_result?.tie && (
-            <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3">
+            <div className="rounded-lg bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-2.5 mb-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300">It was a tie</p>
               <p className="text-sm font-bold text-white">
                 {tieRedo
@@ -870,12 +887,44 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             </div>
           )}
 
+          {me.can_snipe && (
+            <div className="mb-3">
+              {!sniperOpen ? (
+                <button type="button" onClick={() => { setSniperOpen(true); setSniperPick(null); play('flip'); }}
+                  className="text-xs font-bold text-gold-300 underline underline-offset-2">
+                  🎯 Take my Sniper shot
+                </button>
+              ) : (
+                <div className={`${glass} px-3 py-3`}>
+                  <p className={eyebrow}>The Sniper</p>
+                  <p className="text-xs text-cream/70 leading-snug mt-1 mb-3">
+                    One shot this round, no majority needed. A Stranger or Pickpocket goes offboard at once. If you hit a Tourist, the shot backfires and you go offboard instead.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {alivePlayers.filter(p => p.id !== me.id).map(p => (
+                      <button key={p.id} type="button" aria-pressed={sniperPick === p.id} onClick={() => { setSniperPick(p.id); play('flip'); }}
+                        className={`rounded-lg border px-3 py-3 text-left transition ${sniperPick === p.id ? 'bg-gradient-to-br from-red-400 to-rose-600 border-transparent text-white' : 'bg-white/[0.06] border-white/10 text-cream hover:bg-white/10'}`}>
+                        <span className="block font-display text-base font-extrabold leading-tight truncate">{p.name}</span>
+                        <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {p.seat}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <button type="button" disabled={!sniperPick || busy} className={`${primaryBtn} mb-2 disabled:opacity-40 disabled:pointer-events-none`}
+                    onClick={() => { const target = sniperPick; if (!target) return; setSniperOpen(false); setSniperPick(null); void act(() => online.snipe(room.code, target)); }}>
+                    {sniperPick ? `Fire at ${byId.get(sniperPick)?.name ?? ''}` : 'Pick a target'}
+                  </button>
+                  <button type="button" onClick={() => { setSniperOpen(false); setSniperPick(null); }} className={ghostBtn}>Not now</button>
+                </div>
+              )}
+            </div>
+          )}
+
           {me.can_vote ? (
             <>
               <div className="grid grid-cols-2 gap-2 mb-4">
                 {alivePlayers.filter(p => p.id !== me.id && (!room.bounce || room.bounce.includes(p.id))).map(p => (
                   <button key={p.id} type="button" aria-pressed={pickId === p.id} onClick={() => { setPick({ key: voteKey, id: p.id }); play('flip'); }}
-                    className={`rounded-2xl border px-3 py-3 text-left transition ${pickId === p.id ? 'bg-gradient-to-br from-primary-light to-primary border-transparent text-white shadow-[0_8px_20px_rgba(168,90,42,0.5)]' : 'bg-white/[0.06] border-white/10 text-cream hover:bg-white/10'}`}>
+                    className={`rounded-lg border px-3 py-3 text-left transition ${pickId === p.id ? 'bg-gradient-to-br from-primary-light to-primary border-transparent text-white shadow-[0_8px_20px_rgba(168,90,42,0.5)]' : 'bg-white/[0.06] border-white/10 text-cream hover:bg-white/10'}`}>
                     <span className="block font-display text-base font-extrabold leading-tight truncate">{p.name}</span>
                     <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {p.seat}</span>
                   </button>
@@ -892,7 +941,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           <p className={`${eyebrow} mt-4 mb-1.5`}>{voters.filter(p => p.voted).length} of {voters.length} voted</p>
           <ul className="flex flex-wrap gap-1.5">
             {voters.map(p => (
-              <li key={p.id} className={`rounded-full px-2.5 py-1 text-[11px] font-bold border ${p.voted ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
+              <li key={p.id} className={`rounded-md px-2.5 py-1 text-[11px] font-bold border ${p.voted ? 'bg-emerald-400/15 border-emerald-300/40 text-emerald-200' : 'bg-white/[0.06] border-white/15 text-cream/60'}`}>
                 {p.voted && <CheckCircle size={11} weight="fill" className="inline -mt-0.5 mr-1" />}{p.name}
               </li>
             ))}
@@ -924,7 +973,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <div className="grid grid-cols-2 gap-2">
               {tiedPlayers.map(p => (
                 <button key={p.id} type="button" disabled={busy} onClick={() => void act(() => online.tiebreak(room.code, p.id))}
-                  className="rounded-2xl border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98] disabled:opacity-50">
+                  className="rounded-lg border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98] disabled:opacity-50">
                   <span className="block font-display text-base font-extrabold leading-tight truncate">{p.name}</span>
                   <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {p.seat}</span>
                 </button>
@@ -968,13 +1017,14 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             </motion.div>
           </div>
           <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: reduce ? 0 : 1, type: 'spring', stiffness: 240, damping: 14 }}
-            className={`inline-block rounded-2xl bg-gradient-to-br ${ROLE_TONE[room.last_result.role]} px-6 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.4)]`}>
+            className={`inline-block rounded-lg bg-gradient-to-br ${ROLE_TONE[room.last_result.role]} px-6 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.4)]`}>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Was a</p>
             <p className="font-display text-3xl font-extrabold leading-tight">{roleName(room.last_result.role)}</p>
             {outSpecial && <p className="text-xs font-bold mt-1 opacity-80">and {outSpecial}</p>}
           </motion.div>
           {room.last_result.special === 'retriever' && <p className="mt-3 text-sm font-bold text-gold-300">The Retriever’s power is lost.</p>}
           {revengeBy && <p className="mt-3 text-xs font-bold text-gold-300">Revenger! {revengeBy} took them down.</p>}
+          {sniperLine && <p className="mt-3 text-sm font-bold text-gold-300">{sniperLine}</p>}
           {bounceFromName && <p className="mt-3 text-xs font-bold text-gold-300">Boomerang! {bounceFromName}'s votes bounced back onto them.</p>}
           {loverName && <p className="mt-3 text-sm font-bold text-gold-300">{loverName} was in love with {out.name} and leaves too.</p>}
 
@@ -1002,7 +1052,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             className="w-20 h-20 mx-auto mb-4 rounded-[28px] bg-gradient-to-br from-rose-300 to-rose-500 text-rose-950 flex items-center justify-center shadow-[0_14px_36px_rgba(244,63,94,0.4)]" aria-hidden="true">
             <Question size={46} weight="bold" />
           </motion.div>
-          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-full px-3 py-1 mb-2">Last chance</span>
+          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-rose-200 bg-rose-400/15 border border-rose-300/30 rounded-md px-3 py-1 mb-2">Last chance</span>
           <h2 className="font-display text-3xl font-extrabold text-white leading-tight">
             {iAmOut ? 'You were the Pickpocket' : `${out.name} was the Pickpocket`}
           </h2>
@@ -1047,7 +1097,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
             <div className="grid grid-cols-2 gap-2">
               {alivePlayers.map(p => (
                 <button key={p.id} type="button" disabled={busy} onClick={() => void act(() => online.revenge(room.code, p.id))}
-                  className="rounded-2xl border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98] disabled:opacity-50">
+                  className="rounded-lg border px-3 py-3 text-left transition bg-white/[0.06] border-white/10 text-cream hover:bg-white/10 active:scale-[0.98] disabled:opacity-50">
                   <span className="block font-display text-base font-extrabold leading-tight truncate">{p.name}</span>
                   <span className="block text-[10px] uppercase tracking-wider opacity-60">Seat {p.seat}</span>
                 </button>
@@ -1061,7 +1111,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       {phase === 'roundEnd' && summary && (
         <div className="text-center pt-1">
           {!reduce && <Confetti />}
-          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">Round {room.round_no} over</span>
+          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-md px-3 py-1 mb-2">Round {room.round_no} over</span>
           <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
             {summary.outcome === 'tourists' ? 'Tourists win!' : summary.outcome === 'strangers' ? 'The Strangers got away!' : 'The Pickpocket stole it!'}
           </h2>
@@ -1084,7 +1134,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           <ul className={`${glass} text-left divide-y divide-white/10 mb-3`}>
             {[...summary.players].sort((x, y) => y.gained - x.gained).map(s => (
               <li key={s.id} className="flex items-center gap-2.5 px-3 py-2">
-                <span className={`w-6 h-6 shrink-0 rounded-full bg-gradient-to-br ${ROLE_TONE[s.role]} flex items-center justify-center`} aria-hidden="true">
+                <span className={`w-6 h-6 shrink-0 rounded-md bg-gradient-to-br ${ROLE_TONE[s.role]} flex items-center justify-center`} aria-hidden="true">
                   {s.role === 'tourist' ? <Eye size={13} weight="bold" /> : s.role === 'stranger' ? <Ticket size={13} weight="bold" /> : <Skull size={13} weight="bold" />}
                 </span>
                 <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{byId.get(s.id)?.name ?? '...'}{s.id === me.id && <span className="ml-1.5 text-[10px] font-semibold text-cream/55">you</span>}</span>
@@ -1095,7 +1145,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           </ul>
 
           {room.dare && (
-            <div className="rounded-2xl bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-3 text-left">
+            <div className="rounded-lg bg-gradient-to-br from-primary/40 to-secondary/25 border border-gold/30 px-3.5 py-3 mb-3 text-left">
               <p className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-[0.18em] text-gold-300"><Gift size={11} weight="fill" /> Trip dare for the {summary.outcome === 'tourists' ? 'Strangers' : 'Tourists'}</p>
               <p className="text-sm font-bold text-white mt-0.5">{room.dare}</p>
             </div>
@@ -1117,7 +1167,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
       {phase === 'final' && (
         <div className="text-center pt-1">
           {!reduce && <Confetti />}
-          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-full px-3 py-1 mb-2">{room.round_no} round{room.round_no === 1 ? '' : 's'} played</span>
+          <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-md px-3 py-1 mb-2">{room.round_no} round{room.round_no === 1 ? '' : 's'} played</span>
           <div className="w-16 h-16 mx-auto mb-2 rounded-[22px] bg-gradient-to-br from-gold-300 to-gold text-dark flex items-center justify-center shadow-[0_12px_30px_rgba(200,150,42,0.45)]" aria-hidden="true"><Crown size={36} weight="fill" /></div>
           <p className={eyebrow}>Champion</p>
           <p className={`font-display text-4xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>{ranking[0]?.name}</p>

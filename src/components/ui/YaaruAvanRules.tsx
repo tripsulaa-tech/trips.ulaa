@@ -121,7 +121,7 @@ export default function YaaruAvanRules({ onBack }: { onBack: () => void }) {
         <p className={`${p} mb-2`}>
           The host can switch these on. A special role sits on top of a normal role, so a Tourist, Stranger or Pickpocket
           can have one. Each player gets at most one, and there is at most one special per 3 players (5 players gives 1,
-          9 players gives 3). A pair, like the Lovers, counts as one. The Joy Fool and the Revenger are never given to a Pickpocket. The Retriever is Tourist-only and needs 2+ Strangers at the deal; Pickpockets do not count. They stay secret, except the Goddess of Justice,
+          9 players gives 3). A pair, like the Lovers, counts as one. The Joy Fool, the Revenger and the Sniper are never given to a Pickpocket. The Retriever is Tourist-only and needs 2+ Strangers at the deal; Pickpockets do not count. They stay secret, except the Goddess of Justice,
           who is announced to everyone once the words are dealt, and the Retriever, who is revealed once the power is used.
         </p>
         <div className="space-y-2">
