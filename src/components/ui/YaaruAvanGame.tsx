@@ -139,6 +139,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [useSpecials, setUseSpecials] = useState(initial.specials);
   // Mr. Meme (one phone only): each description round a random player describes by gestures.
   const [useMeme, setUseMeme] = useState(initial.meme);
+  // A Stranger always speaks first in the description round.
+  const [strangerFirst, setStrangerFirst] = useState(initial.strangerFirst);
   // Which special roles are ticked in the role list (all of them to start with).
   const [specialIds, setSpecialIds] = useState<SpecialId[]>([...ENABLED_SPECIALS]);
   const [muted, setMuted] = useState<boolean>(() => {
@@ -224,8 +226,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // Persist setup as it changes. A roster handed in by the host is not
   // remembered as this device's own list of names.
   useEffect(() => {
-    saveSetup({ names: hasPreset ? initial.names : names, strangers, pickpockets, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme });
-  }, [names, strangers, pickpockets, hideCounts, level, useDares, useSpecials, useMeme, hasPreset, initial.names]);
+    saveSetup({ names: hasPreset ? initial.names : names, strangers, pickpockets, hideCounts, level, dares: useDares, specials: useSpecials, meme: useMeme, strangerFirst });
+  }, [names, strangers, pickpockets, hideCounts, level, useDares, useSpecials, useMeme, strangerFirst, hasPreset, initial.names]);
 
   useEffect(() => () => {
     timersRef.current.forEach(id => window.clearTimeout(id));
@@ -309,7 +311,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   // A new stop, as in Undercover: everyone describes their word in turn, then the group
   // talks it out and votes. The speaking order is shuffled fresh every stop.
   const startStop = (stop: number, from: number, list: Seat[] = seats) => {
-    const order = describeOrder(list, from, stop);
+    const order = describeOrder(list, from, stop, strangerFirst);
     setBounce(null);
     setTiedIdx(null);
     setTickTied([]);
@@ -319,7 +321,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setDescOrder(order);
     setDescPos(0);
     // Mr. Meme: a random speaker this stop describes with gestures instead of words.
-    setMemeIdx(useMeme && order.length > 0 ? shuffle(order)[0] : null);
+    setMemeIdx(useSpecials && useMeme && order.length > 0 ? shuffle(order)[0] : null);
     setPhase(order.length > 0 ? 'describe' : 'vote');
     play('go');
   };
@@ -869,9 +871,11 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                   { k: 'hide', on: hideCounts, set: setHideCounts, t: 'Hide the counts', d: 'Nobody knows if a Pickpocket exists. Much more tense.' },
                   { k: 'dare', on: useDares, set: setUseDares, t: 'Trip dares', d: 'The losing side draws a silly dare.' },
                   { k: 'special', on: useSpecials, set: setUseSpecials, t: 'Special roles', d: 'The Joy Fool, Boomerang, Revenger, Lovers and more. Up to one per 3 players.' },
-                  { k: 'meme', on: useMeme, set: setUseMeme, t: 'Mr. Meme', d: 'Each description round, a random player describes their word with gestures, not words. Only switch on if everyone can see each other.' },
+                  // Mr. Meme lives inside Special roles: it only shows (and only applies) while Special roles is on.
+                  ...(useSpecials ? [{ k: 'meme', on: useMeme, set: setUseMeme, t: 'Mr. Meme', d: 'Each description round, a random player describes their word with gestures, not words. Only switch on if everyone can see each other.', sub: true }] : []),
+                  { k: 'first', on: strangerFirst, set: setStrangerFirst, t: 'Stranger speaks first', d: 'A Stranger always starts the description round. The rest follow in random order.' },
                 ].map(o => (
-                  <button key={o.k} type="button" role="switch" aria-checked={o.on} onClick={() => o.set(!o.on)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left">
+                  <button key={o.k} type="button" role="switch" aria-checked={o.on} onClick={() => o.set(!o.on)} className={`w-full flex items-center gap-3 py-2.5 text-left ${'sub' in o && o.sub ? 'pl-7 pr-3 bg-white/[0.03]' : 'px-3'}`}>
                     <span className="flex-1 min-w-0">
                       <span className="block text-sm font-bold text-white leading-tight">{o.t}</span>
                       <span className="block text-[11px] text-cream/50">{o.d}</span>

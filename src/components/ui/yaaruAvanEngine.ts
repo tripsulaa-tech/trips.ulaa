@@ -172,10 +172,19 @@ export function checkWinner(seats: Seat[]): Side | null {
 /** Speaking order for the description round: the players still aboard, in a fresh random
  *  order every stop. Returns indexes into `seats`. (`_from` and `_stopNo` are kept so callers
  *  do not change.) */
-export function describeOrder(seats: Seat[], _from: number, _stopNo: number): number[] {
+export function describeOrder(seats: Seat[], _from: number, _stopNo: number, strangerFirst = false): number[] {
   const alive: number[] = [];
   seats.forEach((s, i) => { if (s.alive) alive.push(i); });
-  return shuffle(alive);
+  const order = shuffle(alive);
+  if (strangerFirst) {
+    // A random Stranger still aboard speaks first; everyone else keeps their shuffled order.
+    const strangers = order.filter(i => seats[i].role === 'stranger');
+    if (strangers.length > 0) {
+      const first = shuffle(strangers)[0];
+      return [first, ...order.filter(i => i !== first)];
+    }
+  }
+  return order;
 }
 
 // ── Scoring ──
@@ -314,6 +323,8 @@ export interface SavedSetup {
   specials: boolean;
   /** One-phone only: each description round a random player describes by gestures. */
   meme: boolean;
+  /** A Stranger always speaks first in the description round. */
+  strangerFirst: boolean;
 }
 
 const DEFAULT_SETUP: SavedSetup = {
@@ -325,6 +336,7 @@ const DEFAULT_SETUP: SavedSetup = {
   dares: false,
   specials: false,
   meme: false,
+  strangerFirst: false,
 };
 
 export function loadSetup(): SavedSetup {
@@ -345,6 +357,7 @@ export function loadSetup(): SavedSetup {
       dares: !!v.dares,
       specials: !!v.specials,
       meme: !!v.meme,
+      strangerFirst: !!v.strangerFirst,
     };
   } catch { return DEFAULT_SETUP; }
 }
