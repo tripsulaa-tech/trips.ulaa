@@ -85,7 +85,7 @@ const WHY_ULAA = [
 // field (absolutely positioned), so every control reserves the same `pl-11`
 // gutter whether or not it currently shows an error.
 const fieldClass = (hasError: boolean) => `
-  block w-full rounded-xl border bg-white pl-11 pr-4 py-3.5 font-body text-dark text-[15px]
+  block w-full rounded-md border bg-white pl-11 pr-4 py-3.5 font-body text-dark text-[15px]
   placeholder-dark-muted/75 outline-none transition-colors duration-200
   ${hasError ? 'border-danger-border focus:border-red-400' : 'border-background-warm focus:border-primary'}
 `;
@@ -271,9 +271,9 @@ export default function ContactPage() {
                   href={getWhatsAppLink(WHATSAPP_NUMBER)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex flex-col rounded-2xl border border-background-warm bg-white p-5 shadow-card hover:shadow-card-hover transition-shadow"
+                  className="group flex flex-col rounded-md border border-background-warm bg-white p-5 shadow-card hover:shadow-card-hover transition-shadow"
                 >
-                  <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#25D366] to-[#128C4A] flex items-center justify-center">
+                  <span className="w-11 h-11 rounded-md bg-gradient-to-br from-[#25D366] to-[#128C4A] flex items-center justify-center">
                     <WhatsAppIcon className="w-5 h-5 text-white" />
                   </span>
                   <p className="font-display font-bold text-dark mt-4">WhatsApp (Fastest)</p>
@@ -287,9 +287,9 @@ export default function ContactPage() {
                 {/* Email */}
                 <a
                   href={`mailto:${EMAIL}`}
-                  className="group flex flex-col rounded-2xl border border-background-warm bg-white p-5 shadow-card hover:shadow-card-hover transition-shadow"
+                  className="group flex flex-col rounded-md border border-background-warm bg-white p-5 shadow-card hover:shadow-card-hover transition-shadow"
                 >
-                  <span className="w-11 h-11 rounded-xl bg-orange-50 text-primary flex items-center justify-center">
+                  <span className="w-11 h-11 rounded-md bg-orange-50 text-primary flex items-center justify-center">
                     <Envelope size={22} />
                   </span>
                   <p className="font-display font-bold text-dark mt-4">Email Us</p>
@@ -305,9 +305,9 @@ export default function ContactPage() {
                   href={INSTAGRAM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group flex flex-col rounded-2xl border border-background-warm bg-white p-5 shadow-card hover:shadow-card-hover transition-shadow"
+                  className="group flex flex-col rounded-md border border-background-warm bg-white p-5 shadow-card hover:shadow-card-hover transition-shadow"
                 >
-                  <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#F9CE34] via-[#EE2A7B] to-[#6228D7] flex items-center justify-center">
+                  <span className="w-11 h-11 rounded-md bg-gradient-to-br from-[#F9CE34] via-[#EE2A7B] to-[#6228D7] flex items-center justify-center">
                     <Instagram size={22} className="text-white" />
                   </span>
                   <p className="font-display font-bold text-dark mt-4">Follow on Instagram</p>
@@ -319,8 +319,8 @@ export default function ContactPage() {
                 </a>
 
                 {/* Based in India — informational, so it's a div, not a link */}
-                <div className="flex flex-col rounded-2xl border border-background-warm bg-white p-5 shadow-card">
-                  <span className="w-11 h-11 rounded-xl bg-orange-50 text-primary flex items-center justify-center">
+                <div className="flex flex-col rounded-md border border-background-warm bg-white p-5 shadow-card">
+                  <span className="w-11 h-11 rounded-md bg-orange-50 text-primary flex items-center justify-center">
                     <MapPin size={22} />
                   </span>
                   <p className="font-display font-bold text-dark mt-4">Based in India</p>
@@ -333,7 +333,7 @@ export default function ContactPage() {
               </div>
 
               {/* Honest "no storefront" banner */}
-              <div className="mt-6 rounded-2xl bg-background-warm/70 p-5 sm:p-6 flex flex-col sm:flex-row items-start gap-5">
+              <div className="mt-6 rounded-md bg-background-warm/70 p-5 sm:p-6 flex flex-col sm:flex-row items-start gap-5">
                 <div className="shrink-0">
                   <svg viewBox="0 0 96 34" className="w-24 h-9 text-dark" fill="none" aria-hidden="true">
                     <path
@@ -359,7 +359,7 @@ export default function ContactPage() {
 
             {/* Message form */}
             <motion.div {...fadeUp(0.1)}>
-              <div className="relative overflow-hidden rounded-3xl bg-white border border-background-warm shadow-warm-lg p-6 sm:p-8 md:p-10">
+              <div className="relative overflow-hidden rounded-md bg-white border border-background-warm shadow-warm-lg p-6 sm:p-8 md:p-10">
                 {/* Decorative ripples, top-right */}
                 <svg
                   viewBox="0 0 120 60"
@@ -397,7 +397,7 @@ export default function ContactPage() {
                       Thanks for reaching out — we'll get back to you {RESPONSE_TIME}.
                     </p>
 
-                    <div className="mt-6 bg-background-warm/60 rounded-xl p-4 text-left max-w-sm mx-auto space-y-2">
+                    <div className="mt-6 bg-background-warm/60 rounded-md p-4 text-left max-w-sm mx-auto space-y-2">
                       <p className="text-sm font-semibold text-dark">What happens next</p>
                       <p className="text-sm text-dark-muted">1. We read every message ourselves — no bots.</p>
                       <p className="text-sm text-dark-muted">2. You'll hear back by email or WhatsApp, {RESPONSE_TIME}.</p>
@@ -519,7 +519,7 @@ export default function ContactPage() {
                       </div>
 
                       {status === 'error' && (
-                        <div className="flex items-center gap-2 text-danger-fg bg-danger-bg rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-danger-fg bg-danger-bg rounded-md p-3">
                           <AlertCircle size={16} />
                           <p className="text-sm">{errorMsg}</p>
                         </div>
@@ -531,7 +531,7 @@ export default function ContactPage() {
                         size="lg"
                         fullWidth
                         loading={status === 'loading'}
-                        className="!rounded-xl relative"
+                        className="relative"
                       >
                         <Send size={18} weight="fill" />
                         Send Message
