@@ -99,7 +99,7 @@ export interface RoundSetup {
   pair: WordPair;
 }
 
-export interface SpecialsOptions { enabled: readonly SpecialId[]; count?: number }
+export interface SpecialsOptions { enabled: readonly SpecialId[] }
 
 /** `specials` is optional: leave it out and the deal is exactly as before. */
 export function dealRound(names: string[], c: RoleCounts, pair: WordPair, specials?: SpecialsOptions): RoundSetup {
@@ -116,7 +116,7 @@ export function dealRound(names: string[], c: RoleCounts, pair: WordPair, specia
   const seatNos = seatNumbers(order.length);
   const roleByName = new Map(order.map((n, i) => [n, roles[i]] as const));
   const extra = specials
-    ? assignSpecials(order, specials.enabled, specials.count, Math.random, n => roleByName.get(n) === 'pickpocket', n => roleByName.get(n) === 'stranger')
+    ? assignSpecials(order, specials.enabled, Math.random, n => roleByName.get(n) === 'pickpocket', n => roleByName.get(n) === 'stranger')
     : null;
   const seats: Seat[] = order.map((name, i) => ({
     name,

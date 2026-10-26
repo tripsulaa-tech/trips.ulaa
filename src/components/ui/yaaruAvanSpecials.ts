@@ -1,7 +1,8 @@
 // Yaaru Avan? special roles: pure assignment logic (no React, no storage).
 // A special role sits on top of a core role (Tourist, Stranger or Pickpocket)
 // Retriever is Tourist-only; Joy Fool and Revenger skip Pickpockets.
-// One special per player, never more.
+// One special per player, never more. Every ticked role is dealt, as long as the group has room:
+// at most half the players can hold a special (6 players -> 3).
 // This file only decides WHO gets WHAT. What each special does in a round
 // (points, vote rules, final guesses) is built on top of it in later phases.
 
@@ -59,7 +60,7 @@ export const SPECIAL_BLURB: Record<SpecialId, string> = {
   goddess: 'If a vote ends in a tie, the Goddess of Justice decides which player will be eliminated. She can make this decision even if she has already been eliminated. Everyone is told who she is once the words are dealt.',
   ghost: 'Even after being eliminated, the Ghost retains the power to vote during future voting rounds.',
   lovers: 'Two players are secretly in love. If one lover is eliminated, the other is automatically eliminated too. This role is available when playing with 5 or more players.',
-  falafelVendor: 'At the start of each game, the Falafel Vendor receives a random special ability. Use it wisely and discover what surprises await! Available with 4 or more players.',
+  falafelVendor: 'The Falafel Vendor secretly carries one of the other ticked single-player roles and uses its power. That role goes to the Vendor instead of a separate player. Needs at least one other ticked single-player role. Available with 4 or more players.',
   revenger: 'When the Revenger is eliminated, she can immediately eliminate one other player of her choice. Available with 5 or more players.',
   sniper: 'Once per round, during a vote, the Sniper can take a solo shot at one player. No majority is needed. If the target is a Stranger or a Pickpocket, they are offboarded at once. If the target is a Tourist, the shot backfires and the Sniper is offboarded instead. Available with 4 or more players.',
   duelists: 'Two players are secretly paired in a duel. When one duelist is eliminated, they lose 2 points, while the surviving duelist earns 2 bonus points. Available with 5 or more players.',
@@ -69,8 +70,22 @@ const DEF_BY_ID = new Map(SPECIALS.map(d => [d.id, d]));
 
 export const specialName = (id: SpecialId): string => DEF_BY_ID.get(id)?.name ?? id;
 
-/** At most one special role per 3 players: 5 players -> 1, 9 players -> 3. A pair counts as one role. */
-export const maxSpecials = (players: number): number => Math.max(0, Math.floor(players / 3));
+/** How many players can hold a special role: at most half the group (6 players -> 3, 9 -> 4). */
+export const maxSpecialPlayers = (players: number): number => Math.max(0, Math.floor(players / 2));
+
+/** Players one ticked role needs: a pair (Duelists, Lovers) takes two, everything else one. */
+const roleCost = (id: SpecialId): number => (DEF_BY_ID.get(id)?.pair ? 2 : 1);
+
+/**
+ * How many of the group's special-role places the ticked roles need.
+ * Locked roles (group too small, Retriever without 2 Strangers) are ignored, as in the deal.
+ * The Falafel Vendor carries one other ticked single-player role, so the two share one place.
+ */
+export function specialPlacesNeeded(ids: readonly SpecialId[], players: number, strangers: number): number {
+  return [...new Set(ids)]
+    .filter(id => id !== 'falafelVendor' && !roleLocked(id, players, strangers))
+    .reduce((sum, id) => sum + roleCost(id), 0);
+}
 
 export interface SpecialAssignment {
   special: SpecialId;
@@ -111,47 +126,45 @@ function shuffled<T>(arr: readonly T[], rng: () => number): T[] {
 
 /**
  * Deals specials to a list of unique player names.
- * - `enabled`: which specials may appear (each at most once per round).
- * - `count`: how many specials to hand out; capped at maxSpecials(players).
- *   A pair (Duelists, Lovers) is one role dealt to two players. Omit for the cap.
+ * - `enabled`: the roles the host ticked. Every one of them is dealt (each once per round),
+ *   as long as the group has room: at most maxSpecialPlayers(players) players hold a special.
+ *   A pair (Duelists, Lovers) needs two players. If more are ticked than fit, a random set that fits is dealt.
  * - Specials with a minimum group size (MIN_PLAYERS) are skipped in smaller groups.
  * - One special per player, so pairs can never share a player.
- * - Joy Fool and Revenger are never dealt to a Pickpocket (see NOT_FOR_PICKPOCKET),
- *   and a Falafel Vendor who is a Pickpocket cannot draw them either.
+ * - Joy Fool, Revenger and Sniper are never dealt to a Pickpocket (see NOT_FOR_PICKPOCKET),
+ *   and a Falafel Vendor who is a Pickpocket cannot carry them either.
  * - Retriever needs 2+ Strangers at the deal and can only land on a Tourist, including via a Vendor.
- * - Falafel Vendor draws any solo ability that is enabled and not
- *   already dealt this round. If none is left, the Falafel Vendor is dropped.
+ * - Falafel Vendor carries one of the other ticked single-player roles. That role goes to the Vendor
+ *   instead of a separate player. With no such role ticked, the Vendor is dropped.
  * Returns only the players who got one.
  */
 export function assignSpecials(
   names: readonly string[],
   enabledAll: readonly SpecialId[],
-  count: number = Infinity,
   rng: () => number = Math.random,
   /** Core role of each player, so the Joy Fool and Revenger can skip Pickpockets. */
   isPickpocket: (name: string) => boolean = () => false,
   isStranger: (name: string) => boolean = () => false,
 ): Map<string, SpecialAssignment> {
   const strangerCount = names.filter(isStranger).length;
-  const enabled = enabledAll.filter(id => names.length >= (MIN_PLAYERS[id] ?? 0)
+  const enabled = [...new Set(enabledAll)].filter(id => names.length >= (MIN_PLAYERS[id] ?? 0)
     && (id !== 'retriever' || strangerCount >= 2));
   const out = new Map<string, SpecialAssignment>();
-  let slots = Math.min(Math.max(0, Math.floor(count)), maxSpecials(names.length));
-  if (slots === 0) return out;
+  const places = maxSpecialPlayers(names.length);
+  if (places === 0) return out;
 
+  // Keep ticked roles (random order) while they fit in the group.
   const chosen: SpecialDef[] = [];
-  for (const id of shuffled([...new Set(enabled)], rng)) {
+  let used = 0;
+  for (const id of shuffled(enabled.filter(x => x !== 'falafelVendor'), rng)) {
     const def = DEF_BY_ID.get(id);
     if (!def) continue;
-    const cost = 1;
-    if (cost > slots) continue;
+    const cost = roleCost(id);
+    if (used + cost > places) continue;
     chosen.push(def);
-    slots -= cost;
-    if (slots === 0) break;
+    used += cost;
   }
 
-  // Joy Fool and Revenger never land on a Pickpocket. Deal those first so they
-  // always get a pick of the non-Pickpockets; everything else takes who is left.
   const pool = shuffled(names, rng);
   const take = (ok: (n: string) => boolean): string | undefined => {
     const i = pool.findIndex(ok);
@@ -161,6 +174,20 @@ export function assignSpecials(
   const eligible = (id: SpecialId, name: string) => id === 'retriever'
     ? !isPickpocket(name) && !isStranger(name)
     : !NOT_FOR_PICKPOCKET.includes(id) || !isPickpocket(name);
+
+  // The Falafel Vendor carries one of the chosen single-player roles: that role is theirs, not a separate player's.
+  if (enabled.includes('falafelVendor')) {
+    for (const def of shuffled(chosen.filter(d => !d.pair), rng)) {
+      const who = take(n => eligible(def.id, n));
+      if (who === undefined) continue;
+      out.set(who, { special: 'falafelVendor', dipAs: def.id as SoloSpecialId });
+      chosen.splice(chosen.indexOf(def), 1);
+      break;
+    }
+  }
+
+  // Joy Fool, Revenger, Sniper and Retriever need a particular kind of player. Deal those first so they
+  // always get a pick; everything else takes who is left.
   const dealOrder = [...chosen.filter(d => restricted(d.id)), ...chosen.filter(d => !restricted(d.id))];
   for (const def of dealOrder) {
     if (def.pair) {
@@ -173,18 +200,6 @@ export function assignSpecials(
       const who = take(n => eligible(def.id, n));
       if (who !== undefined) out.set(who, { special: def.id });
     }
-  }
-
-  const dealt = new Set<SpecialId>(chosen.map(d => d.id));
-  for (const [name, a] of out) {
-    if (a.special !== 'falafelVendor') continue;
-    const abilities = SPECIALS.filter(d =>
-      !d.pair && d.id !== 'falafelVendor' && enabled.includes(d.id) && !dealt.has(d.id)
-      && eligible(d.id, name));
-    if (abilities.length === 0) { out.delete(name); continue; }
-    const pick = abilities[Math.floor(rng() * abilities.length)].id as SoloSpecialId;
-    dealt.add(pick);
-    out.set(name, { ...a, dipAs: pick });
   }
   return out;
 }

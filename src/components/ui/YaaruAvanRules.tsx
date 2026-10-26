@@ -120,8 +120,9 @@ export default function YaaruAvanRules({ onBack }: { onBack: () => void }) {
       <Section kicker="Special roles" title="Optional extras">
         <p className={`${p} mb-2`}>
           The host can switch these on. A special role sits on top of a normal role, so a Tourist, Stranger or Pickpocket
-          can have one. Each player gets at most one, and there is at most one special per 3 players (5 players gives 1,
-          9 players gives 3). A pair, like the Lovers, counts as one. The Joy Fool, the Revenger and the Sniper are never given to a Pickpocket. The Retriever is Tourist-only and needs 2+ Strangers at the deal; Pickpockets do not count. They stay secret, except the Goddess of Justice,
+          can have one. Each player gets at most one. Every role the host ticks is dealt, as long as there is room: at most half the
+          players can hold one (6 players gives 3, 9 players gives 4). A pair, like the Lovers, takes two players. If more
+          are ticked than fit, a random set that fits is dealt. The Falafel Vendor secretly carries one of the other ticked single-player roles. The Joy Fool, the Revenger and the Sniper are never given to a Pickpocket. The Retriever is Tourist-only and needs 2+ Strangers at the deal; Pickpockets do not count. They stay secret, except the Goddess of Justice,
           who is announced to everyone once the words are dealt, and the Retriever, who is revealed once the power is used.
         </p>
         <div className="space-y-2">

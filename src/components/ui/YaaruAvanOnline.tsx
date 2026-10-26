@@ -30,7 +30,7 @@ import {
   online, OnlineError, joinLink, normalizeCode, loadOnlineSession, saveOnlineSession, clearOnlineSession,
 } from './yaaruAvanRoomApi';
 import type { OnlinePhase } from './yaaruAvanRoomApi';
-import { describeSpecial, specialDisplayName, SPECIALS, maxSpecials, roleLocked } from './yaaruAvanSpecials';
+import { describeSpecial, specialDisplayName, SPECIALS, maxSpecialPlayers, roleLocked } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
 import { useOnlineRoom } from './useOnlineRoom';
 import { useYaaruAvanContentSync } from './useGameContentSync';
@@ -304,7 +304,7 @@ function SpecialPicker({ initial, players, strangers, busy, onSave, onCancel }: 
   const [draft, setDraft] = useState<SpecialId[]>(initial);
   const on = new Set(draft);
   const toggle = (id: SpecialId) => setDraft(ALL_SPECIAL_IDS.filter(x => (x === id ? !on.has(x) : on.has(x))));
-  const slots = maxSpecials(players);
+  const slots = maxSpecialPlayers(players);
   const readyCount = draft.filter(id => !roleLocked(id, players, strangers)).length;
 
   return (
@@ -314,7 +314,7 @@ function SpecialPicker({ initial, players, strangers, busy, onSave, onCancel }: 
       </button>
       <h3 className="font-display text-2xl font-extrabold text-white leading-tight">Special roles</h3>
       <p className="text-xs text-cream/60 mt-1 mb-3">
-        Tick the ones you want in play. Each round, up to one special per 3 players is dealt from your ticked list
+        Tick the ones you want in play. Every ticked role is dealt each round, as long as there is room: at most half the players can hold one
         {players >= 3 ? ` (${slots} with ${players} players)` : ''}. Duelists and Lovers use two players.
       </p>
 

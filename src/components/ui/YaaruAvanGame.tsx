@@ -26,7 +26,7 @@ import {
   computeAwards, emptyStats, loadSetup, saveSetup, uniqueNames, shuffle,
 } from './yaaruAvanEngine';
 import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './yaaruAvanEngine';
-import { ENABLED_SPECIALS, describeSpecial, activeSpecial, maxSpecials, specialBonus, specialLabel } from './yaaruAvanSpecials';
+import { ENABLED_SPECIALS, describeSpecial, activeSpecial, specialBonus, specialLabel } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
 import { useYaaruAvanContentSync } from './useGameContentSync';
 
@@ -303,7 +303,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     clearTimers();
     const pair = drawPair(level, { tripTitle: no === 1 ? tripTitle : undefined });
     const r = dealRound(list, countsFor(list.length, strangers, pickpockets), pair,
-      useSpecials && specialIds.length > 0 ? { enabled: specialIds, count: maxSpecials(list.length) } : undefined);
+      useSpecials && specialIds.length > 0 ? { enabled: specialIds } : undefined);
     setGuessQueue([]);
     setGuessAfter(null);
     setRetrieveOpen(false);
@@ -936,7 +936,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 {[
                   { k: 'hide', on: hideCounts, set: setHideCounts, t: 'Hide the counts', d: 'Nobody knows if a Pickpocket exists. Much more tense.' },
                   { k: 'dare', on: useDares, set: setUseDares, t: 'Trip dares', d: 'The losing side draws a silly dare.' },
-                  { k: 'special', on: useSpecials, set: setUseSpecials, t: 'Special roles', d: 'The Joy Fool, Boomerang, Revenger, Lovers and more. Up to one per 3 players.' },
+                  { k: 'special', on: useSpecials, set: setUseSpecials, t: 'Special roles', d: 'The Joy Fool, Boomerang, Revenger, Lovers and more. Every role you tick is dealt, if there is room (up to half the players).' },
                   { k: 'first', on: pickpocketCanStart, set: setPickpocketCanStart, t: 'Pickpocket can speak first', d: 'On: a Pickpocket may randomly start the description round. Off: a Pickpocket never starts first.' },
                 ].map(o => (
                   <button key={o.k} type="button" role="switch" aria-checked={o.on} onClick={() => o.set(!o.on)} className="w-full flex items-center gap-3 px-3 py-2.5 text-left">

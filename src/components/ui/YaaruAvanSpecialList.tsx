@@ -2,7 +2,7 @@ import { Check, Users } from '@phosphor-icons/react';
 import { glass as baseGlass } from './gameUi';
 
 const glass = baseGlass.replace('rounded-2xl', 'rounded-lg');
-import { MIN_PLAYERS, SPECIALS, SPECIAL_BLURB, maxSpecials, roleLocked } from './yaaruAvanSpecials';
+import { MIN_PLAYERS, SPECIALS, SPECIAL_BLURB, maxSpecialPlayers, specialPlacesNeeded, roleLocked } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
 
 const SPECIAL_TONE: Record<SpecialId, string> = {
@@ -31,14 +31,19 @@ export default function SpecialList({ on, onToggle, onSetAll, players, strangers
   const available = roles.filter(d => !short(d.id));
   const ticked = available.filter(d => on.has(d.id));
   const active = ticked.length;
+  const places = players !== undefined ? maxSpecialPlayers(players) : undefined;
+  const needed = players !== undefined ? specialPlacesNeeded(ticked.map(d => d.id), players, strangers) : 0;
+  const tooMany = places !== undefined && needed > places;
   return (
     <>
       {players !== undefined && (
-        <p className="text-[12px] leading-snug text-cream/70 mb-2" aria-live="polite">
+        <p className={`text-[12px] leading-snug mb-2 ${tooMany ? 'text-amber-200' : 'text-cream/70'}`} aria-live="polite">
           <span className="font-bold text-white">{players} players:</span>{' '}
           {ticked.length === 0
             ? 'no special roles ticked.'
-            : `${active} ticked ${active === 1 ? 'role is' : 'roles are'} ready. Up to ${maxSpecials(players)} dealt each round.`}
+            : tooMany
+              ? `${active} ticked ${active === 1 ? 'role needs' : 'roles need'} ${needed} players, but only ${places} of ${players} can hold one. A random set that fits is dealt each round. Untick some to choose exactly which.`
+              : `${active} ticked ${active === 1 ? 'role is' : 'roles are'} ready, and every one is dealt each round. Up to ${places} of ${players} players can hold one.`}
         </p>
       )}
       {onSetAll && (
