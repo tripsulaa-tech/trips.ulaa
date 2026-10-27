@@ -23,7 +23,7 @@ import { LEVELS, CATEGORY_LABEL } from './yaaruAvanWords';
 import type { Category, Level } from './yaaruAvanWords';
 import {
   MIN_PLAYERS, MAX_PLAYERS, POINTS, maxPickpockets, rolesValid, recommendedRoles, clampRoles, computeAwards,
-  drawDare,
+  drawDare, outcomeTitle,
 } from './yaaruAvanEngine';
 import type { PlayerStats, Role } from './yaaruAvanEngine';
 import {
@@ -1128,7 +1128,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           {!reduce && <Confetti />}
           <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-md px-3 py-1 mb-2">Round {room.round_no} over</span>
           <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
-            {summary.outcome === 'tourists' ? 'Tourists win!' : summary.outcome === 'strangers' ? 'The Strangers got away!' : 'The Pickpocket stole it!'}
+            {outcomeTitle(summary.outcome, summary.players.filter(s => byId.get(s.id)?.alive).map(s => s.role))}
           </h2>
           <p className="text-sm text-cream/60 mt-1 mb-3">
             {summary.outcome === 'tourists' ? 'Every Stranger and Pickpocket was caught.' : summary.outcome === 'strangers' ? 'Only one Tourist was left.' : 'One lucky guess flipped the whole round.'}
@@ -1154,7 +1154,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 </span>
                 <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{byId.get(s.id)?.name ?? '...'}{s.id === me.id && <span className="ml-1.5 text-[10px] font-semibold text-cream/55">you</span>}</span>
                 <span className="text-[11px] text-cream/50">{ROLE_LABEL[s.role]}{s.special ? ` · ${specialDisplayName(s.special, !!s.dip)}` : ''}</span>
-                <span className={`w-9 text-right font-display font-extrabold tabular-nums ${s.gained > 0 ? 'text-emerald-300' : 'text-cream/50'}`}>+{s.gained}</span>
+                <span className={`w-9 text-right font-display font-extrabold tabular-nums ${s.gained > 0 ? 'text-emerald-300' : 'text-cream/50'}`}>{s.gained >= 0 ? '+' : ''}{s.gained}</span>
               </li>
             ))}
           </ul>

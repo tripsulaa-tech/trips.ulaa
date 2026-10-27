@@ -90,3 +90,7 @@ Both modes deal every special role the host ticks, each to a different player, a
 - One phone: `assignSpecials` and `maxSpecialPlayers` in `yaaruAvanSpecials.ts` (the old per-3-players cap and `count` option are gone).
 - Online: run `supabase/migration/yaaru_avan_online_deal_all_ticked_specials.sql` in the Supabase SQL editor after `add_yaaru_avan_sniper.sql`, then deploy. It replaces only `_ya_deal_specials`. Finish active rounds first. Safe to re-run.
 - To change the limit, change `maxSpecialPlayers` in the TypeScript and `places := p_n / 2` in the SQL together.
+
+## October 2026 game review fixes
+
+After all installed Yaaru Avan migrations, apply `fix_yaaru_avan_scoring_and_revenge.sql` and deploy the matching app. This limits Pickpocket steal points to the actual guesser and resolves pending revenge before the win check. Finish active rounds first. See `YAARU_AVAN_TEST_REPORT.md` for all fixes, reproducible tests and validation limits.

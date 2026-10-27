@@ -22,7 +22,7 @@ import { LEVELS, CATEGORY_LABEL } from './yaaruAvanWords';
 import type { Level } from './yaaruAvanWords';
 import {
   MIN_PLAYERS, MAX_PLAYERS, POINTS, maxPickpockets, countsFor, rolesValid, recommendedRoles, clampRoles, describeOrder,
-  dealRound, drawPair, drawDare, checkWinner, roundPoints, eligibleRetriever, retrieveTourist,
+  dealRound, drawPair, drawDare, afterElimination, roundPoints, outcomeTitle, eligibleRetriever, retrieveTourist,
   computeAwards, emptyStats, loadSetup, saveSetup, uniqueNames, shuffle,
 } from './yaaruAvanEngine';
 import type { Seat, Role, Outcome, PlayerStats, RoundSetup } from './yaaruAvanEngine';
@@ -502,8 +502,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     later(REVEAL_MS, () => afterReveal(updated, selected));
   };
 
-  const finishRound = (list: Seat[], result: Outcome) => {
-    const pts = roundPoints(list, result);
+  const finishRound = (list: Seat[], result: Outcome, guessingPlayer?: string) => {
+    const pts = roundPoints(list, result, guessingPlayer);
     const bonus = specialBonus(list);
     Object.keys(bonus).forEach(n => { pts[n] = (pts[n] ?? 0) + bonus[n]; });
     setGained(pts);
@@ -514,7 +514,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
         const cur = { ...(next[s.name] ?? emptyStats()) };
         cur.points += pts[s.name] ?? 0;
         if (result === 'strangers' && s.role === 'stranger' && s.alive) cur.survivedAsStranger += 1;
-        if (result === 'pickpocket-steal' && s.role === 'pickpocket' && s.alive) cur.pickpocketWins += 1;
+        if (result === 'pickpocket-steal' && s.name === guessingPlayer) cur.pickpocketWins += 1;
         next[s.name] = cur;
       });
       return next;
@@ -546,7 +546,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
 
   // Everything that can follow someone leaving: a win, a Revenge, or the next stop.
   const afterGuess = (list: Seat[], outIdx: number, retrievalResolved = false) => {
-    if (!retrievalResolved && eligibleRetriever(list, outIdx, voteExitRef.current) >= 0) {
+    const action = afterElimination(list, outIdx, voteExitRef.current, retrievalResolved);
+    if (action === 'retrieve') {
       setLastOut(outIdx);
       setRetrievePos(0);
       setRetrieveOpen(false);
@@ -555,11 +556,13 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
       setPhase('retrieve');
       return;
     }
-    const w = checkWinner(list);
-    if (w) { finishRound(list, w === 'tourists' ? 'tourists' : 'strangers'); return; }
-    const out = list[outIdx];
-    if (!out.alive && activeSpecial(out) === 'revenger' && !out.revengeDone && list.some(s => s.alive)) {
+    if (action === 'revenger') {
+      setLastOut(outIdx);
       setPhase('revenger');
+      return;
+    }
+    if (action === 'tourists' || action === 'sneaky') {
+      finishRound(list, action === 'tourists' ? 'tourists' : 'strangers');
       return;
     }
     startStop(stopNo + 1, outIdx + 1, list);
@@ -593,7 +596,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
       // She stays "aboard" for scoring purposes: she stole the round.
       const list = seats.map((s, i) => (i === lastOut ? { ...s, alive: true } : s));
       setSeats(list);
-      finishRound(list, 'pickpocket-steal');
+      finishRound(list, 'pickpocket-steal', seats[lastOut].name);
       return;
     }
     play('bad');
@@ -1292,7 +1295,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               <h2 className="font-display text-3xl font-extrabold text-white leading-tight">{out.name} was the Pickpocket</h2>
               {activeSpecial(out) === 'lovers' && <p className="text-xs font-bold text-gold-300 mt-1">They left with their Lover, and still get a last guess.</p>}
               <p className="text-sm text-cream/65 mt-2 mb-4 px-4">{out.name}, type your guess for the Tourists' word. One box per word.</p>
-              <GuessBoxes key={`${out.name}-${lastOut}`} answer={seats.find(x => x.word)?.word ?? ''} onSubmit={judgeGuess} />
+              <GuessBoxes key={`${out.name}-${lastOut}`} answer={round?.touristWord ?? ''} onSubmit={judgeGuess} />
               <p className="text-xs text-cream/55 mb-3 px-4">Prefer to say it out loud? Let the group decide:</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={() => judgeGuess(false)} className={`${ghostBtn} !py-4`}><XCircle size={20} weight="fill" className="text-rose-300" /> Wrong</button>
@@ -1346,7 +1349,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
               {!reduce && outcome === 'tourists' && <Confetti />}
               <span className="inline-block text-[10px] font-bold uppercase tracking-[0.2em] text-gold-300 bg-gold/15 border border-gold/30 rounded-md px-3 py-1 mb-2">Round {roundNo} over</span>
               <h2 className={`font-display text-3xl font-extrabold leading-tight ${GOLD_GRAD_TEXT}`}>
-                {outcome === 'tourists' ? 'Tourists win!' : outcome === 'strangers' ? 'The Strangers got away!' : 'The Pickpocket stole it!'}
+                {outcomeTitle(outcome, seats.filter(s => s.alive).map(s => s.role))}
               </h2>
               <p className="text-sm text-cream/60 mt-1 mb-3">
                 {outcome === 'tourists' ? 'Every Stranger and Pickpocket was caught.' : outcome === 'strangers' ? 'Only one Tourist was left.' : 'One lucky guess flipped the whole round.'}
@@ -1372,7 +1375,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                     </span>
                     <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{s.name}</span>
                     <span className="text-[11px] text-cream/50">{ROLE_LABEL[s.role]}{s.special && describeSpecial(s) ? ` · ${specialLabel(s)}` : ''}</span>
-                    <span className={`w-9 text-right font-display font-extrabold tabular-nums ${(gained[s.name] ?? 0) > 0 ? 'text-emerald-300' : 'text-cream/50'}`}>+{gained[s.name] ?? 0}</span>
+                    <span className={`w-9 text-right font-display font-extrabold tabular-nums ${(gained[s.name] ?? 0) > 0 ? 'text-emerald-300' : 'text-cream/50'}`}>{(gained[s.name] ?? 0) >= 0 ? '+' : ''}{gained[s.name] ?? 0}</span>
                   </li>
                 ))}
               </ul>

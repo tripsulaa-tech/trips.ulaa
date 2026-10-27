@@ -37,6 +37,7 @@ export function countsFor(players: number, strangers: number, pickpockets: numbe
 }
 
 export function rolesValid(players: number, strangers: number, pickpockets: number): boolean {
+  if (![players, strangers, pickpockets].every(Number.isInteger)) return false;
   if (players < MIN_PLAYERS || players > MAX_PLAYERS) return false;
   if (strangers < 0 || pickpockets < 0 || pickpockets > maxPickpockets(players)) return false;
   if (strangers + pickpockets < 1) return false; // at least one Stranger or one Pickpocket
@@ -56,8 +57,8 @@ export function recommendedRoles(players: number): { strangers: number; pickpock
 
 /** Clamps role counts into a valid split after the player count changes. */
 export function clampRoles(players: number, strangers: number, pickpockets: number): { strangers: number; pickpockets: number } {
-  let l = Math.min(pickpockets, maxPickpockets(players));
-  let s = Math.max(0, strangers);
+  let l = Number.isFinite(pickpockets) ? Math.max(0, Math.min(Math.floor(pickpockets), maxPickpockets(players))) : 0;
+  let s = Number.isFinite(strangers) ? Math.max(0, Math.min(Math.floor(strangers), MAX_PLAYERS)) : 1;
   if (s + l < 1) s = 1;
   while (!rolesValid(players, s, l) && l > 0) { l -= 1; if (s + l < 1) s = 1; }
   while (!rolesValid(players, s, l) && s > 1) s -= 1;
@@ -189,11 +190,28 @@ export function describeOrder(seats: Seat[], _from: number, _stopNo: number, pic
   return order;
 }
 
+/** Resolve powers before ending the round: the last Stranger may still take revenge. */
+export function afterElimination(seats: Seat[], victim: number, votedOut = true, retrievalResolved = false): 'retrieve' | 'revenger' | Side | 'continue' {
+  if (!retrievalResolved && eligibleRetriever(seats, victim, votedOut) >= 0) return 'retrieve';
+  const out = seats[victim];
+  if (out && !out.alive && activeSpecial(out) === 'revenger' && !out.revengeDone && seats.some(s => s.alive)) return 'revenger';
+  return checkWinner(seats) ?? 'continue';
+}
+
 // ── Scoring ──
 
 export type Outcome = 'tourists' | 'strangers' | 'pickpocket-steal';
 
-export function roundPoints(seats: Seat[], outcome: Outcome): Record<string, number> {
+/** Survival wins can belong to Pickpockets even when no Stranger survives. */
+export function outcomeTitle(outcome: Outcome, survivors: readonly Role[]): string {
+  if (outcome === 'tourists') return 'Tourists win!';
+  if (outcome === 'pickpocket-steal') return 'The Pickpocket stole it!';
+  if (survivors.includes('stranger')) return 'The Strangers got away!';
+  return survivors.filter(role => role === 'pickpocket').length > 1
+    ? 'The Pickpockets got away!' : 'The Pickpocket got away!';
+}
+
+export function roundPoints(seats: Seat[], outcome: Outcome, guessingPlayer?: string): Record<string, number> {
   const pts: Record<string, number> = {};
   seats.forEach(s => { pts[s.name] = 0; });
   if (outcome === 'tourists') {
@@ -202,7 +220,7 @@ export function roundPoints(seats: Seat[], outcome: Outcome): Record<string, num
     seats.filter(s => s.alive && s.role === 'stranger').forEach(s => { pts[s.name] = POINTS.strangerSurvive; });
     seats.filter(s => s.alive && s.role === 'pickpocket').forEach(s => { pts[s.name] = POINTS.pickpocketSurvive; });
   } else {
-    seats.filter(s => s.role === 'pickpocket' && s.alive).forEach(s => { pts[s.name] = POINTS.pickpocketSteal; });
+    seats.filter(s => s.role === 'pickpocket' && s.name === guessingPlayer).forEach(s => { pts[s.name] = POINTS.pickpocketSteal; });
   }
   return pts;
 }
@@ -352,7 +370,7 @@ export function loadSetup(): SavedSetup {
     while (names.length < MIN_PLAYERS) names.push('');
     const level: Level = v.level === 'easy' || v.level === 'hard' ? v.level : 'medium';
     const filled = names.filter(n => n.trim()).length || names.length;
-    const r = clampRoles(Math.max(MIN_PLAYERS, filled), Number(v.strangers) || 1, Number(v.pickpockets) || 0);
+    const r = clampRoles(Math.max(MIN_PLAYERS, filled), Number(v.strangers ?? 1), Number(v.pickpockets ?? 0));
     return {
       names, level, strangers: r.strangers, pickpockets: r.pickpockets,
       hideCounts: !!v.hideCounts,
