@@ -571,21 +571,26 @@ export default function TripCountdownCard({
   fine.push(`${remaining.minutes} min`);
   fine.push(`${pad(remaining.seconds)} sec`);
 
-  const showSeatMap = totalSeats > 0 && totalSeats <= MAX_SEAT_ICONS;
+  // Seat count, "travellers already in" and the seat icons only appear once
+  // the trip is nearly gone (3 or fewer left) or sold out. Above that the
+  // panel stays quiet; an Early Bird card, if any, shows regardless.
+  const lowSeats = isAlmostFull && remainingSeats <= 3;
+  const showSeatInfo = isFull || lowSeats;
+  const showSeatMap = showSeatInfo && totalSeats > 0 && totalSeats <= MAX_SEAT_ICONS;
   const takenSeats = Math.max(0, totalSeats - remainingSeats);
   // Scarcity first, social proof second: "Only 1 seat left" is the line that
   // makes people move, and "14 are already in" is why it feels worth moving for.
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   const seatHeadline = isFull
     ? 'Sold out'
-    : isAlmostFull
+    : lowSeats
       ? `Only ${plural(remainingSeats, 'seat')} left`
       : `${plural(remainingSeats, 'seat')} still open`;
   let seatSub: string | null = null;
   if (totalSeats > 0 && takenSeats > 0) {
     if (isFull) seatSub = `All ${totalSeats} seats are taken`;
     else if (remainingSeats === 1) seatSub = `${takenSeats} travellers are already in. Be the ${ordinal(totalSeats)}.`;
-    else if (isAlmostFull) seatSub = `${takenSeats} travellers are already in. Join them.`;
+    else if (lowSeats) seatSub = `${takenSeats} travellers are already in. Join them.`;
     else seatSub = `${takenSeats} traveller${takenSeats === 1 ? ' is' : 's are'} already in`;
   }
 
@@ -606,7 +611,7 @@ export default function TripCountdownCard({
                       weight="fill"
                       className={`h-auto w-full max-w-[26px] lg:h-[22px] lg:w-[22px] ${taken ? 'text-dark/25' : 'text-primary'}`}
                     />
-                    {!taken && isAlmostFull && !isFull && (
+                    {!taken && lowSeats && (
                       <span className="absolute inset-0 rounded-full bg-red-400/30 animate-ping" />
                     )}
                   </li>
@@ -618,6 +623,72 @@ export default function TripCountdownCard({
   const departed = game.phase === 'departed';
   const flyingDown = departed && !isDesktop && !reduceMotion && !noStickyBar;
   const showPips = game.phase === 'playing' || game.phase === 'teasing';
+
+  // No seat info and no Early Bird: nothing to say, so no white stub at all.
+  // The dark countdown card stands alone (phones keep the sticky booking bar).
+  const showStub = showSeatInfo || !!earlyBird;
+
+  // Phones already have the sticky booking bar, so here the button only
+  // appears as the payoff once the plane has taken off. Desktop has no
+  // sticky bar, so it is always there.
+  const renderCta = () => (
+    <motion.div
+      key={String(departed)}
+      initial={departed && !reduceMotion ? { opacity: 0, y: 10 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className={`relative ${departed && noStickyBar ? '' : 'hidden lg:block'}`}
+    >
+      <button
+        type="button"
+        onClick={onCtaClick}
+        className="group/btn relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-primary px-6 py-3.5 font-button font-semibold text-white shadow-warm transition-colors hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      >
+        {/* The payoff, all inside the button: the plane that just left the
+            route sweeps across it and lands on the arrow, then the button
+            keeps a slow shine going. Nothing spills outside the button. */}
+        {departed && !reduceMotion && (
+          <>
+            {isDesktop && (
+              <motion.span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-1/2 -translate-y-1/2"
+                initial={{ left: '-14%', opacity: 0 }}
+                animate={{ left: '102%', opacity: [0, 1, 1, 1] }}
+                transition={{ duration: 0.9, delay: 0.7, ease: 'easeIn' }}
+              >
+                <PremiumVehicle mode={vehicle} size={26} />
+              </motion.span>
+            )}
+            <motion.span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-white"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: [0, 0.35, 0] }}
+              transition={{ duration: 0.5, delay: 1.5 }}
+            />
+            <motion.span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 w-1/4 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+              initial={{ left: '-30%' }}
+              animate={{ left: '130%' }}
+              transition={{ duration: 0.9, delay: 2.4, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2.4 }}
+            />
+          </>
+        )}
+        <span className="relative">{ctaLabel}</span>
+        {!isFull && (
+          <motion.span
+            className="relative flex"
+            animate={departed && !reduceMotion ? { x: [0, 5, 0] } : { x: 0 }}
+            transition={{ duration: 0.8, delay: 2.4, repeat: Infinity, repeatDelay: 2.5 }}
+          >
+            <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
+          </motion.span>
+        )}
+      </button>
+    </motion.div>
+  );
 
   return (
     <>
@@ -858,157 +929,101 @@ export default function TripCountdownCard({
       </div>
 
       {/* ───────── Stub: seats and the one button ───────── */}
-      <div className="relative bg-cream px-6 py-6 sm:px-9 lg:w-[320px] lg:shrink-0 lg:px-7 border-t-2 border-dashed border-primary/25 lg:border-t-0 lg:border-l-2 flex flex-col justify-center gap-5">
-        {/* Ticket notches */}
-        <span aria-hidden="true" className="absolute -top-3 -left-3 h-6 w-6 rounded-full bg-background" />
-        <span
-          aria-hidden="true"
-          className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-background lg:top-auto lg:right-auto lg:-bottom-3 lg:-left-3"
-        />
+      {showStub && (
+        <div className="relative bg-cream px-6 py-6 sm:px-9 lg:w-[320px] lg:shrink-0 lg:px-7 border-t-2 border-dashed border-primary/25 lg:border-t-0 lg:border-l-2 flex flex-col justify-center gap-5">
+          {/* Ticket notches */}
+          <span aria-hidden="true" className="absolute -top-3 -left-3 h-6 w-6 rounded-full bg-background" />
+          <span
+            aria-hidden="true"
+            className="absolute -top-3 -right-3 h-6 w-6 rounded-full bg-background lg:top-auto lg:right-auto lg:-bottom-3 lg:-left-3"
+          />
 
-        <div>
-          {isAlmostFull && !isFull ? (
-            <motion.p
-              className="inline-block font-bold text-xl text-danger-fg bg-clip-text"
-              style={
-                reduceMotion
-                  ? undefined
-                  : {
-                      backgroundImage: 'linear-gradient(90deg,#C62828,#F0792B,#C62828)',
-                      backgroundSize: '200% 100%',
-                      WebkitTextFillColor: 'transparent',
-                    }
-              }
-              animate={reduceMotion ? undefined : { backgroundPosition: ['0% 50%', '200% 50%'] }}
-              transition={{ duration: 2.6, ease: 'linear', repeat: Infinity }}
-            >
-              {seatHeadline}
-            </motion.p>
-          ) : (
-            <p className="font-semibold text-lg text-dark">{seatHeadline}</p>
-          )}
-          {seatSub && <p className="mt-0.5 text-sm text-dark-muted">{seatSub}</p>}
-          {earlyBird && !isFull && (
-            <div className="offer-gradient-shift mt-2.5 rounded-lg px-3 py-2.5 text-white shadow-warm ring-1 ring-inset ring-white/15">
-              <div className="flex items-center justify-between gap-2">
-                <p className="flex items-center gap-1.5 text-2xs font-button font-bold uppercase tracking-widest">
-                  <motion.span
-                    aria-hidden="true"
-                    className="inline-flex origin-bottom text-yellow-300"
-                    animate={reduceMotion ? undefined : { scale: [1, 1.18, 0.95, 1.12, 1], rotate: [0, -6, 5, -4, 0] }}
-                    transition={{ duration: 1.4, ease: 'easeInOut', repeat: Infinity }}
-                  >
-                    <Fire size={13} weight="fill" />
-                  </motion.span>
-                  Early bird
-                </p>
-                <span className="text-2xs font-semibold text-white/90">First {earlyBird.totalSeats} to pay</span>
-              </div>
-
-              <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
-                <span className="font-display text-2xl font-bold leading-none">{earlyBird.price}</span>
-                {earlyBird.regularPrice && (
-                  <span className="text-xs text-white/80 line-through">{earlyBird.regularPrice}</span>
-                )}
-                {earlyBird.saving && (
-                  <span className="rounded-full bg-white px-2 py-0.5 text-2xs font-button font-bold text-danger-fg">
-                    Save {earlyBird.saving}
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <div className="flex gap-0.5" aria-hidden="true">
-                  {Array.from({ length: Math.min(earlyBird.totalSeats, 12) }, (_, i) => {
-                    const taken = i < Math.min(earlyBird.totalSeats - earlyBird.seatsLeft, 12);
-                    return (
-                      <span
-                        key={i}
-                        className={`flex h-5 w-5 items-center justify-center rounded ${taken ? 'bg-white/25 text-white/60' : 'bg-white text-danger-fg'}`}
-                      >
-                        <User size={11} weight="fill" />
-                      </span>
-                    );
-                  })}
-                </div>
-                <span className="text-2xs font-semibold">
-                  {earlyBird.seatsLeft === 1 ? 'Last seat!' : `${earlyBird.seatsLeft} of ${earlyBird.totalSeats} left`}
-                </span>
-              </div>
-
-              {earlyBird.advance && (
-                <p className="mt-1.5 text-2xs leading-snug text-white/90">
-                  Pay {earlyBird.advance} to lock it{earlyBird.balance ? ` · ${earlyBird.balance} later` : ''}
-                </p>
-              )}
-            </div>
-          )}
-
-          {!earlyBird && seatMap}
-        </div>
-
-        {/* Phones already have the sticky booking bar, so here the button
-            only appears as the payoff once the plane has taken off. Desktop
-            has no sticky bar, so it is always there. */}
-        <motion.div
-          key={String(departed)}
-          initial={departed && !reduceMotion ? { opacity: 0, y: 10 } : false}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className={`relative ${departed && noStickyBar ? '' : 'hidden lg:block'}`}
-        >
-          <button
-            type="button"
-            onClick={onCtaClick}
-            className="group/btn relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-md bg-primary px-6 py-3.5 font-button font-semibold text-white shadow-warm transition-colors hover:bg-primary-dark focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-          >
-            {/* The payoff, all inside the button: the plane that just left the
-                route sweeps across it and lands on the arrow, then the button
-                keeps a slow shine going. Nothing spills outside the button. */}
-            {departed && !reduceMotion && (
-              <>
-                {isDesktop && (
-                  <motion.span
-                    aria-hidden="true"
-                    className="pointer-events-none absolute top-1/2 -translate-y-1/2"
-                    initial={{ left: '-14%', opacity: 0 }}
-                    animate={{ left: '102%', opacity: [0, 1, 1, 1] }}
-                    transition={{ duration: 0.9, delay: 0.7, ease: 'easeIn' }}
-                  >
-                    <PremiumVehicle mode={vehicle} size={26} />
-                  </motion.span>
-                )}
-                <motion.span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 bg-white"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 0.35, 0] }}
-                  transition={{ duration: 0.5, delay: 1.5 }}
-                />
-                <motion.span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-y-0 w-1/4 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                  initial={{ left: '-30%' }}
-                  animate={{ left: '130%' }}
-                  transition={{ duration: 0.9, delay: 2.4, ease: 'easeInOut', repeat: Infinity, repeatDelay: 2.4 }}
-                />
-              </>
-            )}
-            <span className="relative">{ctaLabel}</span>
-            {!isFull && (
-              <motion.span
-                className="relative flex"
-                animate={departed && !reduceMotion ? { x: [0, 5, 0] } : { x: 0 }}
-                transition={{ duration: 0.8, delay: 2.4, repeat: Infinity, repeatDelay: 2.5 }}
+          <div>
+            {lowSeats ? (
+              <motion.p
+                className="inline-block font-bold text-xl text-danger-fg bg-clip-text"
+                style={
+                  reduceMotion
+                    ? undefined
+                    : {
+                        backgroundImage: 'linear-gradient(90deg,#C62828,#F0792B,#C62828)',
+                        backgroundSize: '200% 100%',
+                        WebkitTextFillColor: 'transparent',
+                      }
+                }
+                animate={reduceMotion ? undefined : { backgroundPosition: ['0% 50%', '200% 50%'] }}
+                transition={{ duration: 2.6, ease: 'linear', repeat: Infinity }}
               >
-                <ArrowRight size={16} className="transition-transform group-hover/btn:translate-x-1" />
-              </motion.span>
-            )}
-          </button>
-        </motion.div>
+                {seatHeadline}
+              </motion.p>
+            ) : isFull ? (
+              <p className="font-semibold text-lg text-dark">{seatHeadline}</p>
+            ) : null}
+            {showSeatInfo && seatSub && <p className="mt-0.5 text-sm text-dark-muted">{seatSub}</p>}
+            {earlyBird && !isFull && (
+              <div className="offer-gradient-shift mt-2.5 rounded-lg px-3 py-2.5 text-white shadow-warm ring-1 ring-inset ring-white/15">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5 text-2xs font-button font-bold uppercase tracking-widest">
+                    <motion.span
+                      aria-hidden="true"
+                      className="inline-flex origin-bottom text-yellow-300"
+                      animate={reduceMotion ? undefined : { scale: [1, 1.18, 0.95, 1.12, 1], rotate: [0, -6, 5, -4, 0] }}
+                      transition={{ duration: 1.4, ease: 'easeInOut', repeat: Infinity }}
+                    >
+                      <Fire size={13} weight="fill" />
+                    </motion.span>
+                    Early bird
+                  </p>
+                  <span className="text-2xs font-semibold text-white/90">First {earlyBird.totalSeats} to pay</span>
+                </div>
 
-        {earlyBird && seatMap && <div className="-mt-2">{seatMap}</div>}
-      </div>
+                <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
+                  <span className="font-display text-2xl font-bold leading-none">{earlyBird.price}</span>
+                  {earlyBird.regularPrice && (
+                    <span className="text-xs text-white/80 line-through">{earlyBird.regularPrice}</span>
+                  )}
+                  {earlyBird.saving && (
+                    <span className="rounded-full bg-white px-2 py-0.5 text-2xs font-button font-bold text-danger-fg">
+                      Save {earlyBird.saving}
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <div className="flex gap-0.5" aria-hidden="true">
+                    {Array.from({ length: Math.min(earlyBird.totalSeats, 12) }, (_, i) => {
+                      const taken = i < Math.min(earlyBird.totalSeats - earlyBird.seatsLeft, 12);
+                      return (
+                        <span
+                          key={i}
+                          className={`flex h-5 w-5 items-center justify-center rounded ${taken ? 'bg-white/25 text-white/60' : 'bg-white text-danger-fg'}`}
+                        >
+                          <User size={11} weight="fill" />
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <span className="text-2xs font-semibold">
+                    {earlyBird.seatsLeft === 1 ? 'Last seat!' : `${earlyBird.seatsLeft} of ${earlyBird.totalSeats} left`}
+                  </span>
+                </div>
+
+                {earlyBird.advance && (
+                  <p className="mt-1.5 text-2xs leading-snug text-white/90">
+                    Pay {earlyBird.advance} to lock it{earlyBird.balance ? ` · ${earlyBird.balance} later` : ''}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {!earlyBird && seatMap}
+          </div>
+
+          {renderCta()}
+
+          {earlyBird && seatMap && <div className="-mt-2">{seatMap}</div>}
+        </div>
+      )}
 
     </section>
 
