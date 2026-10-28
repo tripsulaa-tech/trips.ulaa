@@ -34,9 +34,13 @@ export default function AdminMfaStep({ mfa }: Props) {
       for (const f of list?.all ?? []) {
         if (f.status === 'unverified') await supabase.auth.mfa.unenroll({ factorId: f.id });
       }
+      // Include the email so several admin accounts can be told apart in the
+      // authenticator app.
+      const { data: userData } = await supabase.auth.getUser();
+      const label = userData?.user?.email ? `Ulaa Admin (${userData.user.email})` : 'Ulaa Admin';
       const { data, error: enrolError } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
-        friendlyName: 'Ulaa Admin',
+        friendlyName: label,
         issuer: 'Ulaa Admin',
       });
       if (enrolError || !data) {
@@ -58,8 +62,16 @@ export default function AdminMfaStep({ mfa }: Props) {
       const { error: verifyError } = await supabase.auth.mfa.challengeAndVerify({ factorId, code: code.trim() });
       if (verifyError) throw verifyError;
       await completeMfa();
-    } catch {
-      setError('That code is not correct, or it has expired. Check your authenticator app and try again.');
+    } catch (err) {
+      console.error('MFA verify failed:', err);
+      const e = err as { code?: string; status?: number; message?: string };
+      if (e.code === 'over_request_rate_limit' || e.status === 429) {
+        setError('Too many attempts. Wait a minute and try again.');
+      } else if (e.code === 'mfa_verification_failed') {
+        setError('That code is not correct, or it has expired. Check your authenticator app and try again.');
+      } else {
+        setError(`Verification failed: ${e.message ?? 'unknown error'}`);
+      }
       setCode('');
     } finally {
       setLoading(false);
