@@ -3,6 +3,7 @@ import { supabase } from '../services/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 import { AuthContext } from './useAuth';
 import type { MfaState } from './useAuth';
+import { dropLeftoverPushSubscription, removePushSubscriptionOnSignOut } from '../services/push';
 
 // `user` means "a signed-in ADMIN who has completed two-factor (AAL2)", not
 // just "someone with a Supabase session". Getting there takes three server
@@ -41,6 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (!session) {
       allowlistedId.current = null;
+      // Nobody is signed in: make sure this browser isn't still subscribed to
+      // admin push notifications from an earlier session.
+      void dropLeftoverPushSubscription();
       finish(null, null);
       return;
     }
@@ -114,6 +118,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Stop admin notifications on this device while we can still authenticate.
+    await removePushSubscriptionOnSignOut();
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };

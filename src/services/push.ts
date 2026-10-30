@@ -114,3 +114,42 @@ export async function unsubscribeFromPush(): Promise<void> {
   await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
 }
 
+// Called on sign-out, BEFORE the session is dropped (the row delete is
+// protected by RLS, so it only works while still signed in). Without this a
+// logged-out device kept its push subscription and kept receiving admin
+// notifications (new enquiries etc.) until the browser data was cleared.
+// Best effort: it must never block or fail the sign-out itself.
+export async function removePushSubscriptionOnSignOut(): Promise<void> {
+  try {
+    if (!isPushSupported()) return;
+    const reg = await navigator.serviceWorker.getRegistration();
+    const subscription = await reg?.pushManager.getSubscription();
+    if (!subscription) return;
+
+    const endpoint = subscription.endpoint;
+    // Delete the server row first so no more pushes are sent to this device,
+    // then drop the browser-side subscription. If the delete fails, the local
+    // unsubscribe below still makes the endpoint invalid (send-push removes
+    // rows that come back 404/410).
+    await supabase.from('push_subscriptions').delete().eq('endpoint', endpoint);
+    await subscription.unsubscribe();
+  } catch (err) {
+    console.error('Failed to remove push subscription on sign-out:', err);
+  }
+}
+
+// Self-heal for devices that signed out before the fix above existed (or lost
+// their session some other way, e.g. it expired): when nobody is signed in,
+// drop any leftover push subscription in this browser. The server then gets a
+// 410 for that endpoint on its next send and deletes the stale row itself.
+export async function dropLeftoverPushSubscription(): Promise<void> {
+  try {
+    if (!isPushSupported()) return;
+    const reg = await navigator.serviceWorker.getRegistration();
+    const subscription = await reg?.pushManager.getSubscription();
+    if (subscription) await subscription.unsubscribe();
+  } catch {
+    /* nothing to clean up */
+  }
+}
+
