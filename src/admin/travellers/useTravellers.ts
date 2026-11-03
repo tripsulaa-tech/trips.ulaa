@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getEnquiries, updateEnquiryDetails, deleteEnquiry } from '../../services/api';
-import type { Enquiry } from '../../types/types-index';
+import { getEnquiries, getWaitlistEntries, updateEnquiryDetails, deleteEnquiry } from '../../services/api';
+import type { Enquiry, WaitlistEntry } from '../../types/types-index';
 import { buildTravellerContacts, contactMatchesQuery, findSharedPhoneGroups } from './travellerContacts';
 import { findMergeConflicts, planMerge } from './travellerMerge';
 import type { TravellerContact } from './travellerContacts';
@@ -36,6 +36,10 @@ type PersistedTravellersFilters = {
  *  they do on Enquiries — a manual refresh on next visit is enough. */
 export function useTravellers() {
   const [enquiries, setEnquiries] = useState<Enquiry[]>([]);
+  // Waitlist signups, so people who are only on a waitlist still appear in
+  // the Contact Book. A failed waitlist load just leaves this empty — it
+  // must never stop the book itself from loading.
+  const [waitlist, setWaitlist] = useState<WaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [persisted] = useState(() => loadPersisted<PersistedTravellersFilters>(FILTERS_STORAGE_KEY));
@@ -67,8 +71,14 @@ export function useTravellers() {
   const [deletingKey, setDeletingKey] = useState<string | null>(null);
 
   const load = () => {
-    getEnquiries()
-      .then(data => { setEnquiries(data); setLoadError(false); })
+    Promise.all([
+      getEnquiries(),
+      getWaitlistEntries().catch(err => {
+        console.error(err);
+        return [] as WaitlistEntry[];
+      }),
+    ])
+      .then(([data, waitData]) => { setEnquiries(data); setWaitlist(waitData); setLoadError(false); })
       .catch(err => {
         console.error(err);
         setLoadError(true);
@@ -83,7 +93,7 @@ export function useTravellers() {
     load();
   }, []);
 
-  const allContacts = useMemo(() => buildTravellerContacts(enquiries), [enquiries]);
+  const allContacts = useMemo(() => buildTravellerContacts(enquiries, waitlist), [enquiries, waitlist]);
 
   // Different travellers sharing one phone number — flagged to the admin to
   // review and merge rather than being collapsed automatically.
@@ -155,7 +165,7 @@ export function useTravellers() {
   // Traveller & Trip card uses — a contact card is a view over those rows,
   // not a row of its own, so there's nothing else to update.
   const handleSaveEdit = async (form: TravellerEditForm) => {
-    if (!editTarget) return;
+    if (!editTarget || editTarget.waitlistOnly) return;
     // Same shared validators the modal shows live, field-by-field — this
     // is just the defense-in-depth save-time gate, matching the pattern
     // used by the enquiry-side admin forms (useAddEnquiry/useEditEnquiry).
@@ -225,6 +235,7 @@ export function useTravellers() {
   // rejected we know exactly how many moved and can say so. Blank email/city
   // are never written over real values.
   const handleMerge = async (keep: TravellerContact, other: TravellerContact) => {
+    if (keep.waitlistOnly || other.waitlistOnly) return;
     const conflicts = findMergeConflicts(keep, other);
     if (conflicts.length > 0) {
       await alert(`Both contacts already have an active enquiry for: ${conflicts.join(', ')}. Cancel or delete the duplicate first, then merge.`);
@@ -292,6 +303,7 @@ export function useTravellers() {
   // row's seat (if any) is released by deleteEnquiry itself, same as a
   // normal single-enquiry delete.
   const handleDelete = async (contact: TravellerContact) => {
+    if (contact.waitlistOnly) return;
     const ok = await confirm({
       title: 'Delete this traveller?',
       message: contact.tripCount > 1

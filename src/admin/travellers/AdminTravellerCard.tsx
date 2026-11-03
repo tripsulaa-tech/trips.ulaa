@@ -2,11 +2,13 @@ import { useState } from 'react';
 import {
   Phone, Envelope as Mail, MapPin, Repeat, Warning, Siren,
   PencilSimple as Edit2, Trash as Trash2, ArrowsMerge,
-  CaretUp as ChevronUp, CaretDown as ChevronDown,
+  CaretUp as ChevronUp, CaretDown as ChevronDown, Hourglass,
 } from '@phosphor-icons/react';
 import { formatDate, getInitials, getWhatsAppLink } from '../../utils/utils-index';
 import { journeyBadge } from '../enquiries/AdminEnquiryCommon';
+import { latestWaitlistEntry } from './travellerContacts';
 import type { TravellerContact } from './travellerContacts';
+import { WAITLIST_STATUS_LABEL } from './travellerProfile';
 
 // Same card shell/layout as the Trip Leaders directory (see
 // AdminTripLeaders.tsx's mobile card and the reference screenshot): avatar
@@ -44,7 +46,10 @@ export default function AdminTravellerCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const latestTrip = contact.trips[0];
-  const badge = latestTrip ? journeyBadge(latestTrip.representative) : undefined;
+  const waitEntry = contact.waitlistOnly ? latestWaitlistEntry(contact) : undefined;
+  const badge = latestTrip
+    ? journeyBadge(latestTrip.representative)
+    : waitEntry ? WAITLIST_STATUS_LABEL[waitEntry.status] : undefined;
 
   return (
     <div className="bg-white rounded-lg shadow-card p-4 space-y-3">
@@ -70,6 +75,11 @@ export default function AdminTravellerCard({
               {contact.joinedTripCount > 1 && (
                 <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
                   <Repeat size={9} aria-hidden="true" /> {contact.joinedTripCount} trips
+                </span>
+              )}
+              {contact.waitlistOnly && (
+                <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning-bg text-warning-fg shrink-0">
+                  <Hourglass size={9} aria-hidden="true" /> Waitlist
                 </span>
               )}
               {sharedPhone && (
@@ -128,6 +138,13 @@ export default function AdminTravellerCard({
         )}
       </div>
 
+      {contact.waitlistOnly && waitEntry && (
+        <p className="text-xs text-dark-muted">
+          Waiting for <span className="font-semibold text-dark">{waitEntry.trip_title || 'a trip'}</span>
+          {contact.waitlist.length > 1 ? ` +${contact.waitlist.length - 1} more` : ''}
+        </p>
+      )}
+
       {expanded && (
         <div className="space-y-1.5 pt-1">
           {contact.trips.map(trip => {
@@ -171,6 +188,9 @@ export default function AdminTravellerCard({
         ) : (
           <span />
         )}
+        {contact.waitlistOnly ? (
+          <span className="text-2xs text-dark-muted">Manage on the Waitlist page</span>
+        ) : (
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -199,6 +219,7 @@ export default function AdminTravellerCard({
             <Trash2 size={16} aria-hidden="true" />
           </button>
         </div>
+        )}
       </div>
     </div>
   );

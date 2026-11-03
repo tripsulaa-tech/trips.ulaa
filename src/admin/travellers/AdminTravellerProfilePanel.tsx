@@ -305,6 +305,9 @@ export default function AdminTravellerProfilePanel({
                       {contact.city && (
                         <span className="inline-flex items-center gap-1"><MapPin size={12} aria-hidden="true" /> {contact.city}</span>
                       )}
+                      {contact.waitlistOnly && (
+                        <Pill className="bg-warning-bg text-warning-fg">Waitlist only</Pill>
+                      )}
                       {profile.isRepeat && (
                         <Pill className="bg-primary/10 text-primary"><Repeat size={10} aria-hidden="true" /> Repeat traveller</Pill>
                       )}
@@ -316,7 +319,7 @@ export default function AdminTravellerProfilePanel({
                   <QuickAction primary label="WhatsApp" icon={<WhatsappLogo size={18} weight="fill" aria-hidden="true" />} href={contact.phone ? getWhatsAppLink(contact.phone) : undefined} />
                   <QuickAction label="Call" icon={<Phone size={18} aria-hidden="true" />} href={contact.phone ? `tel:${contact.phone.replace(/[^\d+]/g, '')}` : undefined} />
                   <QuickAction label="Email" icon={<Mail size={18} aria-hidden="true" />} href={contact.email ? `mailto:${contact.email}` : undefined} />
-                  <QuickAction label="Edit" icon={<Edit2 size={18} aria-hidden="true" />} onClick={() => onEdit(contact)} />
+                  <QuickAction label="Edit" icon={<Edit2 size={18} aria-hidden="true" />} onClick={contact.waitlistOnly ? undefined : () => onEdit(contact)} />
                 </div>
               </header>
 
@@ -389,6 +392,8 @@ export default function AdminTravellerProfilePanel({
                         <span className="inline-flex items-center gap-1.5">
                           <FoodMark type={profile.food} size={12} /> {profile.food === 'veg' ? 'Veg' : 'Non-veg'}
                         </span>
+                      ) : contact.waitlistOnly ? (
+                        <span className="text-dark-muted/75">Not on file</span>
                       ) : (
                         <button
                           type="button"

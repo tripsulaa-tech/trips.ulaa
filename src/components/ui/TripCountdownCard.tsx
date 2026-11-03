@@ -51,6 +51,10 @@ const DAY = 24 * HOUR;
 const URGENT_WITHIN_MS = 2 * DAY;
 // Above this many seats the seat map stops being readable, so we skip it.
 const MAX_SEAT_ICONS = 20;
+// The Early Bird card (and with it the stub and "Pack Your Bags") only shows
+// once this many early-bird seats or fewer are left. Same idea as the normal
+// seats, which only show at 3 or fewer left.
+const EARLY_BIRD_SHOW_AT_SEATS_LEFT = 2;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -573,7 +577,8 @@ export default function TripCountdownCard({
 
   // Seat count, "travellers already in" and the seat icons only appear once
   // the trip is nearly gone (3 or fewer left) or sold out. Above that the
-  // panel stays quiet; an Early Bird card, if any, shows regardless.
+  // panel stays quiet. The Early Bird card follows the same rule: it only
+  // shows when 2 or fewer early-bird seats are left (see showEarlyBird below).
   const lowSeats = isAlmostFull && remainingSeats <= 3;
   const showSeatInfo = isFull || lowSeats;
   const showSeatMap = showSeatInfo && totalSeats > 0 && totalSeats <= MAX_SEAT_ICONS;
@@ -624,9 +629,13 @@ export default function TripCountdownCard({
   const flyingDown = departed && !isDesktop && !reduceMotion && !noStickyBar;
   const showPips = game.phase === 'playing' || game.phase === 'teasing';
 
-  // No seat info and no Early Bird: nothing to say, so no white stub at all.
-  // The dark countdown card stands alone (phones keep the sticky booking bar).
-  const showStub = showSeatInfo || !!earlyBird;
+  // Early Bird card: only when the early-bird seats are nearly gone.
+  const showEarlyBird = !!earlyBird && !isFull && earlyBird.seatsLeft <= EARLY_BIRD_SHOW_AT_SEATS_LEFT;
+
+  // No seat info and no Early Bird card: nothing to say, so no white stub at
+  // all (and no "Pack Your Bags" button with it). The dark countdown card
+  // stands alone (phones keep the sticky booking bar).
+  const showStub = showSeatInfo || showEarlyBird;
 
   // Phones already have the sticky booking bar, so here the button only
   // appears as the payoff once the plane has taken off. Desktop has no
@@ -960,7 +969,7 @@ export default function TripCountdownCard({
               <p className="font-semibold text-lg text-dark">{seatHeadline}</p>
             ) : null}
             {showSeatInfo && seatSub && <p className="mt-0.5 text-sm text-dark-muted">{seatSub}</p>}
-            {earlyBird && !isFull && (
+            {showEarlyBird && earlyBird && (
               <div className="offer-gradient-shift mt-2.5 rounded-lg px-3 py-2.5 text-white shadow-warm ring-1 ring-inset ring-white/15">
                 <div className="flex items-center justify-between gap-2">
                   <p className="flex items-center gap-1.5 text-2xs font-button font-bold uppercase tracking-widest">
@@ -1016,12 +1025,12 @@ export default function TripCountdownCard({
               </div>
             )}
 
-            {!earlyBird && seatMap}
+            {!showEarlyBird && seatMap}
           </div>
 
           {renderCta()}
 
-          {earlyBird && seatMap && <div className="-mt-2">{seatMap}</div>}
+          {showEarlyBird && seatMap && <div className="-mt-2">{seatMap}</div>}
         </div>
       )}
 

@@ -1,4 +1,4 @@
-import type { Enquiry } from '../../types/types-index';
+import type { Enquiry, WaitlistEntry } from '../../types/types-index';
 import { phoneSignature, emailSignature } from '../enquiries/AdminEnquiriesShared';
 
 // One trip (or trip-less enquiry) grouped under a contact — collapsed
@@ -69,6 +69,13 @@ export type TravellerContact = {
   // updateEnquiryDetails, Delete removes each one via deleteEnquiry. See
   // AdminTravellerCard.tsx / useTravellers.ts.
   rows: Enquiry[];
+  // True for someone who is ONLY on a waitlist so far — no enquiry row yet.
+  // They have no trips joined and no rows, so Edit / Merge / Delete don't
+  // apply (the waitlist itself is managed on the Waitlist page).
+  waitlistOnly: boolean;
+  // Their waitlist signups (newest first). Only filled for waitlist-only
+  // contacts; for everyone else the profile panel matches the waitlist by phone.
+  waitlist: WaitlistEntry[];
 };
 
 // Identity = same person name + same (fuzzy) phone. Phone alone is NOT enough:
@@ -126,7 +133,7 @@ function pickBestEmail(rows: Enquiry[]): string {
  *  never converted past a first enquiry, as long as a phone number was
  *  captured. Rows with no phone on file (e.g. an anonymous "Contact Us"
  *  message) have nothing to look someone up by, so they're excluded. */
-export function buildTravellerContacts(enquiries: Enquiry[]): TravellerContact[] {
+export function buildTravellerContacts(enquiries: Enquiry[], waitlist: WaitlistEntry[] = []): TravellerContact[] {
   const contactRows = enquiries.filter(e => (e.phone || '').trim() !== '');
 
   const byContact = new Map<string, Enquiry[]>();
@@ -191,6 +198,52 @@ export function buildTravellerContacts(enquiries: Enquiry[]): TravellerContact[]
       registeredAt,
       lastActivityAt,
       rows,
+      waitlistOnly: false,
+      waitlist: [],
+    });
+  }
+
+  // Waitlist-only people: on a waitlist but with no enquiry yet. They aren't
+  // travellers (nothing joined), but they are contacts we hold a phone number
+  // for. Anyone who already has an enquiry contact (same name + phone) is
+  // skipped — they're in the book already, and their waitlist shows on their
+  // profile.
+  const waitByContact = new Map<string, WaitlistEntry[]>();
+  for (const w of waitlist) {
+    if ((w.phone || '').trim() === '') continue;
+    const key = contactKey({ full_name: w.full_name, phone: w.phone } as Enquiry);
+    if (byContact.has(key)) continue;
+    const list = waitByContact.get(key);
+    if (list) list.push(w);
+    else waitByContact.set(key, [w]);
+  }
+  for (const [key, entries] of waitByContact) {
+    const newestFirst = [...entries].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    const newest = newestFirst[0];
+    const oldest = newestFirst[newestFirst.length - 1];
+    const firstWith = <K extends 'email' | 'city' | 'emergency_contact'>(field: K) =>
+      (newestFirst.find(w => (w[field] || '').toString().trim() !== '')?.[field] || '').toString().trim();
+    const phone = newest.phone.trim();
+    const emergencyContact = firstWith('emergency_contact') || undefined;
+    const phones = [phone];
+    if (emergencyContact && phoneSignature(emergencyContact) !== phoneSignature(phone)) phones.push(emergencyContact);
+    contacts.push({
+      key,
+      fullName: newest.full_name?.trim() || 'Unnamed traveller',
+      phone,
+      phones,
+      email: emailSignature(firstWith('email')) ? firstWith('email') : '',
+      city: firstWith('city') || undefined,
+      emergencyContact,
+      foodPreference: newestFirst.find(w => w.food_preference)?.food_preference || null,
+      trips: [],
+      tripCount: 0,
+      joinedTripCount: 0,
+      registeredAt: oldest.created_at,
+      lastActivityAt: newest.created_at,
+      rows: [],
+      waitlistOnly: true,
+      waitlist: newestFirst,
     });
   }
 
@@ -208,8 +261,14 @@ export function contactMatchesQuery(c: TravellerContact, query: string): boolean
     c.phones.some(p => p.toLowerCase().includes(q)) ||
     c.email.toLowerCase().includes(q) ||
     (!!c.city && c.city.toLowerCase().includes(q)) ||
-    c.trips.some(t => t.tripTitle.toLowerCase().includes(q))
+    c.trips.some(t => t.tripTitle.toLowerCase().includes(q)) ||
+    c.waitlist.some(w => (w.trip_title || '').toLowerCase().includes(q))
   );
+}
+
+/** The most recent waitlist signup of a waitlist-only contact. */
+export function latestWaitlistEntry(c: TravellerContact): WaitlistEntry | undefined {
+  return c.waitlist[0];
 }
 
 /** Distinct travellers (different names) that share the same primary phone
@@ -221,6 +280,8 @@ export type SharedPhoneGroup = { signature: string; phone: string; contacts: Tra
 export function findSharedPhoneGroups(all: TravellerContact[]): SharedPhoneGroup[] {
   const bySig = new Map<string, TravellerContact[]>();
   for (const c of all) {
+    // Waitlist-only people have no rows to merge, so they aren't offered here.
+    if (c.waitlistOnly) continue;
     const sig = phoneSignature(c.phone);
     if (!sig) continue;
     const list = bySig.get(sig);

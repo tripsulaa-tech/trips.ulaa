@@ -59,7 +59,8 @@ export function buildTravellerProfile(contact: TravellerContact): TravellerProfi
   const earliest = byCreated[0];
   // Age lives per enquiry; take the most recent one that has it, the same
   // "most current non-blank value" rule travellerContacts.pickBest uses.
-  const age = [...byCreated].reverse().find(r => typeof r.age === 'number' && r.age > 0)?.age;
+  const age = [...byCreated].reverse().find(r => typeof r.age === 'number' && r.age > 0)?.age
+    ?? contact.waitlist.find(w => typeof w.age === 'number' && w.age > 0)?.age ?? undefined;
 
   const trips: ProfileTrip[] = contact.trips.map(t => {
     const rows = contact.rows.filter(r => tripRowMatches(r, t.key));

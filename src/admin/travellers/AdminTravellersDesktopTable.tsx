@@ -2,12 +2,14 @@ import { useState } from 'react';
 import {
   Phone, Envelope as Mail, MapPin, Repeat, Warning, Siren,
   PencilSimple as Edit2, Trash as Trash2, ArrowsMerge,
-  CaretUp as ChevronUp, CaretDown as ChevronDown,
+  CaretUp as ChevronUp, CaretDown as ChevronDown, Hourglass,
 } from '@phosphor-icons/react';
 import { TableHeaderBar, TablePagination } from '../../components/ui/DataTableChrome';
 import { formatDate, getInitials, getWhatsAppLink } from '../../utils/utils-index';
 import { journeyBadge } from '../enquiries/AdminEnquiryCommon';
+import { latestWaitlistEntry } from './travellerContacts';
 import type { TravellerContact } from './travellerContacts';
+import { WAITLIST_STATUS_LABEL } from './travellerProfile';
 
 interface AdminTravellersDesktopTableProps {
   pageItems: TravellerContact[];
@@ -80,7 +82,10 @@ export default function AdminTravellersDesktopTable({
           <tbody className="divide-y divide-background-warm">
             {pageItems.map(contact => {
               const latestTrip = contact.trips[0];
-              const badge = latestTrip ? journeyBadge(latestTrip.representative) : undefined;
+              const waitEntry = contact.waitlistOnly ? latestWaitlistEntry(contact) : undefined;
+              const badge = latestTrip
+                ? journeyBadge(latestTrip.representative)
+                : waitEntry ? WAITLIST_STATUS_LABEL[waitEntry.status] : undefined;
               const extraTrips = contact.trips.slice(1);
               const isExpanded = expandedKeys.has(contact.key);
               return (
@@ -111,6 +116,11 @@ export default function AdminTravellersDesktopTable({
                           {contact.joinedTripCount > 1 && (
                             <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/10 text-primary shrink-0">
                               <Repeat size={9} aria-hidden="true" /> {contact.joinedTripCount} trips
+                            </span>
+                          )}
+                          {contact.waitlistOnly && (
+                            <span className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning-bg text-warning-fg shrink-0">
+                              <Hourglass size={9} aria-hidden="true" /> Waitlist
                             </span>
                           )}
                           {sharedPhoneKeys?.has(contact.key) && (
@@ -168,7 +178,14 @@ export default function AdminTravellersDesktopTable({
                     ) : '—'}
                   </td>
                   <td className="px-4 py-4 text-dark-muted max-w-[220px]">
-                    <p className="truncate">{latestTrip ? latestTrip.tripTitle : 'No trip on file'}</p>
+                    <p className="truncate">
+                      {latestTrip
+                        ? latestTrip.tripTitle
+                        : waitEntry ? `Waiting: ${waitEntry.trip_title || 'a trip'}` : 'No trip on file'}
+                    </p>
+                    {contact.waitlistOnly && contact.waitlist.length > 1 && (
+                      <p className="text-xs text-dark-muted">+{contact.waitlist.length - 1} more on waitlist</p>
+                    )}
                     {extraTrips.length > 0 && (
                       <button
                         type="button"
@@ -215,6 +232,9 @@ export default function AdminTravellersDesktopTable({
                     )}
                   </td>
                   <td className="px-4 py-4">
+                    {contact.waitlistOnly ? (
+                      <p className="text-right text-2xs text-dark-muted">Manage on the Waitlist page</p>
+                    ) : (
                     <div className="flex items-center justify-end gap-1">
                       <button
                         type="button"
@@ -243,6 +263,7 @@ export default function AdminTravellersDesktopTable({
                         <Trash2 size={16} aria-hidden="true" />
                       </button>
                     </div>
+                    )}
                   </td>
                 </tr>
               );

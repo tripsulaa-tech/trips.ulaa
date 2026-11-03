@@ -79,14 +79,14 @@ export default function AdminTravellers() {
   const waitlist = useTravellerWaitlist(!!profileContact);
 
   const KPI_CARDS = [
-    { label: 'Contacts', value: kpis.total, sub: 'Everyone we have a phone number for', icon: AddressBook },
+    { label: 'Contacts', value: kpis.total, sub: 'Everyone we have a phone number for, waitlist included', icon: AddressBook },
     { label: 'Repeat Travellers', value: kpis.repeat, sub: 'Joined 2 or more trips', icon: Repeat },
     { label: 'Trips', value: kpis.tripsBooked, sub: 'Distinct trips travellers joined', icon: Briefcase },
     { label: 'Cancelled Bookings', value: kpis.cancelledTrips, sub: 'Bookings that fell through', icon: XCircle },
   ] as const;
 
   return (
-    <AdminLayout title="Travellers" subtitle="Every contact you've saved a phone number for — whether they've booked a trip yet or not." scrollRestorationReady={!loading}>
+    <AdminLayout title="Travellers" subtitle="Every contact you've saved a phone number for — whether they've booked a trip yet, or are only on a waitlist." scrollRestorationReady={!loading}>
       <div className="space-y-4 sm:space-y-6">
         <KpiCards cards={KPI_CARDS} columns={4} />
         <KpiCarousel cards={KPI_CARDS} />
@@ -229,7 +229,7 @@ export default function AdminTravellers() {
         key={`${mergeTarget?.key ?? 'none'}|${mergeOtherKey ?? ''}`}
         source={mergeTarget}
         initialOtherKey={mergeOtherKey}
-        allContacts={allContacts}
+        allContacts={allContacts.filter(c => !c.waitlistOnly)}
         onClose={() => { if (!merging) closeMerge(); }}
         onMerge={handleMerge}
         merging={merging}
