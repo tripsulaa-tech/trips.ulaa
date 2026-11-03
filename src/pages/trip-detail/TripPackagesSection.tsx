@@ -1,7 +1,7 @@
 import SectionTitle from '../../components/ui/SectionTitle';
 import Button from '../../components/ui/Button';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
-import { formatPrice, earlyBirdSeatsLabel } from '../../utils/utils-index';
+import { formatPrice, earlyBirdSeatsLabelWhenLow } from '../../utils/utils-index';
 import { bookablePackages, getPackageBase, hasPackageChoice, hasOwnPrice, includedOptions, isPackageSoldOut, packageListPrice, packageQuote, packagePriceLabel } from '../../utils/tripOptions';
 import { CheckCircle, Star } from '@phosphor-icons/react';
 
@@ -29,7 +29,7 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
   const entryPrice = packageQuote(entry, cfg, base).price;
   // "Most popular" on an early-bird-only package lasts only while its seats do.
   const hasHighlight = cfg.packages.some(p => p.highlight && !isPackageSoldOut(p, base));
-  const seatsLabel = earlyBirdSeatsLabel(trip);
+  const seatsLabel = earlyBirdSeatsLabelWhenLow(trip);
   // A sold-out early-bird package is hidden entirely: travellers only see what
   // they can still book. (Kept if hiding it would leave nothing to show.)
   const shown = bookablePackages(cfg, base)?.packages ?? cfg.packages;

@@ -103,6 +103,24 @@ export function earlyBirdSeatsLabel(trip: {
   return `${left} of ${trip.early_bird_seats} early-bird seats left`;
 }
 
+/** The early-bird seat count is only shown once this many early-bird seats
+ *  (or fewer) are left — on the countdown card, the booking popup and the
+ *  sticky booking bar. Above this the offer and price still show, just not
+ *  the count. */
+export const EARLY_BIRD_COUNT_VISIBLE_AT_SEATS_LEFT = 2;
+
+/** Same text as earlyBirdSeatsLabel, but null until the early-bird seats are
+ *  nearly gone (see EARLY_BIRD_COUNT_VISIBLE_AT_SEATS_LEFT). */
+export function earlyBirdSeatsLabelWhenLow(trip: {
+  early_bird_price?: number | null;
+  early_bird_seats?: number | null;
+  early_bird_seats_taken?: number | null;
+}): string | null {
+  const left = earlyBirdSeatsLeft(trip);
+  if (left === null || left > EARLY_BIRD_COUNT_VISIBLE_AT_SEATS_LEFT) return null;
+  return earlyBirdSeatsLabel(trip);
+}
+
 /**
  * Friendly rule for a seat-limited early bird, e.g. "First 5 travellers get ₹1,799.
  * Pay your ₹499 advance to lock it in."

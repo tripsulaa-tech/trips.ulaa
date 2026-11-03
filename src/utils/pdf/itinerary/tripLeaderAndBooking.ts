@@ -6,7 +6,7 @@ import type { PdfCtx } from './context';
 import type { AnyIcon, RGB, PdfTrip } from './shared';
 import type { ButtonLabelsConfig } from '../../../types/types-index';
 import { BRAND, MARGIN, CONTENT_W, COLORS, money, heroMoneyRupee, rgbToHex, loadCoverCroppedImage } from './shared';
-import { formatDateRange, formatAgeRange, formatDate, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, formatDuration } from '../../utils-index';
+import { formatDateRange, formatAgeRange, formatDate, getActivePrice, earlyBirdSeatsLabelWhenLow, getStrikeThroughPrice, publicSeatsLeft, formatDuration } from '../../utils-index';
 import { withBasicPricing } from '../../tripOptions';
 
 import { RESPONSE_TIME } from '../../../constants/site';
@@ -276,7 +276,7 @@ import { RESPONSE_TIME } from '../../../constants/site';
 
       // Offer countdown / expiry note, centered (icon + text as one group)
       const earlyNote = isEarlyBird
-        ? (earlyBirdSeatsLabel(priced) ?? (trip.early_bird_deadline ? `Offer ends ${formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}` : null))
+        ? (earlyBirdSeatsLabelWhenLow(priced) ?? (trip.early_bird_deadline ? `Offer ends ${formatDate(trip.early_bird_deadline, { day: 'numeric', month: 'long', year: 'numeric' })}` : null))
         : null;
       if (earlyNote) {
         const label = earlyNote;

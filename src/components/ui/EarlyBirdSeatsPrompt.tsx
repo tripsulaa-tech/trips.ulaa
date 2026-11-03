@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { Fire, ArrowRight, User, Lock, CheckCircle, Wallet } from '@phosphor-icons/react';
 import Modal from './Modal';
-import { formatPrice } from '../../utils/utils-index';
+import { formatPrice, EARLY_BIRD_COUNT_VISIBLE_AT_SEATS_LEFT } from '../../utils/utils-index';
 import type { EarlyBirdSeatsOffer } from './earlyBirdSeatsOffer';
 
 /** Caption for the card strip: "Only 5 early-bird seats · first 5 to pay get this price",
@@ -91,6 +91,8 @@ export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advance
   const balance = hasAdvance ? Math.max(0, price - (advanceAmount as number)) : null;
   const isLast = seatsLeft === 1;
   const seatWord = seatsLeft === 1 ? 'seat' : 'seats';
+  // The seat count only shows once the early-bird seats are nearly gone.
+  const showCount = seatsLeft <= EARLY_BIRD_COUNT_VISIBLE_AT_SEATS_LEFT;
 
   // Rendered into <body>: this lives inside a trip card, and the card's
   // transform/stacking context would otherwise let the sticky search bar and
@@ -114,7 +116,8 @@ export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advance
         </div>
 
         <div className="px-5 sm:px-6 pt-5 pb-5 sm:pb-6">
-          {/* Seat tracker */}
+          {/* Seat tracker — only when 2 or fewer early-bird seats are left */}
+          {showCount && (
           <div className="text-center">
             <SeatTiles total={totalSeats} left={seatsLeft} />
             <p className={`mt-2.5 text-sm font-button font-semibold ${isLast ? 'text-danger-fg' : 'text-dark'}`}>
@@ -125,9 +128,10 @@ export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advance
                   : `${seatsLeft} of ${totalSeats} early-bird ${seatWord} left`}
             </p>
           </div>
+          )}
 
           {/* Price */}
-          <div className="mt-4 rounded-xl bg-background border border-background-warm px-4 py-3.5 text-center">
+          <div className={`${showCount ? 'mt-4' : ''} rounded-xl bg-background border border-background-warm px-4 py-3.5 text-center`}>
             <div className="flex items-baseline justify-center gap-2.5 flex-wrap">
               <span className="font-display text-4xl font-bold text-primary leading-none">{formatPrice(price)}</span>
               {regularPrice != null && (

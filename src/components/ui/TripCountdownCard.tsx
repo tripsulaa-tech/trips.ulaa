@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Fire, Seat, User } from '@phosphor-icons/react';
 import Plane3D from './Plane3D';
 import { isPlane3DSupported } from './plane3DRenderer';
+import { EARLY_BIRD_COUNT_VISIBLE_AT_SEATS_LEFT } from '../../utils/utils-index';
 
 /** Vehicle on the route: 'flight' (plane), 'train', or 'bus' (Bus / Van). */
 export type TravelMode = 'flight' | 'train' | 'bus';
@@ -51,10 +52,6 @@ const DAY = 24 * HOUR;
 const URGENT_WITHIN_MS = 2 * DAY;
 // Above this many seats the seat map stops being readable, so we skip it.
 const MAX_SEAT_ICONS = 20;
-// The Early Bird card (and with it the stub and "Pack Your Bags") only shows
-// once this many early-bird seats or fewer are left. Same idea as the normal
-// seats, which only show at 3 or fewer left.
-const EARLY_BIRD_SHOW_AT_SEATS_LEFT = 2;
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -630,7 +627,7 @@ export default function TripCountdownCard({
   const showPips = game.phase === 'playing' || game.phase === 'teasing';
 
   // Early Bird card: only when the early-bird seats are nearly gone.
-  const showEarlyBird = !!earlyBird && !isFull && earlyBird.seatsLeft <= EARLY_BIRD_SHOW_AT_SEATS_LEFT;
+  const showEarlyBird = !!earlyBird && !isFull && earlyBird.seatsLeft <= EARLY_BIRD_COUNT_VISIBLE_AT_SEATS_LEFT;
 
   // No seat info and no Early Bird card: nothing to say, so no white stub at
   // all (and no "Pack Your Bags" button with it). The dark countdown card

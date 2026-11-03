@@ -1,6 +1,6 @@
 import Button from '../../components/ui/Button';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
-import { formatDate, formatPrice, specialOfferDaysLeft, earlyBirdSeatsLabel } from '../../utils/utils-index';
+import { formatDate, formatPrice, specialOfferDaysLeft, earlyBirdSeatsLabelWhenLow } from '../../utils/utils-index';
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Clock, Sparkle, Gift, Fire } from '@phosphor-icons/react';
@@ -150,10 +150,10 @@ export default function TripStickyBookingBar({
                       <Fire size={10} weight="fill" className="text-yellow-300" />
                       Early Bird
                     </span>
-                    {earlyBirdSeatsLabel(trip) ? (
+                    {earlyBirdSeatsLabelWhenLow(trip) ? (
                       <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
                         <Clock size={9} className="shrink-0" />
-                        {earlyBirdSeatsLabel(trip)}
+                        {earlyBirdSeatsLabelWhenLow(trip)}
                       </span>
                     ) : trip.early_bird_deadline && (
                       <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
@@ -201,10 +201,10 @@ export default function TripStickyBookingBar({
                           Early Bird
                         </span>
                       )}
-                      {isEarlyBird && (earlyBirdSeatsLabel(trip) ? (
+                      {isEarlyBird && (earlyBirdSeatsLabelWhenLow(trip) ? (
                         <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">
                           <Clock size={10} className="shrink-0" />
-                          {earlyBirdSeatsLabel(trip)}
+                          {earlyBirdSeatsLabelWhenLow(trip)}
                         </span>
                       ) : trip.early_bird_deadline && (
                         <span className="flex items-center gap-0.5 text-orange-600 text-2xs font-medium shrink-0 whitespace-nowrap">

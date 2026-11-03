@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import SectionTitle from '../../components/ui/SectionTitle';
 import type { UpcomingTrip, TripConfidenceItem, ButtonLabelsConfig } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft, formatDuration, earlyBirdSeatsLabel, earlyBirdRuleNote } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft, formatDuration, earlyBirdSeatsLabel, earlyBirdSeatsLabelWhenLow, earlyBirdRuleNote } from '../../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs } from '../../utils/calendar';
 import {
   Calendar,
@@ -157,10 +157,13 @@ export default function TripConfidenceBookingSection({
                     </p>
                   ) : isEarlyBird && (earlyBirdSeatsLabel(trip) ? (
                     <>
-                      <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
-                        <Clock size={12} className="shrink-0" />
-                        {earlyBirdSeatsLabel(trip)}
-                      </p>
+                      {/* The seats-left count only shows at 2 or fewer left. */}
+                      {earlyBirdSeatsLabelWhenLow(trip) && (
+                        <p className="flex items-center justify-center gap-1 text-orange-600 text-xs font-medium mt-2">
+                          <Clock size={12} className="shrink-0" />
+                          {earlyBirdSeatsLabelWhenLow(trip)}
+                        </p>
+                      )}
                       <p className="text-dark-muted text-2xs mt-1">
                         {earlyBirdRuleNote(trip, activePrice, trip.advance_amount) ?? 'Pay your advance to confirm your early-bird seat.'}
                       </p>
