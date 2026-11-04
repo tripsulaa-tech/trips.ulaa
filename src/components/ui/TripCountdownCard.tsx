@@ -997,12 +997,12 @@ export default function TripCountdownCard({
 
                 <div className="mt-2 flex items-center justify-between gap-2">
                   <div className="flex gap-0.5" aria-hidden="true">
-                    {Array.from({ length: Math.min(earlyBird.totalSeats, 12) }, (_, i) => {
-                      const taken = i < Math.min(earlyBird.totalSeats - earlyBird.seatsLeft, 12);
+                    {/* Only the seats still open — never the ones already booked. */}
+                    {Array.from({ length: Math.min(earlyBird.seatsLeft, 12) }, (_, i) => {
                       return (
                         <span
                           key={i}
-                          className={`flex h-5 w-5 items-center justify-center rounded ${taken ? 'bg-white/25 text-white/60' : 'bg-white text-danger-fg'}`}
+                          className="flex h-5 w-5 items-center justify-center rounded bg-white text-danger-fg"
                         >
                           <User size={11} weight="fill" />
                         </span>
@@ -1010,7 +1010,7 @@ export default function TripCountdownCard({
                     })}
                   </div>
                   <span className="text-2xs font-semibold">
-                    {earlyBird.seatsLeft === 1 ? 'Last seat!' : `${earlyBird.seatsLeft} of ${earlyBird.totalSeats} left`}
+                    {earlyBird.seatsLeft === 1 ? 'Last seat!' : `Only ${earlyBird.seatsLeft} seats left`}
                   </span>
                 </div>
 

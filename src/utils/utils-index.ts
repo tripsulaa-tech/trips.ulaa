@@ -86,12 +86,14 @@ export function earlyBirdSeatsLeft(trip: {
 }
 
 /**
- * "3 of 5 early-bird seats left" for a seat-limited early bird that still has
- * seats, otherwise null (not seat-limited, or sold out).
+ * "Only 2 early-bird seats left" (or "Last early-bird seat!") for a
+ * seat-limited early bird that still has seats, otherwise null (not
+ * seat-limited, or sold out).
  *
- * Worded as seats *at the early-bird price* (not "seats left") on purpose: the trip itself
- * has more seats (e.g. 15) and only the first N get the discount, so "5 of 5 seats left"
- * on its own reads as if the whole trip were almost full.
+ * Worded as seats *at the early-bird price* on purpose: the trip itself has
+ * more seats (e.g. 15) and only the first N get the discount, so a bare
+ * "2 seats left" would read as if the whole trip were almost full. It never
+ * says how many early-bird seats are already booked.
  */
 export function earlyBirdSeatsLabel(trip: {
   early_bird_price?: number | null;
@@ -100,7 +102,7 @@ export function earlyBirdSeatsLabel(trip: {
 }): string | null {
   const left = earlyBirdSeatsLeft(trip);
   if (left === null || left <= 0 || !trip.early_bird_seats) return null;
-  return `${left} of ${trip.early_bird_seats} early-bird seats left`;
+  return left === 1 ? 'Last early-bird seat!' : `Only ${left} early-bird seats left`;
 }
 
 /** The early-bird seat count is only shown once this many early-bird seats

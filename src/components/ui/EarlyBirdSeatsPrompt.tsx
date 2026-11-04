@@ -52,26 +52,20 @@ interface EarlyBirdSeatsPromptProps {
 
 // One tile per early-bird seat. Free seats glow in the brand colour; taken
 // ones are greyed out, so scarcity is readable at a glance (no numbers needed).
-function SeatTiles({ total, left }: { total: number; left: number }) {
-  const taken = total - left;
-  // Cap the row so a large seat limit (e.g. 20) still fits on one line.
-  const shown = Math.min(total, 12);
-  const shownTaken = Math.min(taken, shown);
+function SeatTiles({ left }: { left: number }) {
+  // Only the seats still open are drawn — never the ones already booked.
+  // Capped so a large number still fits on one line.
+  const shown = Math.min(left, 12);
   return (
     <div className="flex flex-wrap justify-center gap-1.5" aria-hidden="true">
       {Array.from({ length: shown }).map((_, i) => {
-        const isTaken = i < shownTaken;
         return (
           <motion.span
             key={i}
             initial={{ opacity: 0, y: 8, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ delay: 0.15 + i * 0.05, type: 'spring', stiffness: 400, damping: 20 }}
-            className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-              isTaken
-                ? 'bg-background-warm text-dark-muted/50'
-                : 'bg-gradient-to-b from-orange-500 to-red-500 text-white shadow-warm ring-2 ring-orange-200'
-            }`}
+            className="w-9 h-9 rounded-lg flex items-center justify-center bg-gradient-to-b from-orange-500 to-red-500 text-white shadow-warm ring-2 ring-orange-200"
           >
             <User size={18} weight="fill" />
           </motion.span>
@@ -119,13 +113,9 @@ export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advance
           {/* Seat tracker — only when 2 or fewer early-bird seats are left */}
           {showCount && (
           <div className="text-center">
-            <SeatTiles total={totalSeats} left={seatsLeft} />
+            <SeatTiles left={seatsLeft} />
             <p className={`mt-2.5 text-sm font-button font-semibold ${isLast ? 'text-danger-fg' : 'text-dark'}`}>
-              {isLast
-                ? 'Last early-bird seat!'
-                : seatsLeft === totalSeats
-                  ? `All ${totalSeats} early-bird seats still open`
-                  : `${seatsLeft} of ${totalSeats} early-bird ${seatWord} left`}
+              {isLast ? 'Last early-bird seat!' : `Only ${seatsLeft} early-bird ${seatWord} left`}
             </p>
           </div>
           )}
