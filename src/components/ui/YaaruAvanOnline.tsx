@@ -33,6 +33,7 @@ import type { OnlinePhase } from './yaaruAvanRoomApi';
 import { describeSpecial, specialDisplayName, SPECIALS, maxSpecialPlayers, roleLocked } from './yaaruAvanSpecials';
 import type { SpecialId } from './yaaruAvanSpecials';
 import { useOnlineRoom } from './useOnlineRoom';
+import { useConfirm } from './useConfirm';
 import { useYaaruAvanContentSync } from './useGameContentSync';
 
 // Same corner radius as the buttons on the admin pages (rounded-md). Local to this game, so other games keep theirs.
@@ -354,11 +355,14 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const reduce = useReducedMotion();
   const { play, ensure, muted, toggleMute, hapticsOn, toggleHaptics } = audio;
   const { state, problem, offline, refresh } = useOnlineRoom(code);
+  const confirm = useConfirm();
 
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [holding, setHolding] = useState(false);
-  const [seenRound, setSeenRound] = useState(0);
+  // Which deal this player has looked at. Includes the word and role, so a new word
+  // picked by the host asks everyone to look at their new pass again.
+  const [seenKey, setSeenKey] = useState('');
   const [pick, setPick] = useState<{ key: string; id: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -442,7 +446,8 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   }, [phase, code, refresh]);
 
   // ── Things that need the word and role ──
-  const seen = !!room && seenRound === room.round_no;
+  const dealKey = room && me ? [room.round_no, me.role, me.word, me.special, me.partner].join('|') : '';
+  const seen = !!room && seenKey === dealKey;
   const names = useMemo(() => players.map(p => p.name), [players]);
 
   const stats = useMemo(() => {
@@ -457,7 +462,21 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
   // ── Leaving ──
   const leave = async () => {
-    if (phase && phase !== 'lobby' && !window.confirm('Leave this game? You will not be able to rejoin your seat.')) return;
+    // Always ask first — "Leave" sits right under the game and is easy to tap
+    // by accident. Uses the app's own themed dialog; "Stay" is the focused
+    // default so a stray Enter keeps the player in.
+    if (phase) {
+      const inLobby = phase === 'lobby';
+      const ok = await confirm({
+        title: inLobby ? 'Leave this room?' : 'Leave this game?',
+        message: inLobby
+          ? 'You will be taken out of the room. You will need the room code to join again.'
+          : 'You will not be able to rejoin your seat once you leave.',
+        confirmLabel: inLobby ? 'Leave room' : 'Leave game',
+        cancelLabel: inLobby ? 'Stay in room' : 'Keep playing',
+      });
+      if (!ok) return;
+    }
     try { if (phase === 'lobby') await online.leave(code); } catch { /* leaving anyway */ }
     onLeft();
   };
@@ -770,7 +789,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
           <BoardingPass name={meP?.name ?? ''} seat={meP?.seat ?? null} word={me.word} tripTitle={room.trip_title} holding={holding} special={mySpecial} />
           <HoldButton
             holding={holding}
-            onChange={v => { setHolding(v); if (v) { setSeenRound(room.round_no); play('flip'); } }}
+            onChange={v => { setHolding(v); if (v) { setSeenKey(dealKey); play('flip'); } }}
             className="mt-5"
           />
           {!meP?.ready ? (
@@ -797,6 +816,27 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
                 {players.every(p => p.ready) ? 'Everyone has boarded. Start the round' : `Start anyway (${players.filter(p => p.ready).length} of ${n} ready)`} <ArrowRight size={16} weight="bold" />
               </button>
             : <div className="mt-3">{waiting(players.every(p => p.ready) ? `Waiting for ${hostName} to start…` : 'Waiting for everyone to get ready…')}</div>}
+          {isHost && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                void (async () => {
+                  const ok = await confirm({
+                    title: 'Pick a new word?',
+                    message: 'Everyone gets a new boarding pass and the roles are dealt again. Scores stay the same.',
+                    confirmLabel: 'New word',
+                    cancelLabel: 'Keep this word',
+                    variant: 'default',
+                  });
+                  if (ok) await act(() => online.repickWord(room.code));
+                })();
+              }}
+              className="mt-3 inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-cream/60 hover:text-cream transition-colors disabled:opacity-40"
+            >
+              <ArrowCounterClockwise size={14} weight="bold" /> Pick a new word
+            </button>
+          )}
         </div>
       )}
 

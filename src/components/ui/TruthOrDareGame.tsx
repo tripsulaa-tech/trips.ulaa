@@ -5,6 +5,7 @@ import {
   ChatCircleDots, Lightning, Flag, Fire, Timer, Trophy, ArrowUp, Question, Shuffle, ListNumbers,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
+import { useAskFirst } from './useAskFirst';
 import todBottle from '../../assets/truth-or-dare-bottle.svg';
 import { useSynth } from './gameAudio';
 import { GameTile, TimerRing, Confetti } from './gameParts';
@@ -286,6 +287,27 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
   const close = () => { tickTimers.current.forEach(window.clearTimeout); setSpinning(false); setPhase('idle'); };
   const again = () => { setPhase('setup'); };
 
+  // X / Escape and "End game": ask first once play has started (themed dialog).
+  const askFirst = useAskFirst();
+  const requestClose = () => {
+    const inProgress = phase === 'spin' || phase === 'pick' || phase === 'card';
+    void askFirst(inProgress ? {
+      title: 'Quit this game?',
+      message: 'Your current game and scores will be lost.',
+      confirmLabel: 'Quit game',
+      cancelLabel: 'Keep playing',
+    } : null, close);
+  };
+  const requestEnd = () => {
+    void askFirst({
+      title: 'End the game?',
+      message: 'The game stops here and you will see the results so far. You cannot carry on afterwards.',
+      confirmLabel: 'End game',
+      cancelLabel: 'Keep playing',
+      variant: 'default',
+    }, () => { play('click'); setPhase('summary'); });
+  };
+
   const setName = (i: number, v: string) => setNames(n => n.map((x, idx) => (idx === i ? v : x)));
   const addPlayer = () => { if (names.length < maxPlayers) { play('click'); setNames(n => [...n, '']); } };
   const removePlayer = (i: number) => { if (names.length > MIN_PLAYERS) { play('click'); setNames(n => n.filter((_, idx) => idx !== i)); } };
@@ -346,7 +368,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
         chip="Group game"
       />
 
-      <Modal isOpen={phase !== 'idle'} onClose={close} ariaLabel="Truth or Dare group game" size="sm" flush fullScreen>
+      <Modal isOpen={phase !== 'idle'} onClose={requestClose} ariaLabel="Truth or Dare group game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md flex flex-col">
             <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -484,7 +506,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
                   <Shuffle size={18} weight="bold" /> {spinning ? 'Spinning…' : 'Spin the bottle'}
                 </button>
                 <div className="mt-4">{scoreboard}</div>
-                <button type="button" onClick={() => { play('click'); setPhase('summary'); }} disabled={spinning} className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
+                <button type="button" onClick={requestEnd} disabled={spinning} className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                   <Flag size={14} /> End game
                 </button>
               </div>
@@ -526,7 +548,7 @@ export default function TruthOrDareGame({ className = '', compact = false, thumb
 
                 <div className="mt-4">{scoreboard}</div>
                 <div className="mt-4 flex items-center justify-between">
-                  <button type="button" onClick={() => { play('click'); setPhase('summary'); }} className="inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
+                  <button type="button" onClick={requestEnd} className="inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">
                     <Flag size={14} /> End game
                   </button>
                   <button type="button" onClick={toggleMute} className="inline-flex items-center gap-1.5 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">

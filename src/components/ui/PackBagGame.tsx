@@ -9,6 +9,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import Modal from './Modal';
+import { useAskFirst } from './useAskFirst';
 import { WHATSAPP_NUMBER, SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
@@ -395,6 +396,23 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
   };
 
   const close = () => { setOpen(false); setPhase('idle'); setPaused(false); itemsRef.current = []; setItems([]); };
+  const quitToMenu = () => { setPaused(false); setPhase('idle'); itemsRef.current = []; setItems([]); };
+
+  // X / Escape and "Quit game": ask first while a run is on (themed dialog).
+  // The run is paused behind the question, so the clock isn't ticking while
+  // the player decides; "Keep playing" leaves it paused on the Resume screen.
+  const askFirst = useAskFirst();
+  const quitPrompt = {
+    title: 'Quit this game?',
+    message: 'Your current score will be lost.',
+    confirmLabel: 'Quit game',
+    cancelLabel: 'Keep playing',
+  };
+  const pauseForQuestion = () => { if (phase === 'playing') setPaused(true); };
+  const requestClose = () => {
+    const inRun = phase === 'countdown' || phase === 'playing';
+    void askFirst(inRun ? quitPrompt : null, close, pauseForQuestion);
+  };
 
   const mult = Math.min(MAX_MULT, 1 + Math.floor(streak / COMBO_STEP));
   const secondsLeft = Math.max(0, Math.ceil(DURATION * (1 - progress)));
@@ -460,7 +478,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
         chip="New · 30 sec"
       />
 
-      <Modal isOpen={open} onClose={close} ariaLabel="Pack the bag game" size="sm" flush fullScreen>
+      <Modal isOpen={open} onClose={requestClose} ariaLabel="Pack the bag game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -713,7 +731,7 @@ export default function PackBagGame({ tripId, tripSlug, tripTitle, coverImage, c
                   <div className="absolute inset-0 bg-footer/85 backdrop-blur-md flex flex-col items-center justify-center gap-3 p-6">
                     <p className="font-display text-2xl font-extrabold text-white">Paused</p>
                     <button type="button" onClick={() => setPaused(false)} className={primaryBtn}><Play size={18} weight="fill" /> Resume</button>
-                    <button type="button" onClick={() => { setPaused(false); setPhase('idle'); itemsRef.current = []; setItems([]); }} className={ghostBtn}>Quit game</button>
+                    <button type="button" onClick={() => { void askFirst(quitPrompt, quitToMenu); }} className={ghostBtn}>Quit game</button>
                   </div>
                 )}
               </motion.div>

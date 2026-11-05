@@ -239,6 +239,8 @@ export const online = {
   startRound: (code: string, dare: string | null, reset = false) =>
     rpc('yaaru_avan_start_round', { p_code: code, p_token: t(), p_dare: dare, p_reset: reset }),
   ready: (code: string) => rpc('yaaru_avan_ready', { p_code: code, p_token: t() }),
+  /** Host, during the boarding passes: deal the round again with a new word. */
+  repickWord: (code: string) => rpc('yaaru_avan_repick_word', { p_code: code, p_token: t() }),
   describeDone: (code: string, pos: number) => rpc('yaaru_avan_describe_done', { p_code: code, p_token: t(), p_pos: pos }),
   beginVote: (code: string) => rpc('yaaru_avan_begin_vote', { p_code: code, p_token: t() }),
   vote: (code: string, target: string) => rpc('yaaru_avan_cast_vote', { p_code: code, p_token: t(), p_target: target }),

@@ -5,6 +5,7 @@ import {
   SpeakerHigh, SpeakerSlash, DeviceMobile,
 } from '@phosphor-icons/react';
 import Modal from './Modal';
+import { useAskFirst } from './useAskFirst';
 import { useSynth } from './gameAudio';
 import { GameTile, TimerRing, Confetti } from './gameParts';
 import { GOLD_GRAD_TEXT, primaryBtn, ghostBtn, iconBtn, glass, eyebrow, cleanName } from './gameUi';
@@ -182,6 +183,27 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
 
   const close = () => setPhase('idle');
 
+  // X / Escape and "End game": ask first once play has started (themed dialog).
+  const askFirst = useAskFirst();
+  const requestClose = () => {
+    const inProgress = phase === 'handoff' || phase === 'acting' || phase === 'turnEnd';
+    void askFirst(inProgress ? {
+      title: 'Quit this game?',
+      message: 'Your current game and scores will be lost.',
+      confirmLabel: 'Quit game',
+      cancelLabel: 'Keep playing',
+    } : null, close);
+  };
+  const requestEnd = () => {
+    void askFirst({
+      title: 'End the game?',
+      message: 'The game stops here and you will see the final scores. You cannot carry on afterwards.',
+      confirmLabel: 'End game',
+      cancelLabel: 'Keep playing',
+      variant: 'default',
+    }, () => { play('click'); setPhase('final'); });
+  };
+
   const setTeamName = (i: number, v: string) => setTeamNames(n => n.map((x, idx) => (idx === i ? v : x)));
   const addTeam = () => { if (teamNames.length < MAX_TEAMS) { play('click'); setTeamNames(n => [...n, '']); } };
   const removeTeam = (i: number) => { if (teamNames.length > MIN_TEAMS) { play('click'); setTeamNames(n => n.filter((_, idx) => idx !== i)); } };
@@ -207,7 +229,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
         chip="New · Group game"
       />
 
-      <Modal isOpen={phase !== 'idle'} onClose={close} ariaLabel="Dumb Charades Tamil movies group game" size="sm" flush fullScreen>
+      <Modal isOpen={phase !== 'idle'} onClose={requestClose} ariaLabel="Dumb Charades Tamil movies group game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md flex flex-col">
             <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -318,7 +340,7 @@ export default function DumbCharadesGame({ className = '', compact = false, thum
                   Pass the phone to one actor. Guessers, look away!
                 </p>
                 <button type="button" onClick={begin} className={primaryBtn}><Eye size={18} weight="bold" /> I'm the actor, start the {seconds}s clock</button>
-                <button type="button" onClick={() => { play('click'); setPhase('final'); }} className="mt-4 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">End game</button>
+                <button type="button" onClick={requestEnd} className="mt-4 text-xs font-semibold text-cream/50 hover:text-cream transition-colors">End game</button>
               </div>
             )}
 

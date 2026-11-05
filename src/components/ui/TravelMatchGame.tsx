@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import Modal from './Modal';
+import { useAskFirst } from './useAskFirst';
 import { WHATSAPP_NUMBER, SITE_HOST, SITE_ORIGIN } from '../../constants/site';
 import { getWhatsAppLink } from '../../utils/utils-index';
 import { buildScoreCard } from './packBagScoreCard';
@@ -246,6 +247,18 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
 
   const close = () => { clearTimers(); setOpen(false); setPhase('idle'); setStarted(false); };
 
+  // X / Escape: ask first while a game is in progress (themed dialog).
+  const askFirst = useAskFirst();
+  const requestClose = () => {
+    const inProgress = phase === 'playing' || phase === 'between';
+    void askFirst(inProgress ? {
+      title: 'Quit this game?',
+      message: 'Your current score and progress will be lost.',
+      confirmLabel: 'Quit game',
+      cancelLabel: 'Keep playing',
+    } : null, close);
+  };
+
   // All pairs on the board found: bank the time bonus, then next level or finish.
   const completeLevel = () => {
     const bonus = Math.max(0, timeLeftRef.current) * TIME_BONUS;
@@ -359,7 +372,7 @@ export default function TravelMatchGame({ tripId, tripSlug, tripTitle, className
         chip="New · Memory"
       />
 
-      <Modal isOpen={open} onClose={close} ariaLabel="Travel match game" size="sm" flush fullScreen>
+      <Modal isOpen={open} onClose={requestClose} ariaLabel="Travel match game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />

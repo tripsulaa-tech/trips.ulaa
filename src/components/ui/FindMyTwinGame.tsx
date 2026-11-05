@@ -7,6 +7,7 @@ import { GameTile } from './gameParts';
 import { primaryBtn, ghostBtn, glass } from './gameUi';
 import FindMyTwinOnline from './FindMyTwinOnline';
 import { loadTwinSession } from './findMyTwinApi';
+import { useAskFirst } from './useAskFirst';
 import { QUESTIONS } from './findMyTwinEngine';
 import { useTwinPromptsSync } from './useGameContentSync';
 
@@ -52,6 +53,19 @@ export default function FindMyTwinGame({ tripTitle = 'Ulaa', className = '', com
 
   const close = () => { setOpen(false); setOnline(false); };
 
+  // X / Escape: ask first when the player is inside a room. Uses the app's themed dialog.
+  const askFirst = useAskFirst();
+  const requestClose = () => {
+    const roomCode = online ? loadTwinSession()?.code : undefined;
+    void askFirst(roomCode ? {
+      title: 'Close the game?',
+      message: `You are still in room ${roomCode}. You can rejoin it from the Find My Twin tile.`,
+      confirmLabel: 'Close',
+      cancelLabel: 'Keep playing',
+      variant: 'default',
+    } : null, close);
+  };
+
   return (
     <div className={className}>
       <GameTile
@@ -66,7 +80,7 @@ export default function FindMyTwinGame({ tripTitle = 'Ulaa', className = '', com
         chip="New · Group game"
       />
 
-      <Modal isOpen={open} onClose={close} ariaLabel="Find My Twin group game" size="sm" flush fullScreen>
+      <Modal isOpen={open} onClose={requestClose} ariaLabel="Find My Twin group game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
             <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />

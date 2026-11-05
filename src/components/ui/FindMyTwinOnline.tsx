@@ -21,6 +21,7 @@ import {
 } from './findMyTwinApi';
 import type { TwinEdge, TwinPhase } from './findMyTwinApi';
 import { useTwinRoom } from './useTwinRoom';
+import { useConfirm } from './useConfirm';
 import { useTwinPromptsSync } from './useGameContentSync';
 
 // "Find My Twin" online: every player uses their own phone. The matching and
@@ -474,6 +475,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const reduce = !!useReducedMotion();
   const { play, ensure, muted, toggleMute } = audio;
   const { state, gone, offline, refresh } = useTwinRoom(code);
+  const confirm = useConfirm();
 
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
@@ -568,7 +570,20 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   useEffect(() => () => { setPreviewUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; }); }, []);
 
   const leave = async () => {
-    if (phase && phase !== 'lobby' && !window.confirm('Leave this game? Your twin will be left waiting.')) return;
+    // Always ask first — the Leave links are easy to tap by accident. Uses the
+    // app's themed dialog; the safe choice is the focused default.
+    if (phase) {
+      const inLobby = phase === 'lobby';
+      const ok = await confirm({
+        title: inLobby ? 'Leave this room?' : 'Leave this game?',
+        message: inLobby
+          ? 'You will be taken out of the room. You will need the room code to join again.'
+          : 'Your twin will be left waiting.',
+        confirmLabel: inLobby ? 'Leave room' : 'Leave game',
+        cancelLabel: inLobby ? 'Stay in room' : 'Keep playing',
+      });
+      if (!ok) return;
+    }
     try { if (phase === 'lobby') await twin.leave(code); } catch { /* leaving anyway */ }
     onLeft();
   };

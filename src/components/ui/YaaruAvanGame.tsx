@@ -18,6 +18,7 @@ import YaaruAvanOnline from './YaaruAvanOnline';
 import SpecialList from './YaaruAvanSpecialList';
 import YaaruAvanRules from './YaaruAvanRules';
 import { loadOnlineSession } from './yaaruAvanRoomApi';
+import { useConfirm } from './useConfirm';
 import { LEVELS, CATEGORY_LABEL } from './yaaruAvanWords';
 import type { Level } from './yaaruAvanWords';
 import {
@@ -135,6 +136,8 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const [open, setOpen] = useState(defaultOpen);
   const [phase, setPhase] = useState<Phase>(defaultOpen ? 'setup' : 'idle');
   const [savedRoom, setSavedRoom] = useState<string | null>(null);
+  const confirm = useConfirm();
+  const askingToClose = useRef(false);
   const [names, setNames] = useState<string[]>(() => rowsFor(presetPlayers, initial.names));
   const [strangers, setStrangers] = useState(() => (hasPreset ? clampRoles(Math.max(MIN_PLAYERS, presetNames(presetPlayers).length), initial.strangers, initial.pickpockets).strangers : initial.strangers));
   const [pickpockets, setPickpockets] = useState(() => (hasPreset ? clampRoles(Math.max(MIN_PLAYERS, presetNames(presetPlayers).length), initial.strangers, initial.pickpockets).pickpockets : initial.pickpockets));
@@ -322,6 +325,26 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     setGained({});
     setDare(null);
     setPhase('pass');
+  };
+
+  // A fresh word (and a fresh deal of roles) for the same round and the same players.
+  // Everyone starts their boarding pass again.
+  const repickWord = () => {
+    play('flip');
+    setHolding(false);
+    beginRound(seats.map(s => s.name), roundNo);
+  };
+  // From a pass itself, the player already knows their role, so ask first (themed dialog):
+  // this is for a word that isn't working, not for re-rolling your own role.
+  const repickFromPass = async () => {
+    const ok = await confirm({
+      title: 'Pick a new word?',
+      message: 'Everyone gets a new boarding pass and the roles are dealt again. Use this when the word is not working, not to change your own role.',
+      confirmLabel: 'New word',
+      cancelLabel: 'Keep this word',
+      variant: 'default',
+    });
+    if (ok) repickWord();
   };
 
   // A new stop, as in Undercover: everyone describes their word in turn, then the group
@@ -691,8 +714,45 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   };
 
   const endSession = () => { clearTimers(); setPhase('final'); play('win'); };
+  const requestEndSession = async () => {
+    const ok = await confirm({
+      title: 'End the game?',
+      message: 'The game stops here and you will see the awards. You cannot carry on afterwards.',
+      confirmLabel: 'End game',
+      cancelLabel: 'Keep playing',
+      variant: 'default',
+    });
+    if (ok) endSession();
+  };
 
   const close = () => { clearTimers(); setOpen(false); setPhase('idle'); setHolding(false); };
+
+  // X button / Escape: ask first when a game is actually in progress, so one
+  // stray tap can't throw away a round. Setup, rules, the start screen and the
+  // final results close straight away. Uses the app's own themed dialog.
+  const requestClose = async () => {
+    if (askingToClose.current) return;
+    const roomCode = phase === 'online' ? loadOnlineSession()?.code : undefined;
+    const playingLocal = phase !== 'idle' && phase !== 'rules' && phase !== 'setup' && phase !== 'online' && phase !== 'final';
+    if (!playingLocal && !roomCode) { close(); return; }
+    askingToClose.current = true;
+    const ok = await confirm(playingLocal
+      ? {
+          title: 'Quit this game?',
+          message: 'Your current game and scores will be lost.',
+          confirmLabel: 'Quit game',
+          cancelLabel: 'Keep playing',
+        }
+      : {
+          title: 'Close the game?',
+          message: `You are still in room ${roomCode}. You can rejoin it from the Yaaru Avan tile.`,
+          confirmLabel: 'Close',
+          cancelLabel: 'Keep playing',
+          variant: 'default',
+        });
+    askingToClose.current = false;
+    if (ok) close();
+  };
 
   // ── Result card ──
   const ranking = useMemo(
@@ -780,7 +840,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
         chip="New · Group game"
       />
 
-      <Modal isOpen={open} onClose={close} ariaLabel="Yaaru Avan? group game" size="sm" flush fullScreen>
+      <Modal isOpen={open} onClose={() => void requestClose()} ariaLabel="Yaaru Avan? group game" size="sm" flush fullScreen>
         <div onPointerDownCapture={onPressCapture} className="[-webkit-tap-highlight-color:transparent] touch-manipulation relative overflow-hidden bg-gradient-to-b from-dark via-footer to-neutral-900 text-cream px-4 pt-[max(4rem,calc(env(safe-area-inset-top)+3.5rem))] pb-[max(1.5rem,env(safe-area-inset-bottom))] min-h-[100dvh] flex justify-center items-center md:py-10">
           <div className="relative w-full max-w-md md:max-w-2xl lg:max-w-3xl flex flex-col">
           <span className="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-72 rounded-full bg-primary/35 blur-3xl pointer-events-none" aria-hidden="true" />
@@ -991,6 +1051,11 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 <p className="text-xs text-cream/50 mt-2 px-8">Everyone else, look away. Only {passSeat.name} should see the next screen.</p>
               </motion.div>
               <button type="button" onClick={showTicket} className={primaryBtn}>I am {passSeat.name}. Show my pass</button>
+              {/* On every "Pass the phone to…" screen, before the next player has looked at their
+                  pass (no question asked: nothing has been seen). The pass itself asks first. */}
+              <button type="button" onClick={repickWord} className="mt-4 inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-cream/60 hover:text-cream transition-colors">
+                <ArrowCounterClockwise size={14} weight="bold" /> Pick a new word
+              </button>
             </div>
           )}
 
@@ -1061,6 +1126,9 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
                 {passIdx + 1 >= seats.length ? 'Everyone has boarded. Start' : 'Hidden. Pass it on'} <ArrowRight size={16} weight="bold" />
               </button>
               <p className="mt-2 text-center text-[11px] text-cream/55">Remember it. You cannot look again.</p>
+              <button type="button" disabled={holding} onClick={() => void repickFromPass()} className="mt-3 mx-auto flex items-center justify-center gap-1.5 text-xs font-semibold text-cream/60 hover:text-cream transition-colors disabled:opacity-40">
+                <ArrowCounterClockwise size={14} weight="bold" /> Pick a new word
+              </button>
             </div>
           )}
 
@@ -1391,7 +1459,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
 
               <button type="button" onClick={nextRound} className={`${primaryBtn} mb-2.5`}><Play size={18} weight="fill" /> Play next round</button>
               <button type="button" onClick={openTweak} className={`${ghostBtn} mb-2.5`}><Sliders size={16} weight="bold" /> Change players or settings</button>
-              <button type="button" onClick={endSession} className={ghostBtn}><Trophy size={16} weight="fill" /> End game and see awards</button>
+              <button type="button" onClick={() => void requestEndSession()} className={ghostBtn}><Trophy size={16} weight="fill" /> End game and see awards</button>
             </div>
           )}
 

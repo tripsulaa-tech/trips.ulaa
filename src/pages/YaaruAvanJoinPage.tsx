@@ -3,6 +3,8 @@ import FullScreenGame from '../components/ui/FullScreenGame';
 import YaaruAvanOnline from '../components/ui/YaaruAvanOnline';
 import { usePageMeta } from '../hooks/usePageMeta';
 import { pageTitle } from '../constants/site';
+import { loadOnlineSession } from '../components/ui/yaaruAvanRoomApi';
+import { useAskFirst } from '../components/ui/useAskFirst';
 
 // The page a Yaaru Avan invite link opens (/play/yaaru-avan/KBR7). It shows the
 // "Join" form with the code already filled in, or drops a returning player
@@ -10,6 +12,7 @@ import { pageTitle } from '../constants/site';
 export default function YaaruAvanJoinPage() {
   const { code } = useParams<{ code?: string }>();
   const navigate = useNavigate();
+  const askFirst = useAskFirst();
 
   usePageMeta({
     title: pageTitle('Join a Yaaru Avan? game'),
@@ -18,7 +21,17 @@ export default function YaaruAvanJoinPage() {
   });
 
   return (
-    <FullScreenGame ariaLabel="Yaaru Avan? group game" onClose={() => navigate('/trips')}>
+    <FullScreenGame ariaLabel="Yaaru Avan? group game" onClose={() => {
+      // Ask first when the player is inside a room (themed dialog).
+      const roomCode = loadOnlineSession()?.code;
+      void askFirst(roomCode ? {
+        title: 'Close the game?',
+        message: `You are still in room ${roomCode}. You can rejoin it from the Yaaru Avan tile.`,
+        confirmLabel: 'Close',
+        cancelLabel: 'Keep playing',
+        variant: 'default',
+      } : null, () => navigate('/trips'));
+    }}>
       <YaaruAvanOnline tripTitle="Ulaa" initialCode={code} onExit={() => navigate('/trips')} />
     </FullScreenGame>
   );
