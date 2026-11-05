@@ -980,7 +980,7 @@ export default function TripCountdownCard({
                     </motion.span>
                     Early bird
                   </p>
-                  <span className="text-2xs font-semibold text-white/90">First {earlyBird.totalSeats} to pay</span>
+                  <span className="text-2xs font-semibold text-white/90">Limited seats</span>
                 </div>
 
                 <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">

@@ -4,6 +4,46 @@ import type { Enquiry, JourneyStage } from '../../../types/types-index';
 // =============================================
 // Shared internals for the enquiries/* modules
 // =============================================
+
+// A bank/UPI UTR identifies exactly one transaction, so the same UTR can't
+// legitimately be recorded twice on one booking — that's always the same
+// payment entered twice (a double click, or a re-entry). Spaces and letter
+// case are ignored so "6675 7897 4131" and "667578974131" count as the same.
+// Refunds are left out (a refund has its own, different reference), and so is
+// any other booking: one transfer can legitimately pay for several travellers.
+// Call this BEFORE writing anything, so a blocked save leaves no half-written
+// state behind. `excludePaymentId` is for settling an existing pending invoice.
+function normalizeUtr(utr: string): string {
+  return utr.replace(/\s+/g, '').toUpperCase();
+}
+
+export async function assertUtrNotAlreadyRecorded(
+  enquiryId: string,
+  utr: string | null | undefined,
+  excludePaymentId?: string
+): Promise<void> {
+  const wanted = normalizeUtr(utr || '');
+  if (!wanted) return;
+  const { data, error } = await supabase
+    .from('payments')
+    .select('id, invoice_number, amount, utr_number')
+    .eq('enquiry_id', enquiryId)
+    .eq('status', 'paid')
+    .neq('payment_type', 'refund')
+    .not('utr_number', 'is', null);
+  if (error) throw error;
+  const clash = (data ?? []).find(
+    p => p.id !== excludePaymentId && normalizeUtr(p.utr_number || '') === wanted
+  );
+  if (clash) {
+    const amount = Number(clash.amount).toLocaleString('en-IN');
+    throw new Error(
+      `UTR ${utr!.trim()} is already recorded on this booking` +
+      `${clash.invoice_number ? ` (${clash.invoice_number}, ₹${amount})` : ` (₹${amount})`}. ` +
+      `It looks like this payment was already added. If it's a different payment, check the UTR number.`
+    );
+  }
+}
 // True when a Postgres error is the enforce_trip_age_eligibility trigger's
 // rejection (see add_trip_age_eligibility_enforcement.sql) rather than some
 // other failure. That trigger raises a plain 'AGE_NOT_ELIGIBLE' marker

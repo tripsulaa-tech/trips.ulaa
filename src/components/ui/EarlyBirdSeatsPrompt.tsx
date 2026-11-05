@@ -5,35 +5,32 @@ import Modal from './Modal';
 import { formatPrice, EARLY_BIRD_COUNT_VISIBLE_AT_SEATS_LEFT } from '../../utils/utils-index';
 import type { EarlyBirdSeatsOffer } from './earlyBirdSeatsOffer';
 
-/** Caption for the card strip: "Only 5 early-bird seats · first 5 to pay get this price",
- *  "3 of 5 early-bird seats left · pay to lock yours", or the last-seat variant. */
-function earlyBirdSeatsCaption(total: number, left: number): string {
+/** Caption for the card strip: "Only 2 early-bird seats left · pay to lock
+ *  yours", or the last-seat variant. Never the total or the booked count. */
+function earlyBirdSeatsCaption(left: number): string {
   if (left === 1) return 'Last early-bird seat! · first to pay gets it';
-  if (left === total) return `Only ${total} exclusive Early-bird seats - first 5 payments win!`;
-  return `${left} of ${total} early-bird seats left · pay to lock yours`;
+  return `Only ${left} early-bird seats left · pay to lock yours`;
 }
 
 /** Compact seat-tile strip for the trip card: same tiles as the banner, so
  *  the card and the banner read as one system. */
-export function EarlyBirdSeatsStrip({ total, left }: { total: number; left: number }) {
-  const shown = Math.min(total, 12);
-  const shownTaken = Math.min(total - left, shown);
+export function EarlyBirdSeatsStrip({ left }: { left: number }) {
+  // Only the seats still open are drawn — never the ones already booked.
+  const shown = Math.min(left, 12);
   return (
     <div className="early-bird-border flex flex-col items-center gap-2 rounded-lg px-3 py-2.5 mb-5">
       <div className="flex flex-wrap justify-center gap-1" aria-hidden="true">
         {Array.from({ length: shown }).map((_, i) => (
           <span
             key={i}
-            className={`w-6 h-6 rounded-md flex items-center justify-center ${
-              i < shownTaken ? 'bg-background-warm text-dark-muted/50' : 'bg-gradient-to-b from-orange-500 to-red-500 text-white'
-            }`}
+            className="w-6 h-6 rounded-md flex items-center justify-center bg-gradient-to-b from-orange-500 to-red-500 text-white"
           >
             <User size={13} weight="fill" />
           </span>
         ))}
       </div>
       <p className={`text-2xs leading-tight font-bold text-center ${left === 1 ? 'text-danger-fg' : 'text-orange-900'}`}>
-        {earlyBirdSeatsCaption(total, left)}
+        {earlyBirdSeatsCaption(left)}
       </p>
     </div>
   );
@@ -79,7 +76,7 @@ function SeatTiles({ left }: { left: number }) {
  *  whose early-bird price is limited to the first N paid travellers. */
 export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advanceAmount, onContinue, onClose }: EarlyBirdSeatsPromptProps) {
   if (!offer || typeof document === 'undefined') return null;
-  const { totalSeats, seatsLeft, price, regularPrice } = offer;
+  const { seatsLeft, price, regularPrice } = offer;
   const saving = regularPrice != null ? regularPrice - price : 0;
   const hasAdvance = !!advanceAmount && advanceAmount > 0;
   const balance = hasAdvance ? Math.max(0, price - (advanceAmount as number)) : null;
@@ -102,7 +99,7 @@ export default function EarlyBirdSeatsPrompt({ isOpen, offer, tripTitle, advance
             Early bird · Limited seats
           </span>
           <h3 className="relative mt-3 font-display text-2xl sm:text-[26px] font-bold leading-tight">
-            Only the first {totalSeats} travellers<br className="hidden sm:block" /> get this price
+            Limited early-bird seats<br className="hidden sm:block" /> at this price
           </h3>
           {tripTitle && (
             <p className="relative mt-1.5 text-xs text-white/95 line-clamp-1">{tripTitle}</p>

@@ -124,8 +124,10 @@ export function earlyBirdSeatsLabelWhenLow(trip: {
 }
 
 /**
- * Friendly rule for a seat-limited early bird, e.g. "First 5 travellers get ₹1,799.
- * Pay your ₹499 advance to lock it in."
+ * Friendly rule for a seat-limited early bird, e.g. "Limited early-bird seats
+ * at ₹1,799. Pay your ₹499 advance to lock it in." Deliberately never says the
+ * total limit, so together with the seats-left count it can't reveal how many
+ * are already booked.
  * Null when there are no early-bird seats left to talk about.
  */
 export function earlyBirdRuleNote(
@@ -139,7 +141,7 @@ export function earlyBirdRuleNote(
 ): string | null {
   if (earlyBirdSeatsLabel(trip) === null || earlyPrice == null) return null;
   const advanceText = advance && advance > 0 ? `your ${formatPrice(advance)} advance` : 'your advance';
-  return `First ${trip.early_bird_seats} travellers get ${formatPrice(earlyPrice)}. Pay ${advanceText} to lock it in.`;
+  return `Limited early-bird seats at ${formatPrice(earlyPrice)}. Pay ${advanceText} to lock it in.`;
 }
 
 /** Format a date string to a readable format */
