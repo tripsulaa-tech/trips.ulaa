@@ -5,7 +5,7 @@ import CancellationPolicyDisplay from '../../components/ui/CancellationPolicyDis
 import TermsBlocks from '../../components/ui/TermsBlocks';
 import { DEFAULT_CANCELLATION_POLICY } from '../../constants/cancellationPolicy';
 import { parseTerms } from '../../utils/parseTerms';
-import { formatDate, formatAgeRange, formatPrice, formatDuration, isOneDayTrip, ONE_DAY_STAY_TEXT } from '../../utils/utils-index';
+import { formatDate, formatPrice, formatDuration, isOneDayTrip, ONE_DAY_STAY_TEXT } from '../../utils/utils-index';
 import { computeTripFinanceSummary } from '../../utils/tripFinance';
 import TripFinanceBreakdown from './TripFinanceBreakdown';
 import type { TripRevenue } from './useTripFinanceData';
@@ -61,14 +61,6 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Duration</p>
                 <p className="text-dark">{formatDuration(trip.duration)}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium text-dark-muted mb-0.5">Age Range</p>
-                <p className="text-dark">
-                  {trip.min_age != null || trip.max_age != null
-                    ? formatAgeRange(trip.min_age, trip.max_age)
-                    : 'No restriction (default 18–65)'}
-                </p>
               </div>
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Dates</p>

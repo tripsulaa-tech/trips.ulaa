@@ -22,7 +22,6 @@ import { PACKAGE_CONFIG, PACKAGE_OPTIONS, SOURCE_CONFIG, SOURCE_OPTIONS_ALL, FOO
 import type { EditDetailsForm } from './AdminEditDetailsModal';
 import {
   validateFullName, validatePhone, validateOptionalEmail, validateOptionalCity, validateOptionalAge,
-  DEFAULT_MIN_AGE, DEFAULT_MAX_AGE,
 } from '../../utils/formValidation';
 import { getCitySuggestions, getEmailSuggestions } from './AdminEnquiriesShared';
 import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
@@ -70,8 +69,6 @@ export default function AdminEnquiryTravellerCard({
   // src/utils/formValidation.ts — with email/city/age kept optional here,
   // same reasoning as AdminAddEnquiryModal's validateEnquiryForm.
   const selectedTrip = editForm.trip_id ? trips.find(t => t.id === editForm.trip_id) : undefined;
-  const effectiveMinAge = selectedTrip?.min_age ?? DEFAULT_MIN_AGE;
-  const effectiveMaxAge = selectedTrip?.max_age ?? DEFAULT_MAX_AGE;
   const editErrors: { full_name?: string; phone?: string; email?: string; city?: string; age?: string } = {};
   if (!editForm.full_name.trim()) editErrors.full_name = 'Full name is required.';
   else {
@@ -87,7 +84,7 @@ export default function AdminEnquiryTravellerCard({
   if (emailError !== true) editErrors.email = emailError;
   const cityError = validateOptionalCity(editForm.city);
   if (cityError !== true) editErrors.city = cityError;
-  const ageError = validateOptionalAge(editForm.age, selectedTrip?.min_age, selectedTrip?.max_age);
+  const ageError = validateOptionalAge(editForm.age);
   if (ageError !== true) editErrors.age = ageError;
   const hasEditErrors = !!(editErrors.full_name || editErrors.phone || editErrors.email || editErrors.city || editErrors.age);
 
@@ -293,13 +290,10 @@ export default function AdminEnquiryTravellerCard({
                     value={editForm.age}
                     onChange={e => setEditForm(f => ({ ...f, age: e.target.value === '' ? '' : Number(e.target.value) }))}
                     onBlur={() => setEditTouched(prev => new Set(prev).add('age'))}
-                    aria-describedby={editTouched.has('age') && editErrors.age ? 'eq-detail-edit-age-error' : 'eq-detail-edit-age-hint'}
+                    aria-describedby={editTouched.has('age') && editErrors.age ? 'eq-detail-edit-age-error' : undefined}
                     className={`${inlineInputClass} mt-0.5`}
                     placeholder="Optional"
                   />
-                  {!(editTouched.has('age') && editErrors.age) && editForm.trip_id && (
-                    <p id="eq-detail-edit-age-hint" className="text-2xs text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
-                  )}
                   {editTouched.has('age') && editErrors.age && <p id="eq-detail-edit-age-error" role="alert" className="text-danger-fg text-xs mt-1">{editErrors.age}</p>}
                 </>
               ) : (

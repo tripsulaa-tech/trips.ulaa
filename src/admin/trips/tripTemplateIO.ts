@@ -56,7 +56,6 @@ export const handleExportTemplate = () => {
           'What is the trip title?',
           'Where is it going (destination)?',
           'Start date and end date?',
-          'Any age limits (minimum / maximum), or no limit?',
           'Shall I write a 2-4 sentence overview from your notes for you to approve?',
         ] },
         { tab: 'Pricing & Availability', ask: [
@@ -119,8 +118,6 @@ export const handleExportTemplate = () => {
     duration: '(auto-computed from start_date/end_date — leave blank)',
     start_date: '<Start Date, format YYYY-MM-DD>',
     end_date: '<End Date, format YYYY-MM-DD>',
-    min_age: '<Min Age as a number, or "" for no limit>',
-    max_age: '<Max Age as a number, or "" for no limit>',
     description: '<Short 2-4 sentence overview. Day-by-day plan goes in itinerary below, not here>',
 
     // ── Tab: Pricing & Availability ─────────────────────────────────
@@ -512,8 +509,6 @@ export function parseImportedTripForm(raw: unknown): TripForm {
             .map(f => ({ question: asStr(f?.question), answer: asStr(f?.answer) })),
       total_seats: asNum(r.total_seats) || emptyForm.total_seats,
       seats_booked: asNum(r.seats_booked) || 0,
-      min_age: asNum(r.min_age),
-      max_age: asNum(r.max_age),
       price: asNum(r.price),
       early_bird_price: asNum(r.early_bird_price),
       early_bird_deadline: asStr(r.early_bird_deadline),

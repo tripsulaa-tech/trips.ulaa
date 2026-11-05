@@ -404,18 +404,11 @@ export const emptyWaitlistPerson: WaitlistPersonForm = {
 // actually seat the booking — unchanged from before.
 // Shared by the modal (live, as the admin types) and handleSave as the
 // final save-time gate, so the two can never drift.
-// minAge/maxAge mirror BookingForm's own props of the same name — the
-// selected trip's age-eligibility range (either side may be unset), used
-// to validate the Age field against the same bounds the public form
-// would enforce for that trip. Omitted (e.g. no trip picked yet) falls
-// back to the app default 18-65 range, same as validateOptionalAge itself.
 type EnquiryFormErrors = Partial<Record<'full_name' | 'phone' | 'email' | 'city' | 'age' | 'amount_paid', string>>;
 
 export function validateEnquiryForm(
   form: EnquiryForm,
-  isConvertingWaitlist: boolean,
-  minAge?: number | null,
-  maxAge?: number | null
+  isConvertingWaitlist: boolean
 ): EnquiryFormErrors {
   const errors: EnquiryFormErrors = {};
   // required-ness stays a plain empty check (same copy as before this
@@ -437,7 +430,7 @@ export function validateEnquiryForm(
   if (emailError !== true) errors.email = emailError;
   const cityError = validateOptionalCity(form.city);
   if (cityError !== true) errors.city = cityError;
-  const ageError = validateOptionalAge(form.age, minAge, maxAge);
+  const ageError = validateOptionalAge(form.age);
   if (ageError !== true) errors.age = ageError;
 
   const totalAmount = form.total_amount === '' ? null : Number(form.total_amount);
@@ -456,16 +449,12 @@ export function validateEnquiryForm(
 // (checked with the same validators as the solo form above) and its own
 // qualifying advance (the shared per-person total_amount is passed in
 // separately since it lives on the parent `form`, not each person).
-// Email/city/age are optional per-seat, same as the solo form. minAge/
-// maxAge are the shared trip's age range (same for every seat, since
-// they're all booking the same trip) — see validateEnquiryForm above.
+// Email/city/age are optional per-seat, same as the solo form.
 type WaitlistPersonFormErrors = Partial<Record<'full_name' | 'phone' | 'email' | 'city' | 'age' | 'amount_paid', string>>;
 
 export function validateWaitlistPersonForm(
   p: WaitlistPersonForm,
-  totalAmount: number | '',
-  minAge?: number | null,
-  maxAge?: number | null
+  totalAmount: number | ''
 ): WaitlistPersonFormErrors {
   const errors: WaitlistPersonFormErrors = {};
   if (!p.full_name.trim()) errors.full_name = 'Full name is required.';
@@ -482,7 +471,7 @@ export function validateWaitlistPersonForm(
   if (emailError !== true) errors.email = emailError;
   const cityError = validateOptionalCity(p.city);
   if (cityError !== true) errors.city = cityError;
-  const ageError = validateOptionalAge(p.age, minAge, maxAge);
+  const ageError = validateOptionalAge(p.age);
   if (ageError !== true) errors.age = ageError;
 
   const amountPaid = p.amount_paid === '' ? 0 : Number(p.amount_paid);

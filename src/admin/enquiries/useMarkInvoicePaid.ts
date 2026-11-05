@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { markInvoicePaid } from '../../services/api';
+import { markInvoicePaid, getUtrWarning } from '../../services/api';
 import { useAlert } from '../../components/ui/useAlert';
+import { useConfirm } from '../../components/ui/useConfirm';
 import type { Payment } from '../../types/types-index';
 import { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
 
@@ -15,6 +16,7 @@ import { emptyMarkPaidForm, type MarkPaidForm } from './AdminMarkPaidModal';
 // same reason.
 export function useMarkInvoicePaid(onSuccess: (updatedPayment: Payment) => void | Promise<void>) {
   const alert = useAlert();
+  const askConfirm = useConfirm();
   const [target, setTarget] = useState<Payment | null>(null);
   const [form, setForm] = useState<MarkPaidForm>(emptyMarkPaidForm);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -30,6 +32,12 @@ export function useMarkInvoicePaid(onSuccess: (updatedPayment: Payment) => void 
   const confirm = async () => {
     if (!target) return;
     const payment = target;
+    // A UTR already on a booking is only a warning (one person can pay for
+    // several travellers): the admin decides whether to carry on.
+    if (form.utr_number) {
+      const utrWarning = await getUtrWarning(form.utr_number, { excludePaymentId: payment.id, currentEnquiryId: payment.enquiry_id });
+      if (utrWarning && !(await askConfirm({ title: 'UTR already used', message: utrWarning, confirmLabel: 'Save anyway', variant: 'default' }))) return;
+    }
     try {
       setSaving(true);
       setBusyId(payment.id);

@@ -1,7 +1,7 @@
 import { supabase } from '../../supabase';
 import { formatPrice } from '../../../utils/utils-index';
 import type { Enquiry, Payment } from '../../../types/types-index';
-import { PAYMENT_TYPE_LOG_LABEL, refreshJourneyStage, assertUtrNotAlreadyRecorded } from './shared';
+import { PAYMENT_TYPE_LOG_LABEL, refreshJourneyStage } from './shared';
 import { logActivity } from './activity';
 
 // =============================================
@@ -46,8 +46,6 @@ export async function addAddonCharge(
   if (amount <= 0) {
     throw new Error('Add-on amount must be greater than zero.');
   }
-  // Before the total is bumped, so a blocked duplicate leaves nothing behind.
-  if (options?.collectedNow) await assertUtrNotAlreadyRecorded(current.id, options.utr_number);
   const newTotal = (current.total_amount || 0) + amount;
 
   const { error: totalError } = await supabase
@@ -92,15 +90,6 @@ export async function markInvoicePaid(
   // was always this row itself. Fixed in place rather than left broken
   // since it's the "Mark Paid" action the Invoice system (spec section 11)
   // depends on.
-  if (options?.utr_number) {
-    const { data: row, error: rowError } = await supabase
-      .from('payments')
-      .select('enquiry_id')
-      .eq('id', paymentId)
-      .single();
-    if (rowError) throw rowError;
-    await assertUtrNotAlreadyRecorded(row.enquiry_id, options.utr_number, paymentId);
-  }
   const { data, error } = await supabase
     .from('payments')
     .update({

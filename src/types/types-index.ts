@@ -38,7 +38,7 @@ export interface TripConfidenceItem {
 // Admin-managed per trip via Add/Edit Trip → Overview & Itinerary tab; see
 // add_trip_card_feature_tags.sql. When a trip has none set, TripCard falls
 // back to auto-generated tags built from real trip data (traveler count,
-// age range, duration, destination count) instead.
+// duration, destination count) instead.
 export interface TripCardFeatureTag {
   icon: string;      // icon-library key, see constants/tripHighlightIcons.ts
   label: string;      // bold label shown in the icon row, e.g. "Girls-Only"
@@ -302,7 +302,7 @@ export interface UpcomingTrip {
   // Optional fixed marketing tags (up to 4) shown in the icon row on the
   // public Trip Card, e.g. "Girls-Only" / "Safe & fun". Left unset, the
   // card falls back to auto-generated tags from real trip data (travelers,
-  // age range, duration, destination count). See TripCardFeatureTag above
+  // duration, destination count). See TripCardFeatureTag above
   // and add_trip_card_feature_tags.sql.
   card_feature_tags?: TripCardFeatureTag[] | null;
   // Domestic vs. international, used by the DB's set_enquiry_trip_type()
@@ -315,12 +315,6 @@ export interface UpcomingTrip {
   /** Vehicle shown on the countdown card's route. Domestic trips only: 'train' or 'bus'
    *  (Bus / Van). Null = default (Bus for domestic, plane otherwise). See add_trip_travel_mode.sql. */
   travel_mode?: 'train' | 'bus' | null;
-  // Optional age eligibility range for this trip. Either side can be left
-  // unset (no restriction on that side); if both are unset, the public
-  // forms fall back to the app's default 18-65 rule — see validateAge in
-  // src/utils/formValidation.ts.
-  min_age?: number | null;
-  max_age?: number | null;
   cover_image?: string;
   // Optional saved position/zoom for cover_image, set via the Cover Image
   // Editor in Admin → Add/Edit Trip → Media. Stores a single focal point +

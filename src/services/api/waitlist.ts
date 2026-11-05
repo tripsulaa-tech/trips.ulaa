@@ -1,6 +1,6 @@
 import { supabase } from '../supabase';
 import type { WaitlistEntry, WaitlistFormData } from '../../types/types-index';
-import { isAgeNotEligibleError, isRateLimitedError, logActivity } from './enquiries';
+import { isRateLimitedError, logActivity } from './enquiries';
 
 // =============================================
 // Waitlist
@@ -18,9 +18,6 @@ export async function submitWaitlist(entry: WaitlistFormData): Promise<void> {
     }
     if (isRateLimitedError(error)) {
       throw new Error('RATE_LIMITED');
-    }
-    if (isAgeNotEligibleError(error)) {
-      throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw error;
   }

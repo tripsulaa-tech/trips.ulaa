@@ -5,52 +5,55 @@ import type { Enquiry, JourneyStage } from '../../../types/types-index';
 // Shared internals for the enquiries/* modules
 // =============================================
 
-// A bank/UPI UTR identifies exactly one transaction, so the same UTR can't
-// legitimately be recorded twice on one booking — that's always the same
-// payment entered twice (a double click, or a re-entry). Spaces and letter
-// case are ignored so "6675 7897 4131" and "667578974131" count as the same.
-// Refunds are left out (a refund has its own, different reference), and so is
-// any other booking: one transfer can legitimately pay for several travellers.
-// Call this BEFORE writing anything, so a blocked save leaves no half-written
-// state behind. `excludePaymentId` is for settling an existing pending invoice.
+// A bank/UPI UTR identifies exactly one transaction, but the same UTR can
+// legitimately appear on more than one booking (one person paying for two
+// travellers) — so it is never blocked. Instead this looks the UTR up and
+// returns a plain-English warning for the admin's confirm popup, or null when
+// the UTR is new / blank. Spaces and letter case are ignored. Refunds are left
+// out (a refund has its own reference). `excludePaymentId` is for settling an
+// existing pending invoice; `currentEnquiryId` lets the message say "this
+// booking". Any lookup problem returns null: a warning must never block a save.
 function normalizeUtr(utr: string): string {
   return utr.replace(/\s+/g, '').toUpperCase();
 }
 
-export async function assertUtrNotAlreadyRecorded(
-  enquiryId: string,
+export async function getUtrWarning(
   utr: string | null | undefined,
-  excludePaymentId?: string
-): Promise<void> {
+  options?: { excludePaymentId?: string; currentEnquiryId?: string }
+): Promise<string | null> {
   const wanted = normalizeUtr(utr || '');
-  if (!wanted) return;
-  const { data, error } = await supabase
-    .from('payments')
-    .select('id, invoice_number, amount, utr_number')
-    .eq('enquiry_id', enquiryId)
-    .eq('status', 'paid')
-    .neq('payment_type', 'refund')
-    .not('utr_number', 'is', null);
-  if (error) throw error;
-  const clash = (data ?? []).find(
-    p => p.id !== excludePaymentId && normalizeUtr(p.utr_number || '') === wanted
-  );
-  if (clash) {
-    const amount = Number(clash.amount).toLocaleString('en-IN');
-    throw new Error(
-      `UTR ${utr!.trim()} is already recorded on this booking` +
-      `${clash.invoice_number ? ` (${clash.invoice_number}, ₹${amount})` : ` (₹${amount})`}. ` +
-      `It looks like this payment was already added. If it's a different payment, check the UTR number.`
+  if (!wanted) return null;
+  try {
+    const safe = (v: string) => v.replace(/[^A-Za-z0-9 ]/g, '');
+    const patterns = Array.from(new Set([safe(wanted), safe((utr || '').trim())].filter(Boolean)));
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id, enquiry_id, invoice_number, amount, utr_number')
+      .eq('status', 'paid')
+      .neq('payment_type', 'refund')
+      .not('utr_number', 'is', null)
+      .or(patterns.map(p => `utr_number.ilike.%${p}%`).join(','));
+    if (error) return null;
+    const clashes = (data ?? []).filter(
+      p => p.id !== options?.excludePaymentId && normalizeUtr(p.utr_number || '') === wanted
     );
+    if (clashes.length === 0) return null;
+
+    const ids = Array.from(new Set(clashes.map(c => c.enquiry_id).filter(Boolean)));
+    const names = new Map<string, string>();
+    if (ids.length > 0) {
+      const { data: rows } = await supabase.from('enquiries').select('id, full_name, trip_title').in('id', ids);
+      for (const r of rows ?? []) names.set(r.id, r.trip_title ? `${r.full_name} (${r.trip_title})` : r.full_name);
+    }
+    const lines = clashes.map(c => {
+      const who = c.enquiry_id === options?.currentEnquiryId ? 'this booking' : (names.get(c.enquiry_id) || 'another booking');
+      const amount = Number(c.amount).toLocaleString('en-IN');
+      return `• ${who} — ₹${amount}${c.invoice_number ? ` (${c.invoice_number})` : ''}`;
+    });
+    return `UTR ${(utr || '').trim()} is already recorded on:\n${lines.join('\n')}\n\nIf one person paid for more than one traveller, this is fine. If not, it may be the same payment entered twice.`;
+  } catch {
+    return null;
   }
-}
-// True when a Postgres error is the enforce_trip_age_eligibility trigger's
-// rejection (see add_trip_age_eligibility_enforcement.sql) rather than some
-// other failure. That trigger raises a plain 'AGE_NOT_ELIGIBLE' marker
-// message (default SQLSTATE — not a dedicated code like the 23505 unique
-// violations below), so it's matched on message text instead of error.code.
-export function isAgeNotEligibleError(error: { message?: string }): boolean {
-  return !!error.message?.includes('AGE_NOT_ELIGIBLE');
 }
 
 // The aab_rate_limit_public_insert() DB trigger raises a plain 'RATE_LIMITED'
@@ -68,7 +71,7 @@ export function isRateLimitedError(error: { message?: string }): boolean {
 // re-check below: even if two people submit within the same instant, only
 // as many as actually fit get through as real enquiries — the rest get
 // this error and the caller routes them to the waitlist instead. Matched
-// on message text, same pattern as isAgeNotEligibleError above.
+// on message text.
 export function isSeatsUnavailableError(error: { message?: string }): boolean {
   return !!error.message?.includes('SEATS_UNAVAILABLE');
 }

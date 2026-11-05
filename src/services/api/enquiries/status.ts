@@ -1,6 +1,6 @@
 import { supabase } from '../../supabase';
 import type { Enquiry, ContactOutcome, BookingFollowUpType } from '../../../types/types-index';
-import { isAgeNotEligibleError, refreshJourneyStage } from './shared';
+import { refreshJourneyStage } from './shared';
 import { logActivity, tripContext } from './activity';
 import { formatPrice } from '../../../utils/utils-index';
 
@@ -237,9 +237,6 @@ export async function updateEnquiryDetails(
     console.error('updateEnquiryDetails failed:', error.code, error.message, error.details, error.hint);
     if (error.code === '23505') {
       throw new Error('DUPLICATE_ENQUIRY');
-    }
-    if (isAgeNotEligibleError(error)) {
-      throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw new Error(error.message || 'Failed to update enquiry details.');
   }

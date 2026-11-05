@@ -16,7 +16,6 @@ import {
   type EnquiryForm, type WaitlistPersonForm,
 } from './AdminEnquiriesShared';
 import { SOURCE_OPTIONS } from './AdminEnquiriesShared';
-import { DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
 import type { TravellerContact } from '../travellers/travellerContacts';
 import SuggestionDropdown from '../../components/ui/SuggestionDropdown';
 import { useSuggestionField, useIndexedSuggestionField } from '../useSuggestionField';
@@ -55,15 +54,6 @@ export default function AddEnquiryModal({
   const confirm = useConfirm();
   const errorClass = 'text-danger-fg text-xs mt-1';
   const isDirty = form.full_name.trim() !== '' || form.phone.trim() !== '' || (form.amount_paid !== '' && Number(form.amount_paid) > 0);
-
-  // Trip-specific age eligibility for whichever trip is currently picked —
-  // same fallback-to-app-default behaviour as the public BookingForm (see
-  // its minAge/maxAge props), just resolved here from the trip list
-  // instead of being passed in as a prop, since this modal (unlike
-  // BookingForm) picks its own trip via the Trip select below.
-  const selectedTrip = trips.find(t => t.id === form.trip_id);
-  const effectiveMinAge = selectedTrip?.min_age ?? DEFAULT_MIN_AGE;
-  const effectiveMaxAge = selectedTrip?.max_age ?? DEFAULT_MAX_AGE;
 
   // Which fields have been blurred yet — required-field errors (name,
   // phone, and the "advance required to convert" amount check) would
@@ -111,7 +101,7 @@ export default function AddEnquiryModal({
   // render so a missing name/phone or an amount that doesn't qualify for
   // a waitlist conversion show up as the admin fills the form, instead of
   // only surfacing behind an alert() after Save.
-  const soloErrors = validateEnquiryForm(form, !!convertingWaitlist, selectedTrip?.min_age, selectedTrip?.max_age);
+  const soloErrors = validateEnquiryForm(form, !!convertingWaitlist);
   const soloErrorsVisible = {
     full_name: touched.has('full_name') ? soloErrors.full_name : undefined,
     phone: touched.has('phone') ? soloErrors.phone : undefined,
@@ -123,7 +113,7 @@ export default function AddEnquiryModal({
   const hasSoloErrors = Object.keys(soloErrors).length > 0;
 
   // Same, per row, for the group (multi-seat waitlist conversion) form.
-  const groupErrors = waitlistPeople.map(p => validateWaitlistPersonForm(p, form.total_amount, selectedTrip?.min_age, selectedTrip?.max_age));
+  const groupErrors = waitlistPeople.map(p => validateWaitlistPersonForm(p, form.total_amount));
   const hasGroupErrors = groupErrors.some(e => Object.keys(e).length > 0);
 
   const requestClose = async () => {
@@ -284,13 +274,10 @@ export default function AddEnquiryModal({
                       value={p.age}
                       onChange={e => updateWaitlistPerson(i, { age: e.target.value === '' ? '' : +e.target.value })}
                       onBlur={() => touchPerson(i, 'age')}
-                      aria-describedby={touchedPeople.has(`${i}:age`) && groupErrors[i].age ? `ge-p-age-${i}-error` : `ge-p-age-${i}-hint`}
+                      aria-describedby={touchedPeople.has(`${i}:age`) && groupErrors[i].age ? `ge-p-age-${i}-error` : undefined}
                       className={inputClass}
                       placeholder="Optional"
                     />
-                    {!(touchedPeople.has(`${i}:age`) && groupErrors[i].age) && form.trip_id && (
-                      <p id={`ge-p-age-${i}-hint`} className="text-2xs text-dark-muted mt-1">Ages {effectiveMinAge}–{effectiveMaxAge}.</p>
-                    )}
                     {touchedPeople.has(`${i}:age`) && groupErrors[i].age && <p id={`ge-p-age-${i}-error`} role="alert" className={errorClass}>{groupErrors[i].age}</p>}
                   </div>
                   <div className="relative">
@@ -442,13 +429,10 @@ export default function AddEnquiryModal({
               value={form.age}
               onChange={e => setForm(f => ({ ...f, age: e.target.value === '' ? '' : +e.target.value }))}
               onBlur={() => touch('age')}
-              aria-describedby={soloErrorsVisible.age ? 'ge-age-error' : 'ge-age-hint'}
+              aria-describedby={soloErrorsVisible.age ? 'ge-age-error' : undefined}
               className={inputClass}
               placeholder="Optional"
             />
-            {!soloErrorsVisible.age && form.trip_id && (
-              <p id="ge-age-hint" className="text-2xs text-dark-muted mt-1">This trip is open to ages {effectiveMinAge}–{effectiveMaxAge}.</p>
-            )}
             {soloErrorsVisible.age && <p id="ge-age-error" role="alert" className={errorClass}>{soloErrorsVisible.age}</p>}
           </div>
           <div className="relative">

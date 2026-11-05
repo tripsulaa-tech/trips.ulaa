@@ -49,7 +49,6 @@ function tripToForm(trip: UpcomingTrip): TripForm {
     meeting_time: trip.meeting_time || '', meeting_terminal: trip.meeting_terminal || '',
     meeting_details: trip.meeting_details || '',
     faqs: trip.faqs || [], total_seats: trip.total_seats, seats_booked: trip.seats_booked || 0,
-    min_age: trip.min_age ?? '', max_age: trip.max_age ?? '',
     price: trip.price ?? '', early_bird_price: trip.early_bird_price ?? '',
     early_bird_deadline: trip.early_bird_deadline || '',
     early_bird_seats: trip.early_bird_seats ?? '',
@@ -411,13 +410,6 @@ export function useTripFormModal(load: () => void) {
       });
       return;
     }
-    if (form.min_age !== '' && form.max_age !== '' && Number(form.min_age) > Number(form.max_age)) {
-      await alert({
-        title: 'Invalid age range',
-        message: 'Min Age cannot be greater than Max Age.',
-      });
-      return;
-    }
     if (form.special_offer_date && form.special_offer_end_date && form.special_offer_end_date < form.special_offer_date) {
       await alert({
         title: 'Invalid offer date range',
@@ -471,8 +463,6 @@ export function useTripFormModal(load: () => void) {
         trip_type: form.trip_type === '' ? null : form.trip_type,
         // Train / Bus only applies to domestic trips; anything else falls back to the default.
         travel_mode: form.trip_type === 'domestic' && form.travel_mode ? form.travel_mode : null,
-        min_age: form.min_age === '' ? null : form.min_age,
-        max_age: form.max_age === '' ? null : form.max_age,
         trip_leader_id: form.trip_leader_id === '' ? null : form.trip_leader_id,
         seats_booked: Math.max(0, Math.min(form.seats_booked, form.total_seats)),
         // Blank/unnamed rows and dangling option references are dropped;

@@ -78,7 +78,7 @@ export function useEditEnquiry(params: {
       validatePhone(editForm.phone),
       validateOptionalEmail(editForm.email),
       validateOptionalCity(editForm.city),
-      validateOptionalAge(editForm.age, newTrip?.min_age, newTrip?.max_age),
+      validateOptionalAge(editForm.age),
     ].find(r => r !== true);
     if (firstError) {
       alert(firstError as string);

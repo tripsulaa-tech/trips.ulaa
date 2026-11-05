@@ -3,7 +3,7 @@ import type { PdfTrip } from './shared';
 import { BRAND, PAGE_W, PAGE_H, MARGIN, CONTENT_W, COLORS, money, loadCoverCroppedImage } from './shared';
 import { sanitizeForPdf } from '../../pdfText';
 import { loadContainImage } from '../../pdfImageLoading';
-import { formatDateRange, formatAgeRange, getActivePrice, formatDuration } from '../../utils-index';
+import { formatDateRange, getActivePrice, formatDuration } from '../../utils-index';
 import { withBasicPricing } from '../../tripOptions';
 
 /** Renders the "Cover" slide — trip hero photo, title, meta pills, and
@@ -95,7 +95,7 @@ export async function renderCover(ctx: PdfCtx, trip: PdfTrip): Promise<void> {
       ty += 22;
     }
 
-    // Meta row: dates • duration • total seats • age eligibility • early bird.
+    // Meta row: dates • duration • total seats • early bird.
     // Pills auto-wrap onto a second row if the full set doesn't fit one line
     // (long destinations/durations, or an early-bird pill, can push it over).
     // Basic (first package) price when the trip has packages.
@@ -105,7 +105,6 @@ export async function renderCover(ctx: PdfCtx, trip: PdfTrip): Promise<void> {
       formatDateRange(trip.start_date, trip.end_date),
       formatDuration(trip.duration),
       trip.total_seats ? `${trip.total_seats} Travelers` : '',
-      formatAgeRange(trip.min_age, trip.max_age),
       isEarlyBird && activePrice ? `Early Bird ${money(activePrice)}` : '',
     ]
       .filter(Boolean)

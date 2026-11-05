@@ -114,16 +114,6 @@ function ShortLabel({ full, short }: { full: string; short: string }) {
   );
 }
 
-/** "Open to ages 18–45" style summary of the Min/Max Age fields. */
-function ageSummary(min: number | '', max: number | ''): string {
-  const hasMin = min !== '';
-  const hasMax = max !== '';
-  if (hasMin && hasMax) return `Open to ages ${min}–${max}.`;
-  if (hasMin) return `Open to ages ${min} and above.`;
-  if (hasMax) return `Open to ages up to ${max}.`;
-  return 'Open to all ages.';
-}
-
 export default function AdminTripFormModal({
   modalOpen, closeModal, editingTrip, trips, onSwitchTrip, form, setForm,
   modalSearch, setModalSearch, modalSearchNoMatch, onModalSearchEnter, modalBodyRef,
@@ -270,36 +260,6 @@ export default function AdminTripFormModal({
                   min={form.start_date || undefined}
                 />
               </div>
-              <div>
-                <label htmlFor="trip-min-age" className="block text-sm font-medium text-dark mb-1">Min Age</label>
-                <input
-                  id="trip-min-age"
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  value={form.min_age}
-                  onChange={e => setForm(f => ({ ...f, min_age: e.target.value === '' ? '' : +e.target.value }))}
-                  className={inputClass}
-                  placeholder="e.g. 18"
-                />
-              </div>
-              <div>
-                <label htmlFor="trip-max-age" className="block text-sm font-medium text-dark mb-1">Max Age</label>
-                <input
-                  id="trip-max-age"
-                  type="number"
-                  min={0}
-                  inputMode="numeric"
-                  value={form.max_age}
-                  onChange={e => setForm(f => ({ ...f, max_age: e.target.value === '' ? '' : +e.target.value }))}
-                  className={inputClass}
-                  placeholder="e.g. 45"
-                />
-              </div>
-              <p className="col-span-2 md:col-span-4 text-xs text-dark-muted -mt-2" aria-live="polite">
-                {ageSummary(form.min_age, form.max_age)}{' '}
-                Leave blank for no limit.
-              </p>
             </div>
             <div className="md:col-span-2">
               <label htmlFor="trip-description" className="block text-sm font-medium text-dark mb-1">Description *</label>
@@ -526,7 +486,7 @@ export default function AdminTripFormModal({
                 )}
               </div>
               <p className="text-xs text-dark-muted -mt-1">
-                Up to 4 tags on the Trip Card (e.g. "Girls-Only"). Leave empty to show travelers, age range, duration and destinations automatically.
+                Up to 4 tags on the Trip Card (e.g. "Girls-Only"). Leave empty to show travelers, duration and destinations automatically.
               </p>
               {form.card_feature_tags.map((tag, i) => (
                 <div key={i} {...tagDrag.itemProps(i)} className={`flex items-start gap-2 rounded-lg border border-transparent transition-all ${tagDrag.itemClass(i)}`}>
@@ -546,7 +506,7 @@ export default function AdminTripFormModal({
                   <button type="button" onClick={() => setForm(f => ({ ...f, card_feature_tags: f.card_feature_tags.filter((_, idx) => idx !== i) }))} aria-label={`Remove tag ${i + 1}`} className="p-1.5 rounded text-primary hover:text-primary-dark hover:bg-primary/5 transition-colors flex-shrink-0"><Trash2 size={13} aria-hidden="true" /></button>
                 </div>
               ))}
-              {form.card_feature_tags.length === 0 && <p className="text-xs text-dark-muted">No custom tags. The card shows travelers, age range, duration and destinations.</p>}
+              {form.card_feature_tags.length === 0 && <p className="text-xs text-dark-muted">No custom tags. The card shows travelers, duration and destinations.</p>}
             </div>
             <TripPackagesEditor
               value={form.trip_options}

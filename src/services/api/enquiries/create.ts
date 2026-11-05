@@ -1,7 +1,7 @@
 import { supabase } from '../../supabase';
 import type { Enquiry, BookingFormData } from '../../../types/types-index';
 import { getWaitlistReservedCounts } from '../trips';
-import { isAgeNotEligibleError, isRateLimitedError, isSeatsUnavailableError, computeAutoStatus, computeBookingStatus, computeJourneyStage, refreshJourneyStage } from './shared';
+import { isRateLimitedError, isSeatsUnavailableError, computeAutoStatus, computeBookingStatus, computeJourneyStage, refreshJourneyStage } from './shared';
 
 // =============================================
 // Enquiries — creation / intake
@@ -29,9 +29,6 @@ export async function submitEnquiry(enquiry: BookingFormData): Promise<void> {
     }
     if (isRateLimitedError(error)) {
       throw new Error('RATE_LIMITED');
-    }
-    if (isAgeNotEligibleError(error)) {
-      throw new Error('AGE_NOT_ELIGIBLE');
     }
     if (isSeatsUnavailableError(error)) {
       throw new Error('SEATS_UNAVAILABLE');
@@ -119,9 +116,6 @@ export async function submitGroupEnquiry(
     if (isRateLimitedError(error)) {
       throw new Error('RATE_LIMITED');
     }
-    if (isAgeNotEligibleError(error)) {
-      throw new Error('AGE_NOT_ELIGIBLE');
-    }
     if (isSeatsUnavailableError(error)) {
       throw new Error('SEATS_UNAVAILABLE');
     }
@@ -204,9 +198,6 @@ export async function createManualEnquiry(
   if (error) {
     if (error.code === '23505') {
       throw new Error('DUPLICATE_ENQUIRY');
-    }
-    if (isAgeNotEligibleError(error)) {
-      throw new Error('AGE_NOT_ELIGIBLE');
     }
     throw error;
   }

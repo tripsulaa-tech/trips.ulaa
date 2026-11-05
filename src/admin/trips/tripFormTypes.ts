@@ -27,10 +27,6 @@ export interface TripForm {
   faqs: FAQ[];
   total_seats: number;
   seats_booked: number;
-  // Optional age eligibility range. Blank ('') means no restriction on
-  // that side — see the DB check constraints in add_trip_age_range.sql.
-  min_age: number | '';
-  max_age: number | '';
   price: number | '';
   early_bird_price: number | '';
   early_bird_deadline: string;
@@ -108,7 +104,7 @@ export const emptyForm: TripForm = {
   description: '', itinerary: [], not_included: [],
   meeting_point: '', meeting_point_map_url: '',
   meeting_time: '', meeting_terminal: '', meeting_details: '', faqs: [], total_seats: 15, seats_booked: 0,
-  min_age: '', max_age: '', price: '',
+  price: '',
   early_bird_price: '', early_bird_deadline: '', early_bird_seats: '', strike_through_price: '', advance_amount: '',
   special_offer_name: '', special_offer_price: '', special_offer_date: '', special_offer_end_date: '',
   card_feature_tags: [], trip_type: '', travel_mode: '',

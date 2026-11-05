@@ -2,11 +2,10 @@ import type { PdfCtx } from './context';
 import type { RGB, PdfTrip } from './shared';
 import { MARGIN, CONTENT_W, CONTENT_BOTTOM, COLORS, CONFIDENCE_PALETTE, resolveIcon, getThingsToCarryFallbackIcon } from './shared';
 import { getTripHighlightIcon } from '../../../constants/tripHighlightIcons';
-import { formatAgeRange } from '../../utils-index';
 
   // =========================================================================
   // SLIDE — Travel with Confidence (left) | Things to Carry (right), with
-  // compact Meeting Point / Eligibility cards anchored along the bottom.
+  // compact Meeting Point card anchored along the bottom.
   // =========================================================================
   // A single split slide rather than several separate ones — divided by a
   // vertical rule down the middle, matching the reference screenshot. Falls
@@ -24,8 +23,7 @@ import { formatAgeRange } from '../../utils-index';
     const hasConfidence = confidenceItems.length > 0;
     const hasCarry = trip.things_to_carry.length > 0;
     const hasMeetingPoint = !!trip.meeting_point;
-    const hasEligibility = trip.min_age != null || trip.max_age != null;
-    if (!hasConfidence && !hasCarry && !hasMeetingPoint && !hasEligibility) return;
+    if (!hasConfidence && !hasCarry && !hasMeetingPoint) return;
 
     newSlide();
     const top = 92;
@@ -35,15 +33,14 @@ import { formatAgeRange } from '../../utils-index';
     // column geometry reacts to whichever row actually needs it — keeping
     // the vertical rule and column edges aligned across the whole slide.
     const topTwoCol = hasConfidence && hasCarry;
-    const cardsTwoCol = hasMeetingPoint && hasEligibility;
-    const twoCol = topTwoCol || cardsTwoCol;
+    const twoCol = topTwoCol;
     const leftW = twoCol ? (CONTENT_W - colGap) / 2 : CONTENT_W;
     const rightW = leftW;
     const rightX = MARGIN + leftW + colGap;
 
     // Bottom info cards reserve their own band; the checklist/chip content
     // above is capped to whatever's left so nothing overlaps.
-    const hasCards = hasMeetingPoint || hasEligibility;
+    const hasCards = hasMeetingPoint;
     const cardH = 116;
     const cardGap = 22;
     const listBottom = hasCards ? CONTENT_BOTTOM - cardH - cardGap : CONTENT_BOTTOM;
@@ -173,7 +170,7 @@ import { formatAgeRange } from '../../utils-index';
     if (!hasCards) return;
 
     // ---------------------------------------------------------------------
-    // Bottom band — compact Meeting Point / Eligibility cards. Each sits in
+    // Bottom band — compact Meeting Point card. It sits in
     // its own column slot (left under "Travel with Confidence", right under
     // "Things to Carry") when both are present; a lone card takes the full
     // slot width it would otherwise share.
@@ -201,7 +198,7 @@ import { formatAgeRange } from '../../utils-index';
     }
 
     if (hasMeetingPoint) {
-      const w = cardsTwoCol ? leftW : (hasEligibility ? leftW : CONTENT_W);
+      const w = CONTENT_W;
       drawInfoCard(MARGIN, w, icons.navigation, 'Meeting Point', (bx, by, bw) => {
         setText(COLORS.dark);
         doc.setFont('helvetica', 'bold');
@@ -219,19 +216,6 @@ import { formatAgeRange } from '../../utils-index';
           doc.text(label, bx + 16, linkY + 4);
           doc.link(bx, linkY - 8, doc.getTextWidth(label) + 16, 16, { url: trip.meeting_point_map_url });
         }
-      });
-    }
-
-    if (hasEligibility) {
-      const x = cardsTwoCol ? rightX : (hasMeetingPoint ? rightX : MARGIN);
-      const w = cardsTwoCol ? rightW : (hasMeetingPoint ? rightW : CONTENT_W);
-      drawInfoCard(x, w, icons.userCheck, 'Eligibility', (bx, by, bw) => {
-        drawParagraph(`This trip is open to travelers aged ${formatAgeRange(trip.min_age, trip.max_age)}.`, bx, by, bw, {
-          size: 10,
-          color: COLORS.darkMuted,
-          lineHeight: 14,
-          maxLines: 3,
-        });
       });
     }
   }

@@ -27,7 +27,7 @@ import { useToast } from '../../components/ui/useToast';
 import LoadErrorState from '../../components/ui/LoadErrorState';
 import {
   getEnquiries, getPaymentsForEnquiry, getAllUpcomingTripsAdmin, getActivityLog,
-  recordPayment, generatePendingInvoice, addAddonCharge,
+  recordPayment, generatePendingInvoice, addAddonCharge, getUtrWarning,
   markEnquiryCompleted, checkInEnquiry, undoCheckInEnquiry,
   updateEnquiryStatus, cancelEnquiry, uncancelEnquiry, setEnquiryNoShow,
   recordRefund, deleteEnquiry, setEnquiryFollowUp,
@@ -471,6 +471,12 @@ export default function AdminEnquiryDetail() {
       alert(firstError);
       return;
     }
+      // A UTR already on a booking is only a warning (one person can pay for
+      // several travellers): the admin decides whether to carry on.
+      if (!isPending && thisPayment > 0 && paymentForm.payment_utr) {
+        const utrWarning = await getUtrWarning(paymentForm.payment_utr, { currentEnquiryId: enquiry.id });
+        if (utrWarning && !(await confirm({ title: 'UTR already used', message: utrWarning, confirmLabel: 'Save anyway', variant: 'default' }))) return;
+      }
     try {
       setSavingPayment(true);
       let updated = enquiry;

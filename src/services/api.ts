@@ -8,7 +8,7 @@
 // Only the names that were exported from this file before the split are
 // re-exported here (some domain modules export a couple of extra
 // cross-module-only helpers — e.g. getWaitlistReservedCounts,
-// isAgeNotEligibleError, logActivity — purely so sibling domain files can
+// logActivity — purely so sibling domain files can
 // import them; those are deliberately NOT re-exported here, so the public
 // surface of `services/api` is unchanged).
 
@@ -78,6 +78,7 @@ export {
   generatePendingInvoice,
   addAddonCharge,
   markInvoicePaid,
+  getUtrWarning,
   cancelEnquiry,
   setEnquiryNoShow,
   deleteEnquiry,

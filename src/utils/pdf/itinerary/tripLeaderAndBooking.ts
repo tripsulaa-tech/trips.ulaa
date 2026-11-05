@@ -1,12 +1,12 @@
 import {
-  Calendar, Clock, Users, UserCheck, Phone, Envelope as Mail, Globe, Chat as MessageSquare,
+  Calendar, Clock, Users, Phone, Envelope as Mail, Globe, Chat as MessageSquare,
   Headphones, ShieldCheck, SealCheck as BadgeCheck,
 } from '@phosphor-icons/react';
 import type { PdfCtx } from './context';
 import type { AnyIcon, RGB, PdfTrip } from './shared';
 import type { ButtonLabelsConfig } from '../../../types/types-index';
 import { BRAND, MARGIN, CONTENT_W, COLORS, money, heroMoneyRupee, rgbToHex, loadCoverCroppedImage } from './shared';
-import { formatDateRange, formatAgeRange, formatDate, getActivePrice, earlyBirdSeatsLabelWhenLow, getStrikeThroughPrice, publicSeatsLeft, formatDuration } from '../../utils-index';
+import { formatDateRange, formatDate, getActivePrice, earlyBirdSeatsLabelWhenLow, getStrikeThroughPrice, publicSeatsLeft, formatDuration } from '../../utils-index';
 import { withBasicPricing } from '../../tripOptions';
 
 import { RESPONSE_TIME } from '../../../constants/site';
@@ -378,11 +378,10 @@ import { RESPONSE_TIME } from '../../../constants/site';
       { icon: Calendar, label: 'Dates', value: formatDateRange(trip.start_date, trip.end_date) },
       { icon: Clock, label: 'Duration', value: formatDuration(trip.duration) },
       { icon: Users, label: 'Group Size', value: `Max ${trip.total_seats}` },
-      { icon: UserCheck, label: 'Age Range', value: formatAgeRange(trip.min_age, trip.max_age) },
     ];
     const rowH = 18;
     for (const item of metaItems) {
-      // Real Phosphor icons (same Calendar/Clock/Users/UserCheck the
+      // Real Phosphor icons (same Calendar/Clock/Users the
       // live booking widget uses), not the hand-drawn `icons.*` set — those
       // were coming out visually cramped/misaligned at this small size.
       await drawLucideIcon(item.icon, innerLeft + 6, ry + 4, 12, COLORS.primary);

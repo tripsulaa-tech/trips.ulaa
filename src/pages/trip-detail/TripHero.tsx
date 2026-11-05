@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import type { UpcomingTrip, ButtonLabelsConfig } from '../../types/types-index';
-import { PLACEHOLDER_IMAGE, formatDateRange, formatAgeRange, getCoverImageStyle, formatDuration } from '../../utils/utils-index';
-import { ArrowLeft, ArrowRight, CaretDown, MapPin, Calendar, Clock, Users, UserCheck, Sparkle, Fire } from '@phosphor-icons/react';
+import { PLACEHOLDER_IMAGE, formatDateRange, getCoverImageStyle, formatDuration } from '../../utils/utils-index';
+import { ArrowLeft, ArrowRight, CaretDown, MapPin, Calendar, Clock, Users, Sparkle, Fire } from '@phosphor-icons/react';
 
 interface TripHeroProps {
   trip: UpcomingTrip;
@@ -130,7 +130,7 @@ export default function TripHero({
     </div>
   );
 
-  // Date · duration · seats · age (· offer badge on sm+).
+  // Date · duration · seats (· offer badge on sm+).
   const facts = (desktop: boolean) => {
     const icon = desktop ? 'text-secondary' : '';
     return (
@@ -146,9 +146,6 @@ export default function TripHero({
           <span className="flex items-center gap-2"><Users size={16} className={icon} />
             {isFull ? 'Sold out' : `${trip.total_seats} Travellers`}
           </span>
-        )}
-        {(trip.min_age != null || trip.max_age != null) && (
-          <span className="flex items-center gap-2"><UserCheck size={16} className={icon} /> {formatAgeRange(trip.min_age, trip.max_age)}</span>
         )}
         {desktop && (isSpecialOffer && trip.special_offer_name ? (
           <span className="offer-badge-gradient-shift flex items-center gap-1.5 text-white text-xs font-button font-bold uppercase tracking-wide px-3 py-1.5 rounded-md shadow-warm">

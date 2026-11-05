@@ -257,7 +257,7 @@ export function useAddEnquiry(params: {
     // already seated.
     const trip = trips.find(t => t.id === form.trip_id);
     for (const p of waitlistPeople) {
-      const errors = validateWaitlistPersonForm(p, totalAmount ?? '', trip?.min_age, trip?.max_age);
+      const errors = validateWaitlistPersonForm(p, totalAmount ?? '');
       const firstError = errors.full_name || errors.phone || errors.email || errors.city || errors.age || errors.amount_paid;
       if (firstError) {
         const name = p.full_name.trim() || 'One person';
@@ -309,8 +309,6 @@ export function useAddEnquiry(params: {
       const partial = seated > 0 ? ` ${seated} of ${waitlistPeople.length} were saved before this happened.` : '';
       if (message === 'DUPLICATE_ENQUIRY') {
         alert(`There's already an active enquiry for this trip with that exact name, phone, and email.${partial} Tweak that person's details and try the remaining seats again.`);
-      } else if (message === 'AGE_NOT_ELIGIBLE') {
-        alert(`That person's age falls outside this trip's age range.${partial} Adjust their age (or the trip's age range in Admin → Trips) and try the remaining seats again.`);
       } else if (message && /no seats left/i.test(message)) {
         alert(`Ran out of free seats partway through this batch.${partial}`);
       } else {
@@ -340,7 +338,7 @@ export function useAddEnquiry(params: {
     // between "what the admin sees live" and "what actually blocks the
     // save".
     const trip = trips.find(t => t.id === form.trip_id);
-    const formErrors = validateEnquiryForm(form, !!convertingWaitlist, trip?.min_age, trip?.max_age);
+    const formErrors = validateEnquiryForm(form, !!convertingWaitlist);
     const firstError = formErrors.full_name || formErrors.phone || formErrors.email || formErrors.city || formErrors.age || formErrors.amount_paid;
     if (firstError) {
       alert(firstError);
@@ -394,8 +392,6 @@ export function useAddEnquiry(params: {
       const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
       if (message === 'DUPLICATE_ENQUIRY') {
         alert('There\'s already an active enquiry for this trip with this exact name, phone, and email. If this is meant to be a different traveler, tweak one of those fields — a shared family phone/email with a different name is fine.');
-      } else if (message === 'AGE_NOT_ELIGIBLE') {
-        alert('The age entered falls outside this trip\'s age range (set in Admin → Trips → Basic Info). Adjust the age or the trip\'s age range and try again.');
       } else if (message && /no seats left/i.test(message)) {
         alert(convertingWaitlist
           ? 'All slots are filled. Unable to complete the conversion.'

@@ -5,15 +5,15 @@
 // itself lives in focused, per-concern files. See ./enquiries/*.ts for the
 // actual logic — this file intentionally has none of its own.
 //
-// isAgeNotEligibleError, isRateLimitedError and logActivity are re-exported here (in addition
+// isRateLimitedError and logActivity are re-exported here (in addition
 // to everything services/api.ts's own barrel re-exports) purely because
 // waitlist.ts imports them from './enquiries' as cross-module-only helpers
 // — see the comment in services/api.ts for why they're deliberately NOT
 // re-exported from that outer barrel.
 
 export {
-  isAgeNotEligibleError,
   isRateLimitedError,
+  getUtrWarning,
 } from './enquiries/shared';
 
 export {

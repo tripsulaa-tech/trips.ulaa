@@ -72,8 +72,6 @@ export default function TripBookingModal({
         tripDate={trip.start_date}
         terms={trip.terms_and_conditions}
         remainingSeats={remaining}
-        minAge={trip.min_age}
-        maxAge={trip.max_age}
         initialDraft={bookingDraft}
         onDraftChange={onDraftChange}
         // Sold-out early-bird packages aren't offered in the booking form, so

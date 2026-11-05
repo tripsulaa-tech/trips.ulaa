@@ -1,7 +1,7 @@
 import { supabase } from '../../supabase';
 import { formatPrice } from '../../../utils/utils-index';
 import type { Enquiry, Payment } from '../../../types/types-index';
-import { PAYMENT_TYPE_LOG_LABEL, computeAutoStatus, computeBookingStatus, refreshJourneyStage, assertUtrNotAlreadyRecorded } from './shared';
+import { PAYMENT_TYPE_LOG_LABEL, computeAutoStatus, computeBookingStatus, refreshJourneyStage } from './shared';
 import { logActivity } from './activity';
 
 // =============================================
@@ -60,10 +60,6 @@ export async function recordPayment(
   }
 
   const delta = payment.amount_paid - (current.amount_paid || 0);
-
-  // Same UTR twice on one booking = the same payment entered twice. Checked
-  // before any write below (add-on settling included).
-  if (delta > 0) await assertUtrNotAlreadyRecorded(current.id, payment.utr_number);
 
   // Labels this transaction the way the invoice list shows it: the first
   // money in is 'full_payment' if it settles the whole total in one go,

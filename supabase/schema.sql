@@ -184,14 +184,13 @@ create table public.upcoming_trips (
   advance_amount          numeric(10, 2),
   -- Optional fixed marketing tags (up to 4) shown in the icon row on the
   -- public Trip Card, e.g. "Girls-Only" / "Safe & fun". Empty/unset falls
-  -- back to auto-generated tags built from real trip data (travelers, age
-  -- range, duration, destination count). See add_trip_card_feature_tags.sql.
+  -- back to auto-generated tags built from real trip data (travelers,
+  -- duration, destination count). See add_trip_card_feature_tags.sql.
   card_feature_tags       jsonb default '[]'::jsonb,
-  -- Optional per-trip age eligibility range shown/enforced on the public
-  -- Book Your Seat / Join Waitlist forms. Either side left null means that
-  -- side is unrestricted; both null falls back to the app's default 18-65
-  -- rule — see add_trip_age_range.sql and validateAge in
-  -- src/utils/formValidation.ts.
+  -- DEPRECATED / unused: Ulaa is age-free, so no age limit is shown or
+  -- enforced anywhere (see remove_trip_age_restriction.sql). The columns are
+  -- kept only so older deployed code that still selects them keeps working;
+  -- they are always null and can be dropped once nothing references them.
   min_age                 integer,
   max_age                 integer,
   -- Optional structured assembly-point logistics shown alongside
@@ -272,12 +271,6 @@ create table public.upcoming_trips (
     check (strike_through_price is null or strike_through_price >= 0),
   constraint upcoming_trips_advance_amount_check
     check (advance_amount is null or advance_amount >= 0),
-  constraint upcoming_trips_min_age_check
-    check (min_age is null or min_age >= 0),
-  constraint upcoming_trips_max_age_check
-    check (max_age is null or max_age >= 0),
-  constraint upcoming_trips_age_range_check
-    check (min_age is null or max_age is null or min_age <= max_age),
   -- Prevents recompute_trip_seats() from storing a negative count if a
   -- cancellation/refund trigger fires in an unexpected order.
   constraint upcoming_trips_seats_booked_nonneg
@@ -749,7 +742,7 @@ $function$;
 -- open. This locks the trip row and checks the request (1 seat for solo,
 -- group_size for a group) against the trip's real, current
 -- seats_booked/total_seats, raising a plain 'SEATS_UNAVAILABLE' marker
--- (matched by src/services/api.ts, same convention as AGE_NOT_ELIGIBLE) so
+-- (matched by src/services/api.ts, same convention as DUPLICATE_ENQUIRY) so
 -- the UI can fall back to a waitlist signup instead of failing outright.
 -- See add_enquiry_capacity_enforcement.sql for the full rationale.
 create or replace function public.enforce_enquiry_capacity_or_waitlist()
@@ -848,43 +841,6 @@ begin
     new.offer_expiry         := null;
     new.converted_enquiry_id := null;
   end if;
-  return new;
-end;
-$function$;
-
--- Rejects an insert into enquiries/waitlist whose age falls outside the
--- referenced trip's optional min_age/max_age (see add_trip_age_range.sql).
--- Fails open whenever there's nothing to check (age/trip_id missing, no
--- matching upcoming_trips row, or the trip has no range configured) — see
--- add_trip_age_eligibility_enforcement.sql for the full rationale. Message
--- is a plain marker, not prose; src/services/api.ts catches it and supplies
--- friendly copy, same pattern as the DUPLICATE_ENQUIRY/
--- DUPLICATE_WAITLIST_ENTRY unique-violation handling.
-create or replace function public.enforce_trip_age_eligibility()
-returns trigger
-language plpgsql
-as $function$
-declare
-  v_min_age integer;
-  v_max_age integer;
-begin
-  if new.age is null or new.trip_id is null then
-    return new;
-  end if;
-
-  select min_age, max_age into v_min_age, v_max_age
-  from public.upcoming_trips
-  where id = new.trip_id;
-
-  if not found then
-    return new;
-  end if;
-
-  if (v_min_age is not null and new.age < v_min_age)
-     or (v_max_age is not null and new.age > v_max_age) then
-    raise exception 'AGE_NOT_ELIGIBLE';
-  end if;
-
   return new;
 end;
 $function$;
@@ -1805,19 +1761,9 @@ create trigger on_enquiries_capacity_check_at_submit
 create trigger on_enquiries_seat_sync
   after insert or update or delete on public.enquiries
   for each row execute function public.trg_enquiries_seat_sync();
--- Age eligibility (see add_trip_age_range.sql /
--- add_trip_age_eligibility_enforcement.sql) — insert-only, so editing an
--- existing row's age from Admin afterward is never blocked retroactively.
-create trigger enquiries_enforce_age_eligibility
-  before insert on public.enquiries
-  for each row execute function public.enforce_trip_age_eligibility();
-
 create trigger on_waitlist_created
   after insert on public.waitlist
   for each row execute function public.notify_new_waitlist_signup();
-create trigger waitlist_enforce_age_eligibility
-  before insert on public.waitlist
-  for each row execute function public.enforce_trip_age_eligibility();
 create trigger on_waitlist_status_change
   before update on public.waitlist
   for each row execute function public.enforce_waitlist_conversion();

@@ -50,7 +50,7 @@ export default function DialogShell({
               {title && (
                 <h3 className="font-display text-lg font-bold text-dark mb-1">{title}</h3>
               )}
-              <p id={messageId} className="text-dark-muted text-sm leading-relaxed">
+              <p id={messageId} className="text-dark-muted text-sm leading-relaxed whitespace-pre-line">
                 {message}
               </p>
             </div>

@@ -133,7 +133,7 @@ const PUBLIC_UPCOMING_TRIP_COLUMNS = [
   'cover_image', 'gallery_images', 'created_at', 'updated_at', 'early_bird_price',
   'early_bird_deadline', 'early_bird_seats', 'meeting_point_map_url', 'terms_and_conditions',
   'trip_type', 'cancellation_policy', 'strike_through_price', 'advance_amount',
-  'card_feature_tags', 'min_age', 'max_age', 'meeting_time', 'meeting_terminal',
+  'card_feature_tags', 'meeting_time', 'meeting_terminal',
   'meeting_details', 'highlight_cards', 'accommodation_description', 'accommodation_photos',
   'included_items', 'included_groups', 'not_included_items', 'gallery_items', 'fashion_photos',
   'trip_founder', 'trip_leader_id', 'confidence_items', 'confidence_description',

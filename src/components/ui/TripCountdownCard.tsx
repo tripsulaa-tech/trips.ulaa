@@ -434,7 +434,7 @@ function buildFlight(waypoints: Pt[]): FlyPath {
  *   - Stub: a seat map that makes "1 seat left" visible rather than just
  *     readable, and the single booking button.
  *
- * Trip length, age range and full date range already live in the hero, so
+ * Trip length and full date range already live in the hero, so
  * they are not repeated here.
  */
 export default function TripCountdownCard({

@@ -20,7 +20,7 @@ import { useBotTrap } from '../../utils/botProtection';
 import HoneypotField from './HoneypotField';
 import { DEFAULT_TERMS_AND_CONDITIONS } from '../../constants/terms';
 import { parseTerms } from '../../utils/parseTerms';
-import { validateFullName, validateCity, validateEmail, validatePhone, validateOptionalPhone, validateAge, DEFAULT_MIN_AGE, DEFAULT_MAX_AGE } from '../../utils/formValidation';
+import { validateFullName, validateCity, validateEmail, validatePhone, validateOptionalPhone, validateAge } from '../../utils/formValidation';
 import { MIN_GROUP_SIZE, MAX_GROUP_SIZE } from '../../utils/bookingDraft';
 import { INDIAN_CITIES } from '../../constants/indianCities';
 import { getEmailDomainSuggestions } from '../../constants/emailDomains';
@@ -54,13 +54,6 @@ interface BookingFormProps {
   // existing callers that don't pass it still work (falls back to always
   // treating this as a normal booking).
   remainingSeats?: number;
-  // Trip-specific age eligibility, set by the admin on this trip (Admin →
-  // Trips → Basic Info). Either side can be left unset by the admin (no
-  // restriction on that side) or omitted entirely by the caller — in both
-  // cases validateAge falls back to the app's default 18-65 range. See
-  // src/utils/formValidation.ts.
-  minAge?: number | null;
-  maxAge?: number | null;
   // Restores an in-progress (never submitted) entry — e.g. the user opened
   // this form, typed some details, then closed the modal without
   // submitting. Undefined/omitted means start blank, same as before this
@@ -150,7 +143,7 @@ function Stepper({ id, value, min, max, current, onChange, onBlur, onStep, decLa
   );
 }
 
-export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, minAge, maxAge, initialDraft, onDraftChange, tripOptions, packageBase, initialPackageId, tripDate }: BookingFormProps) {
+export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remainingSeats, initialDraft, onDraftChange, tripOptions, packageBase, initialPackageId, tripDate }: BookingFormProps) {
   // Shared id prefix so every label/input pair below has a stable,
   // unique-per-instance id — needed for htmlFor/aria-describedby wiring,
   // and unique in case this form is ever mounted more than once at a time.
@@ -168,8 +161,6 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     vegCount: `${uid}-veg-count`,
     message: `${uid}-message`,
   };
-  const effectiveMinAge = minAge ?? DEFAULT_MIN_AGE;
-  const effectiveMaxAge = maxAge ?? DEFAULT_MAX_AGE;
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [termsOpen, setTermsOpen] = useState(false);
@@ -580,8 +571,6 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         setErrorMsg("You're already on the waitlist for this trip with these exact details — we'll reach out the moment enough seats open up.");
       } else if (err instanceof Error && err.message === 'RATE_LIMITED') {
         setErrorMsg("We've received a lot of submissions from these contact details in the last few minutes. Please wait about 10 minutes and try again, or message us on WhatsApp.");
-      } else if (err instanceof Error && err.message === 'AGE_NOT_ELIGIBLE') {
-        setErrorMsg(`This trip is only open to ages ${effectiveMinAge}–${effectiveMaxAge}. Please double-check the age entered, or message us on WhatsApp if you have questions.`);
       } else if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
         setErrorMsg("Seats for this trip just sold out while you were booking. Please refresh the page and try again — you'll be offered the waitlist instead.");
       } else {
@@ -967,9 +956,9 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
             maxLength={3}
             {...register('age', {
               required: 'Age is required',
-              validate: value => validateAge(value, effectiveMinAge, effectiveMaxAge),
+              validate: value => validateAge(value),
             })}
-            placeholder={`Age ${effectiveMinAge}–${effectiveMaxAge}`}
+            placeholder="Your age"
             autoComplete="off"
             aria-invalid={!!errors.age}
             aria-describedby={errors.age ? `${ids.age}-error` : undefined}

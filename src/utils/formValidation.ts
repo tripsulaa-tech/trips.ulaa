@@ -93,41 +93,20 @@ export function validateOptionalEmail(value: string): true | string {
   return validateEmail(value);
 }
 
-// Fallback range used whenever a trip doesn't set its own min/max age —
-// matches the app's original hardcoded rule, so trips with no age range
-// configured in Admin behave exactly as before this feature existed.
-export const DEFAULT_MIN_AGE = 18;
-export const DEFAULT_MAX_AGE = 65;
+// Ulaa is age-free: there is no minimum or maximum age anywhere. Age is
+// just an optional detail — whatever is entered only has to be a whole
+// number (no letters, no decimals).
 
-/** Whole number only (no decimals, no letters — though type="number" already
- * blocks letters), within the given trip's age range. Either bound can be
- * omitted (e.g. an "18+" trip with no max) — an omitted bound falls back to
- * the app default for that side, not "unrestricted", so a trip that never
- * configured an age range at all keeps today's 18-65 behavior. */
-export function validateAge(
-  value: string | number,
-  minAge: number = DEFAULT_MIN_AGE,
-  maxAge: number = DEFAULT_MAX_AGE
-): true | string {
+/** Age is optional: blank passes, anything entered must be a whole number. */
+export function validateAge(value: string | number): true | string {
   const raw = String(value).trim();
+  if (raw.length === 0) return true;
   if (!/^\d{1,3}$/.test(raw)) return 'Age must be a whole number';
-  const n = Number(raw);
-  if (n < minAge) return `Must be ${minAge} or older`;
-  if (n > maxAge) return `Age must be ${maxAge} or under`;
   return true;
 }
 
-/** Same as validateAge but for fields where age itself is optional (e.g.
- * admin-side enquiry forms) — an empty value passes, but whatever *is*
- * entered still has to be a whole number within range. minAge/maxAge
- * accept null (as stored on a trip's row, unset) as well as undefined —
- * both fall back to the app default, same as validateAge itself. */
-export function validateOptionalAge(
-  value: string | number,
-  minAge?: number | null,
-  maxAge?: number | null
-): true | string {
-  const raw = String(value).trim();
-  if (raw.length === 0) return true;
-  return validateAge(value, minAge ?? DEFAULT_MIN_AGE, maxAge ?? DEFAULT_MAX_AGE);
+/** Kept as an alias of validateAge (both are optional now) so the admin
+ * forms that already call it keep working. */
+export function validateOptionalAge(value: string | number): true | string {
+  return validateAge(value);
 }

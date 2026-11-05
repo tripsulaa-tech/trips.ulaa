@@ -71,8 +71,6 @@ export function useAddWaitlistModal(allTrips: UpcomingTrip[], load: () => void, 
       const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
       if (message === 'DUPLICATE_WAITLIST_ENTRY') {
         alert('This person is already on the waitlist for this trip.');
-      } else if (message === 'AGE_NOT_ELIGIBLE') {
-        alert('The age entered falls outside this trip\'s age range (set in Admin → Trips → Basic Info). Adjust the age or the trip\'s age range and try again.');
       } else {
         alert(message || 'Failed to add to the waitlist.');
       }

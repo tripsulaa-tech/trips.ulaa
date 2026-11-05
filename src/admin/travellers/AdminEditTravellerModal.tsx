@@ -65,7 +65,7 @@ export default function AdminEditTravellerModal({
   // src/utils/formValidation.ts — with email/city kept optional here,
   // same reasoning as AdminAddEnquiryModal's validateEnquiryForm. This
   // modal has no trip context (a contact can span several trips), so
-  // there's no age field and no trip-specific bounds to apply anywhere.
+  // there's no age field here at all.
   const nameError = (() => {
     if (!form.full_name.trim()) return 'Full name is required.';
     const err = validateFullName(form.full_name);

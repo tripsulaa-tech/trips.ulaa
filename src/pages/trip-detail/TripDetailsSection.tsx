@@ -1,9 +1,8 @@
 import type { UpcomingTrip, TripInclusionItem } from '../../types/types-index';
-import { formatAgeRange } from '../../utils/utils-index';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
 import { getThingsToCarryIcon } from './tripDetailUtils';
 import SectionTitle from '../../components/ui/SectionTitle';
-import { MapPin, NavigationArrow as Navigation, UserCheck } from '@phosphor-icons/react';
+import { MapPin, NavigationArrow as Navigation } from '@phosphor-icons/react';
 import { safeHref } from '../../utils/safeUrl';
 
 interface TripDetailsSectionProps {
@@ -86,25 +85,6 @@ export default function TripDetailsSection({ trip }: TripDetailsSectionProps) {
           >
             <MapPin size={15} /> View on map
           </a>
-        </section>
-      )}
-
-      {/* Eligibility — only shown when the admin has set an age
-          restriction on this trip (Admin → Trips → Basic Info). */}
-      {(trip.min_age != null || trip.max_age != null) && (
-        <section className="bg-background-warm rounded-lg p-5 sm:p-6">
-          <SectionTitle
-            variant="plain"
-            align="left"
-            size="sm"
-            icon={<UserCheck size={22} className="text-primary" />}
-            label="Who can join"
-            title="Eligibility"
-            titleClassName="mb-2"
-          />
-          <p className="text-dark-muted">
-            This trip is open to travelers aged {formatAgeRange(trip.min_age, trip.max_age)}.
-          </p>
         </section>
       )}
 

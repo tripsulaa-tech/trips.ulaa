@@ -237,22 +237,6 @@ export function isOneDayTrip(trip: { start_date?: string | null; end_date?: stri
   return /^1\s*day$/i.test(formatDuration(trip.duration));
 }
 
-/**
- * Renders a trip's optional age eligibility for display. Either side may
- * be unset (no restriction on that side) — only called once at least one
- * side is set, so this never needs to represent "no restriction at all"
- * itself. See UpcomingTrip.min_age/max_age and validateAge in
- * src/utils/formValidation.ts for the matching form-validation logic.
- */
-export function formatAgeRange(minAge?: number | null, maxAge?: number | null): string {
-  const hasMin = minAge !== undefined && minAge !== null;
-  const hasMax = maxAge !== undefined && maxAge !== null;
-  if (hasMin && hasMax) return `${minAge}–${maxAge} yrs`;
-  if (hasMin) return `${minAge}+ yrs`;
-  if (hasMax) return `Up to ${maxAge} yrs`;
-  return 'All ages welcome';
-}
-
 /** Get seats remaining count */
 export function seatsLeft(total: number, booked: number): number {
   return Math.max(0, total - booked);

@@ -14,7 +14,7 @@ import {
 } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import type { UpcomingTrip, TripCardFeatureTag } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatAgeRange, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, getActivePrice, earlyBirdSeatsLabel, getStrikeThroughPrice, publicSeatsLeft, PLACEHOLDER_IMAGE, formatDestinationDotsCompact, daysUntil, specialOfferDaysLeft, formatDuration } from '../../utils/utils-index';
 import { addToCalendar } from '../../utils/calendar';
 import { withBasicPricing } from '../../utils/tripOptions';
 import { getTripHighlightIcon, suggestTripHighlightIcons } from '../../constants/tripHighlightIcons';
@@ -175,7 +175,6 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
   const destinationCount = trip.destination.split(',').map(s => s.trim()).filter(Boolean).length;
   const fallbackFeatureTags: TripCardFeatureTag[] = [
     { icon: 'users', label: isFull ? 'Full' : isAlmostFull ? `${remaining} left` : `${trip.total_seats}`, sublabel: 'Travelers' },
-    { icon: 'user-check', label: formatAgeRange(trip.min_age, trip.max_age), sublabel: 'Age range' },
     { icon: 'clock', label: formatDuration(trip.duration), sublabel: 'Duration' },
     { icon: 'map-pin', label: String(destinationCount), sublabel: destinationCount === 1 ? 'Place' : 'Places' },
   ];

@@ -4,13 +4,12 @@ import Button from '../../components/ui/Button';
 import PdfDownloadMenu from '../../components/ui/PdfDownloadMenu';
 import SectionTitle from '../../components/ui/SectionTitle';
 import type { UpcomingTrip, TripConfidenceItem, ButtonLabelsConfig } from '../../types/types-index';
-import { formatDateRange, formatDate, formatPrice, formatAgeRange, specialOfferDaysLeft, formatDuration, earlyBirdSeatsLabel, earlyBirdSeatsLabelWhenLow, earlyBirdRuleNote } from '../../utils/utils-index';
+import { formatDateRange, formatDate, formatPrice, specialOfferDaysLeft, formatDuration, earlyBirdSeatsLabel, earlyBirdSeatsLabelWhenLow, earlyBirdRuleNote } from '../../utils/utils-index';
 import { getGoogleCalendarUrl, downloadTripIcs } from '../../utils/calendar';
 import {
   Calendar,
   Clock,
   Users,
-  UserCheck,
   ArrowRight,
   CalendarPlus,
   Download,
@@ -233,12 +232,6 @@ export default function TripConfidenceBookingSection({
               <span className="flex items-center gap-2 text-dark-muted"><Users size={14} className="text-primary shrink-0" /> Group Size</span>
               <span className="text-dark font-medium">Max {trip.total_seats}</span>
             </div>
-            {(trip.min_age != null || trip.max_age != null) && (
-              <div className="flex justify-between text-sm">
-                <span className="flex items-center gap-2 text-dark-muted"><UserCheck size={14} className="text-primary shrink-0" /> Age Range</span>
-                <span className="text-dark font-medium">{formatAgeRange(trip.min_age, trip.max_age)}</span>
-              </div>
-            )}
           </div>
 
           <Button

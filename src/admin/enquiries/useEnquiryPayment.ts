@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
   recordPayment, recordRefund, getAllUpcomingTripsAdmin,
-  getPaymentsForEnquiry, generatePendingInvoice, addAddonCharge,
+  getPaymentsForEnquiry, generatePendingInvoice, addAddonCharge, getUtrWarning,
 } from '../../services/api';
 import type { Enquiry, UpcomingTrip, Payment } from '../../types/types-index';
 import { validatePaymentForm, reconcilePaymentType } from './AdminEnquiryCommon';
 import type { PaymentForm } from './AdminEnquiryCommon';
 import { useAlert } from '../../components/ui/useAlert';
+import { useConfirm } from '../../components/ui/useConfirm';
 import { useToast } from '../../components/ui/useToast';
 
 /** Owns the Track Payment modal — its target/form state, the inline payment-
@@ -35,6 +36,7 @@ export function useEnquiryPayment(params: {
 }) {
   const { setTrips, load, getTripPrice } = params;
   const alert = useAlert();
+  const confirm = useConfirm();
   const toast = useToast();
 
   const [paymentTarget, setPaymentTarget] = useState<Enquiry | null>(null);
@@ -133,6 +135,12 @@ export function useEnquiryPayment(params: {
       alert(firstError);
       return;
     }
+      // A UTR already on a booking is only a warning (one person can pay for
+      // several travellers): the admin decides whether to carry on.
+      if (!isPending && thisPayment > 0 && paymentForm.payment_utr) {
+        const utrWarning = await getUtrWarning(paymentForm.payment_utr, { currentEnquiryId: paymentTarget.id });
+        if (utrWarning && !(await confirm({ title: 'UTR already used', message: utrWarning, confirmLabel: 'Save anyway', variant: 'default' }))) return;
+      }
     try {
       setSavingPayment(true);
       let updated: Enquiry = paymentTarget;
