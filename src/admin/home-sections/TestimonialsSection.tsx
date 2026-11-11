@@ -328,7 +328,7 @@ export default function TestimonialsSection({
                 </div>
 
                 <div className="flex items-center gap-0.5" aria-label={`${t.rating} out of 5 stars`}>
-                  {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={13} className="fill-secondary text-secondary" aria-hidden="true" />)}
+                  {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={13} weight="fill" className="text-secondary" aria-hidden="true" />)}
                 </div>
 
                 <p className="text-sm text-dark-muted leading-relaxed line-clamp-3">{t.review}</p>
@@ -394,7 +394,7 @@ export default function TestimonialsSection({
                       <td className="px-4 py-4 text-dark-muted hidden md:table-cell">{t.destination}</td>
                       <td className="px-4 py-4 text-dark-muted hidden md:table-cell">
                         <div className="flex items-center gap-0.5" aria-label={`${t.rating} out of 5 stars`}>
-                          {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={12} className="fill-secondary text-secondary" aria-hidden="true" />)}
+                          {Array.from({ length: t.rating }).map((_, i) => <Star key={i} size={12} weight="fill" className="text-secondary" aria-hidden="true" />)}
                         </div>
                       </td>
                       <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[280px] truncate">{t.review}</td>

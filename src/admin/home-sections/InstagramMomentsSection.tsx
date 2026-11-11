@@ -128,7 +128,7 @@ export default function InstagramMomentsSection({
                 <img src={img.image_url} alt={`Gallery photo ${index + 1}`} className="w-full h-full object-cover" loading="lazy" />
                 {img.is_featured && (
                   <div className="absolute top-2 left-2 flex items-center gap-1 bg-amber-700 text-white text-2xs px-2 py-0.5 rounded-md font-button font-semibold">
-                    <Star size={10} className="fill-white" aria-hidden="true" />
+                    <Star size={10} weight="fill" aria-hidden="true" />
                     Featured
                   </div>
                 )}
@@ -155,7 +155,7 @@ export default function InstagramMomentsSection({
                     className={`p-1.5 rounded-full transition-colors ${img.is_featured ? 'text-secondary' : 'text-white/90 hover:bg-white/20'}`}
                     title="Toggle featured"
                   >
-                    <Star size={14} className={img.is_featured ? 'fill-secondary' : ''} aria-hidden="true" />
+                    <Star size={14} weight={img.is_featured ? 'fill' : 'regular'} aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => handleDelete(img)}

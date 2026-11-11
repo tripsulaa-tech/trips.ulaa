@@ -52,7 +52,9 @@ export default function TestimonialCard({ testimonial, index = 0, animateEntranc
           <Star
             key={i}
             size={16}
-            className={i < testimonial.rating ? 'text-secondary fill-secondary' : 'text-gray-200 fill-gray-200'}
+            weight="fill"
+            aria-hidden="true"
+            className={i < testimonial.rating ? 'text-secondary' : 'text-gray-200'}
           />
         ))}
       </div>
