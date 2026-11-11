@@ -111,7 +111,7 @@ export default function CoverImageCropEditor({ imageUrl, value, onChange }: Cove
           <p className="text-2xs text-dark-muted leading-snug mb-2 max-w-sm">
             For a sharp, well-framed result in both previews below, upload a
             wide landscape image at least <span className="font-medium text-dark">2400×1029px</span> (a
-            21:9 widescreen shape), with the main subject centered — the crop below
+            21:9 widescreen shape), with the main subject centered - the crop below
             trims more or less off the sides depending on the layout.
           </p>
           <div

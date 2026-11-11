@@ -28,8 +28,8 @@ export function QueueRankBadge({ entry, queueRank }: {
   return (
     <span
       title={rank!.rank === 1
-        ? `First in line for this trip — ${rank!.total} waiting in total`
-        : `#${rank!.rank} of ${rank!.total} waiting for this trip — ${rank!.rank - 1} waited longer`}
+        ? `First in line for this trip - ${rank!.total} waiting in total`
+        : `#${rank!.rank} of ${rank!.total} waiting for this trip - ${rank!.rank - 1} waited longer`}
       className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md whitespace-nowrap ${
         rank!.rank === 1 ? 'bg-emerald-100 text-emerald-700' : 'bg-warning-bg text-warning-fg'
       }`}
@@ -45,7 +45,7 @@ export function ConvertedProgressBadge({ entry }: { entry: WaitlistEntry }) {
   if (entry.status === 'converted' || convertedCount(entry) === 0) return null;
   return (
     <span
-      title={`${convertedCount(entry)} of ${seatsNeeded(entry)} in this group converted so far — ${seatsRemaining(entry)} left to go`}
+      title={`${convertedCount(entry)} of ${seatsNeeded(entry)} in this group converted so far - ${seatsRemaining(entry)} left to go`}
       className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-info-bg text-info-fg whitespace-nowrap"
     >
       <CheckCircle2 size={9} aria-hidden="true" /> {convertedCount(entry)}/{seatsNeeded(entry)} converted
@@ -70,7 +70,7 @@ export function SeatAvailabilityBadges({ entry, seatsAvailable }: {
   if (entry.status === 'waiting' && seatsRemaining(entry) > 1 && (seatsAvailable[entry.trip_id] ?? 0) > 0) {
     return (
       <span
-        title={`Needs ${seatsRemaining(entry)} more seats free together — only ${seatsAvailable[entry.trip_id]} open so far`}
+        title={`Needs ${seatsRemaining(entry)} more seats free together - only ${seatsAvailable[entry.trip_id]} open so far`}
         className="mt-1 inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-0.5 rounded-md bg-warning-bg text-warning-fg whitespace-nowrap"
       >
         {seatsAvailable[entry.trip_id]}/{seatsRemaining(entry)} seats open
@@ -98,7 +98,7 @@ export function ConvertedStatusBadges({ entry, cancelledEnquiryIds }: {
       </span>
       {cancelledCount > 0 && (
         <span
-          title="At least one of this group's bookings was cancelled after converting — that seat is free again."
+          title="At least one of this group's bookings was cancelled after converting - that seat is free again."
           className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-danger-bg text-danger-fg whitespace-nowrap"
         >
           <XCircle size={12} className="shrink-0" aria-hidden="true" />

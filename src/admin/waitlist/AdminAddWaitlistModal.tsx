@@ -114,7 +114,7 @@ export default function AdminAddWaitlistModal({
               setForm(f => ({ ...f, trip_id: val }));
               setFormTouched(prev => new Set(prev).add('trip_id'));
             }}
-            options={[{ value: '', label: '— Select a trip —' }, ...allTrips.map(t => ({ value: t.id, label: t.title }))]}
+            options={[{ value: '', label: '- Select a trip -' }, ...allTrips.map(t => ({ value: t.id, label: t.title }))]}
           />
           {formTouched.has('trip_id') && formErrors.trip_id && <p role="alert" className="text-danger-fg text-xs mt-1">{formErrors.trip_id}</p>}
         </div>

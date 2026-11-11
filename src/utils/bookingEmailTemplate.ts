@@ -34,7 +34,7 @@ export const DEFAULT_BOOKING_EMAIL_TEMPLATE: BookingEmailTemplate = {
   subjectConfirmed: 'Booking Confirmed - {trip}',
   subjectFull: 'Full Payment Received - {trip}',
   tagline: 'Your next adventure is waiting',
-  preheader: 'Your booking for {trip} is confirmed — booking ID {booking_id}.',
+  preheader: 'Your booking for {trip} is confirmed - booking ID {booking_id}.',
   badge: 'Booking Confirmed',
   greeting: 'Dear {name},',
   intro: "Thank you for choosing Ulaa. We're delighted to have you join us on our {trip}.",
@@ -43,7 +43,7 @@ export const DEFAULT_BOOKING_EMAIL_TEMPLATE: BookingEmailTemplate = {
   paymentNotePartial:
     'Please note that advance/installment payments are non-refundable, as they are used to confirm your booking. The remaining balance of **{balance}** must be paid on or before **{deadline}**.',
   paymentLabelFull: 'Payment Complete',
-  paymentNoteFull: 'Payment for this booking has been received in full — **{total}** paid in total. Thank you!',
+  paymentNoteFull: 'Payment for this booking has been received in full - **{total}** paid in total. Thank you!',
   buttonLabel: 'View Trip Details',
   closingLine: 'We look forward to welcoming you on the trip.',
   signOff: 'Best regards,\nTeam Ulaa',

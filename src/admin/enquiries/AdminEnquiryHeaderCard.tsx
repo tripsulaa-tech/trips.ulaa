@@ -111,8 +111,8 @@ export default function AdminEnquiryHeaderCard({
               </span>
             )}
             {isNotInterested(enquiry) && (
-              <span title={closedReasonLabel(enquiry) ? `Closed — ${closedReasonLabel(enquiry)}` : 'Closed — this was just a query, no booking followed'} className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-danger-bg text-danger-fg">
-                <UserMinus size={12} className="shrink-0" aria-hidden="true" /> Not Interested{closedReasonLabel(enquiry) ? ` — ${closedReasonLabel(enquiry)}` : ''}
+              <span title={closedReasonLabel(enquiry) ? `Closed - ${closedReasonLabel(enquiry)}` : 'Closed - this was just a query, no booking followed'} className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap bg-danger-bg text-danger-fg">
+                <UserMinus size={12} className="shrink-0" aria-hidden="true" /> Not Interested{closedReasonLabel(enquiry) ? ` - ${closedReasonLabel(enquiry)}` : ''}
               </span>
             )}
             {/* Set once an Add-on with the "Child fare" preset has
@@ -121,7 +121,7 @@ export default function AdminEnquiryHeaderCard({
                 informational; check the Invoices card below for the
                 actual charge. */}
             {enquiry.has_child_addon && (
-              <span title="A Child Fare add-on has been added to this booking — see Invoices below" className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
+              <span title="A Child Fare add-on has been added to this booking - see Invoices below" className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
                 <Baby size={10} aria-hidden="true" /> Bringing a Child
               </span>
             )}
@@ -136,7 +136,7 @@ export default function AdminEnquiryHeaderCard({
               </button>
             )}
             {enquiry.group_size && enquiry.group_size > 1 ? (
-              <span title={`Part of a group booking of ${enquiry.group_size} — this is traveler #${enquiry.group_seq}`} className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
+              <span title={`Part of a group booking of ${enquiry.group_size} - this is traveler #${enquiry.group_seq}`} className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted">
                 <Users size={10} aria-hidden="true" /> Group of {enquiry.group_size} · seat {enquiry.group_seq}
               </span>
             ) : (

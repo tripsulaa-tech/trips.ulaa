@@ -98,7 +98,7 @@ export default function TripConfidenceBookingSection({
                   type="button"
                   onClick={() => toggleInSet(setActiveConfidenceItems, i)}
                   aria-expanded={activeConfidenceItems.has(i)}
-                  aria-label={`${item.description} — tap for details`}
+                  aria-label={`${item.description} - tap for details`}
                   className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:pointer-events-none"
                 />
                 {item.icon && (
@@ -194,7 +194,7 @@ export default function TripConfidenceBookingSection({
               </span>
             ) : isAlmostFull ? (
               <span className="inline-block bg-warning-bg text-warning-fg text-sm font-button font-semibold px-4 py-2 rounded-md">
-                Only {remaining} seats left — almost full!
+                Only {remaining} seats left - almost full!
               </span>
             ) : trip.advance_amount != null ? (
               <div className="flex items-center gap-3 bg-success-bg border border-success-border rounded-lg px-4 py-3 justify-center">

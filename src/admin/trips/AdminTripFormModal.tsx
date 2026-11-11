@@ -748,7 +748,7 @@ export default function AdminTripFormModal({
                     <label htmlFor={`trip-included-bullets-${gi}`} className="block text-xs font-medium text-dark mb-1">Bullet Points</label>
                     <textarea
                       id={`trip-included-bullets-${gi}`}
-                      placeholder="Paste bullet points here — one per line or paragraph. Press Enter or click away to add."
+                      placeholder="Paste bullet points here - one per line or paragraph. Press Enter or click away to add."
                       aria-describedby={`trip-included-bullets-hint-${gi}`}
                       rows={2}
                       className={`${inputClass} resize-none`}
@@ -911,7 +911,7 @@ export default function AdminTripFormModal({
                   onChange={e => setForm(f => ({ ...f, meeting_point: e.target.value }))}
                   aria-describedby="trip-meeting-point-hint"
                   className={inputClass}
-                  placeholder="e.g. Shimla Bus Stand, Himachal Pradesh — 7:00 AM on Day 1"
+                  placeholder="e.g. Shimla Bus Stand, Himachal Pradesh - 7:00 AM on Day 1"
                 />
                 <button
                   type="button"
@@ -949,7 +949,7 @@ export default function AdminTripFormModal({
             </div>
 
             <div className="md:col-span-2">
-              <label htmlFor="trip-meeting-map-url" className="block text-sm font-medium text-dark mb-1">Meeting Point — Google Maps Link</label>
+              <label htmlFor="trip-meeting-map-url" className="block text-sm font-medium text-dark mb-1">Meeting Point - Google Maps Link</label>
               <input
                 id="trip-meeting-map-url"
                 value={form.meeting_point_map_url}
@@ -1022,8 +1022,8 @@ export default function AdminTripFormModal({
                 value={form.trip_leader_id}
                 onChange={id => setForm(f => ({ ...f, trip_leader_id: id }))}
                 options={[
-                  { value: '', label: 'Not linked — no trip leader shown' },
-                  ...tripLeaders.map(l => ({ value: l.id, label: l.designation ? `${l.name} — ${l.designation}` : l.name })),
+                  { value: '', label: 'Not linked - no trip leader shown' },
+                  ...tripLeaders.map(l => ({ value: l.id, label: l.designation ? `${l.name} - ${l.designation}` : l.name })),
                 ]}
                 placeholder="Select a trip leader..."
               />
@@ -1064,7 +1064,7 @@ export default function AdminTripFormModal({
                       >
                         <PencilSimple size={13} aria-hidden="true" /> Edit this leader
                       </button>
-                      <p className="text-2xs text-dark-muted mt-1">Your unsaved trip changes are kept — you'll be brought back here.</p>
+                      <p className="text-2xs text-dark-muted mt-1">Your unsaved trip changes are kept - you'll be brought back here.</p>
                     </div>
                   </div>
                 </div>

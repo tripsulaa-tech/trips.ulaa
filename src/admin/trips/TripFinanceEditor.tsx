@@ -46,7 +46,7 @@ export default function TripFinanceEditor({ finance, onChange, options, revenue,
     <>
       <div className="md:col-span-2 bg-warning-bg border border-warning-border rounded-md p-3">
         <p className="text-xs text-warning-fg">
-          Internal record only — none of this is ever shown on the public site. Use it to track what this trip costs to run and what it earns.
+          Internal record only - none of this is ever shown on the public site. Use it to track what this trip costs to run and what it earns.
         </p>
       </div>
 

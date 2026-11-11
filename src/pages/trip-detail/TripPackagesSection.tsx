@@ -103,7 +103,7 @@ export default function TripPackagesSection({ trip, buttonLabels, onChoose }: Tr
                     <CheckCircle size={18} weight="fill" className={`${tick} shrink-0 mt-0.5`} aria-hidden="true" />
                     <span>
                       <span className="font-medium">{o.name}</span>
-                      {o.description && <span className="text-dark-muted"> — {o.description}</span>}
+                      {o.description && <span className="text-dark-muted"> - {o.description}</span>}
                     </span>
                   </li>
                 ))}

@@ -27,7 +27,7 @@ export default function AdminEnquiryCancelModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Cancel Booking" size="sm">
       <div className="space-y-4">
-        <p className="text-sm text-dark-muted">This frees up the seat immediately. Amount paid stays on record — track any refund via Payment afterwards.</p>
+        <p className="text-sm text-dark-muted">This frees up the seat immediately. Amount paid stays on record - track any refund via Payment afterwards.</p>
         <div>
           <label htmlFor="ed-cancel-reason" className="block text-sm font-medium text-dark mb-1">Cancellation Reason</label>
           <Select
@@ -35,7 +35,7 @@ export default function AdminEnquiryCancelModal({
             value={cancelReason}
             onChange={val => setCancelReason(val as CancellationReason | '')}
             options={CANCELLATION_REASON_OPTIONS}
-            placeholder="Select a reason — optional"
+            placeholder="Select a reason - optional"
           />
         </div>
         <div>

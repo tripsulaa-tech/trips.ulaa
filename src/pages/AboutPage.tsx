@@ -51,7 +51,7 @@ export default function AboutPage() {
 
   usePageMeta({
     title: pageTitle('About Us'),
-    description: `${BRAND_MOTTO} — a girls-only travel revolution. Learn who we are and why women travel with ${SITE_SHORT_NAME}.`,
+    description: `${BRAND_MOTTO} - a girls-only travel revolution. Learn who we are and why women travel with ${SITE_SHORT_NAME}.`,
     path: '/about',
   });
 

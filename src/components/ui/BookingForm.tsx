@@ -566,13 +566,13 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
     } catch (err) {
       setStatus('error');
       if (err instanceof Error && err.message === 'DUPLICATE_ENQUIRY') {
-        setErrorMsg("Looks like you've already submitted an enquiry for this trip with these exact details. We'll be in touch shortly — or message us on WhatsApp if you need to change something.");
+        setErrorMsg("Looks like you've already submitted an enquiry for this trip with these exact details. We'll be in touch shortly - or message us on WhatsApp if you need to change something.");
       } else if (err instanceof Error && err.message === 'DUPLICATE_WAITLIST_ENTRY') {
-        setErrorMsg("You're already on the waitlist for this trip with these exact details — we'll reach out the moment enough seats open up.");
+        setErrorMsg("You're already on the waitlist for this trip with these exact details - we'll reach out the moment enough seats open up.");
       } else if (err instanceof Error && err.message === 'RATE_LIMITED') {
         setErrorMsg("We've received a lot of submissions from these contact details in the last few minutes. Please wait about 10 minutes and try again, or message us on WhatsApp.");
       } else if (err instanceof Error && err.message === 'SEATS_UNAVAILABLE') {
-        setErrorMsg("Seats for this trip just sold out while you were booking. Please refresh the page and try again — you'll be offered the waitlist instead.");
+        setErrorMsg("Seats for this trip just sold out while you were booking. Please refresh the page and try again - you'll be offered the waitlist instead.");
       } else {
         // Log whatever we actually got so the real DB rejection reason
         // (visible here even though the UI keeps a friendly generic message)
@@ -599,8 +599,8 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
         <p className="text-dark-muted">
           {justMissedSeats
             ? (successCount > 1
-                ? `Seats for this trip just sold out as you were booking — no worries, we've added your group of ${successCount} to the waitlist and will message and email you the moment seats free up together.`
-                : "A seat for this trip just sold out as you were booking — no worries, we've added you to the waitlist and will message and email you the moment one frees up.")
+                ? `Seats for this trip just sold out as you were booking - no worries, we've added your group of ${successCount} to the waitlist and will message and email you the moment seats free up together.`
+                : "A seat for this trip just sold out as you were booking - no worries, we've added you to the waitlist and will message and email you the moment one frees up.")
             : submittedAsWaitlist
             ? (successCount > 1
                 ? `We'll message and email you the moment ${successCount} seats free up together on this trip.`
@@ -738,7 +738,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           {bookingMode === 'solo' && !soloFits && (
             <p className="flex items-start gap-1.5 text-xs text-dark-muted mt-2">
               <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
-              Trip is full — you'll join the waitlist.
+              Trip is full - you'll join the waitlist.
             </p>
           )}
         </div>
@@ -793,7 +793,7 @@ export default function BookingForm({ tripId, tripTitle, terms, onSuccess, remai
           {!groupFits && (
             <p id={`${ids.groupSize}-hint`} className="flex items-start gap-1.5 text-xs text-dark-muted mt-1.5">
               <Clock3 size={13} className="text-primary shrink-0 mt-0.5" aria-hidden="true" />
-              Not enough seats for this group — you'll join the waitlist.
+              Not enough seats for this group - you'll join the waitlist.
             </p>
           )}
           {groupSizeError && <p id={`${ids.groupSize}-error`} role="alert" className={errorClass}>{groupSizeError}</p>}

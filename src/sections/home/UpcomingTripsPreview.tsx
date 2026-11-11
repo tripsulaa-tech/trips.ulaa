@@ -62,7 +62,7 @@ export default function UpcomingTripsPreview() {
         ) : trips.length === 0 ? (
           <div className="text-center py-16">
             <p className="font-display text-xl text-dark-muted">No upcoming trips yet.</p>
-            <p className="text-sm text-dark-muted mt-2">New adventures are being planned — check back soon.</p>
+            <p className="text-sm text-dark-muted mt-2">New adventures are being planned - check back soon.</p>
           </div>
         ) : isMobile ? (
           // Same arrows-and-dots carousel as the Completed Trips section, one

@@ -164,7 +164,7 @@ export default function AdminEnquiriesMobileCards({
                     )}
                     {!e.trip_id && !activeGroup && (
                       <span
-                        title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
+                        title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website - not linked to any trip' : 'Logged without picking a trip'}
                         className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                       >
                         <MessageCircle size={9}  aria-hidden="true" /> General
@@ -182,7 +182,7 @@ export default function AdminEnquiriesMobileCards({
                         <CalendarClock size={12} className="shrink-0" aria-hidden="true" />
                       </span>
                     )}
-                    <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                    <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} - ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                       <jb.icon size={12} className="shrink-0" aria-hidden="true" />
                       {jb.label}
                     </span>
@@ -198,7 +198,7 @@ export default function AdminEnquiriesMobileCards({
                   )}
                   {e.group_size && e.group_size > 1 ? (
                     <span
-                      title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
+                      title={`${groupLabel(e)} - part of a group booking of ${e.group_size}`}
                       className={`inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                     >
                       <Users size={9}  aria-hidden="true" /> {groupLabel(e).replace(/^Group /, '')} · {e.group_seq}/{e.group_size}
@@ -295,7 +295,7 @@ export default function AdminEnquiriesMobileCards({
                           <p className="text-dark text-sm truncate">
                             {e.trip_id ? e.trip_title : (
                               <span className="text-dark-muted italic">
-                                {isGeneralContactMessage(e) ? 'None — Contact Us message' : 'None — logged without a trip'}
+                                {isGeneralContactMessage(e) ? 'None - Contact Us message' : 'None - logged without a trip'}
                               </span>
                             )}
                           </p>
@@ -307,7 +307,7 @@ export default function AdminEnquiriesMobileCards({
                         </span>
                         <div className="min-w-0">
                           <p className="text-dark-muted text-xs">Age</p>
-                          <p className="text-dark text-sm truncate">{e.age ?? '—'}</p>
+                          <p className="text-dark text-sm truncate">{e.age ?? '-'}</p>
                         </div>
                       </div>
                     </div>
@@ -319,7 +319,7 @@ export default function AdminEnquiriesMobileCards({
                         </span>
                         <div className="min-w-0">
                           <p className="text-dark-muted text-xs">City</p>
-                          <p className="text-dark text-sm truncate">{e.city || '—'}</p>
+                          <p className="text-dark text-sm truncate">{e.city || '-'}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2.5 min-w-0">
@@ -332,7 +332,7 @@ export default function AdminEnquiriesMobileCards({
                             e.food_preference === 'veg' ? 'text-success-fg font-medium' : e.food_preference === 'non_veg' ? 'text-danger-fg font-medium' : 'text-dark'
                           }`}>
                             {(e.food_preference === 'veg' || e.food_preference === 'non_veg') && <FoodMark type={e.food_preference} size={11} />}
-                            {e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '—'}
+                            {e.food_preference === 'veg' ? 'Veg' : e.food_preference === 'non_veg' ? 'Non-veg' : '-'}
                           </p>
                         </div>
                       </div>
@@ -376,7 +376,7 @@ export default function AdminEnquiriesMobileCards({
                       {e.phone && (
                         <div className="flex items-center gap-2.5 min-w-0">
                           <a
-                            href={getWhatsAppLink(e.phone, `Hi ${e.full_name.trim().split(/\s+/)[0]}, following up on your ${e.trip_title ? `${e.trip_title} ` : ''}enquiry with Ulaa — `)}
+                            href={getWhatsAppLink(e.phone, `Hi ${e.full_name.trim().split(/\s+/)[0]}, following up on your ${e.trip_title ? `${e.trip_title} ` : ''}enquiry with Ulaa - `)}
                             target="_blank"
                             rel="noopener noreferrer"
                             title={`Message ${e.full_name} on WhatsApp`}

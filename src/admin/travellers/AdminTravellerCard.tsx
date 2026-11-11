@@ -86,7 +86,7 @@ export default function AdminTravellerCard({
                 <button
                   type="button"
                   onClick={onMerge}
-                  title="Another traveller uses this phone number — tap to review and merge"
+                  title="Another traveller uses this phone number - tap to review and merge"
                   className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning-bg text-warning-fg shrink-0"
                 >
                   <Warning size={9} aria-hidden="true" /> Shared number

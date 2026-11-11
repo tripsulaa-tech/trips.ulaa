@@ -80,7 +80,7 @@ export default function CancelModal({
                 <span className="font-semibold">
                   {describeWaiting(waitlistWaitingCounts[cancelTarget.trip_id])} {waitlistWaitingCounts[cancelTarget.trip_id].entries === 1 ? 'is' : 'are'} waiting
                 </span>{' '}
-                for a seat on this trip. Once you cancel, that freed seat is bookable by anyone on the website — convert
+                for a seat on this trip. Once you cancel, that freed seat is bookable by anyone on the website - convert
                 them first if you want to give them priority.
               </p>
             </div>
@@ -93,7 +93,7 @@ export default function CancelModal({
               value={cancelReason}
               onChange={val => setCancelReason(val as CancellationReason | '')}
               options={CANCELLATION_REASON_OPTIONS}
-              placeholder="Select a reason — optional"
+              placeholder="Select a reason - optional"
             />
           </div>
 
@@ -107,7 +107,7 @@ export default function CancelModal({
               onChange={ev => setCancelCharges(parseNonNegative(ev.target.value))}
               aria-describedby="cancel-charges-hint"
               className={inputClass}
-              placeholder="Airline/hotel penalties, if known — optional"
+              placeholder="Airline/hotel penalties, if known - optional"
             />
             <p id="cancel-charges-hint" className="text-2xs text-dark-muted mt-1">
               Used for the suggested refund estimate. Optional; can be added later.

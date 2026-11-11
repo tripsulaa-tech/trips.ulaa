@@ -506,7 +506,7 @@ export default function AdminInvoiceGenerator() {
     <div className="rounded-md border border-background-warm bg-background-warm/40 overflow-hidden" style={{ aspectRatio: '595 / 842' }}>
       {previewError ? (
         <div className="w-full h-full flex items-center justify-center text-center text-dark-muted text-xs p-6">
-          Couldn't render the preview. Try Download or Print — the PDF may still generate correctly.
+          Couldn't render the preview. Try Download or Print - the PDF may still generate correctly.
         </div>
       ) : previewBytes ? (
         <InvoicePdfPreview data={previewBytes} onError={handlePreviewDrawError} />
@@ -586,15 +586,15 @@ export default function AdminInvoiceGenerator() {
                   <div
                     className={`${inputClass} flex-1 min-w-0 flex items-center truncate !px-2 sm:!px-3 bg-background-warm/60 text-dark-muted cursor-not-allowed select-text`}
                     aria-label="Invoice number (auto-generated)"
-                    title="Auto-generated — not editable"
+                    title="Auto-generated - not editable"
                   >
-                    {numberLoading ? 'Generating…' : data.invoiceNumber || '—'}
+                    {numberLoading ? 'Generating…' : data.invoiceNumber || '-'}
                   </div>
                   <button
                     type="button"
                     onClick={handleNextInvoiceNumber}
                     disabled={numberLoading}
-                    title="Refresh — check the next number in the series"
+                    title="Refresh - check the next number in the series"
                     aria-label="Refresh invoice number preview"
                     className="shrink-0 inline-flex items-center justify-center w-8 sm:w-9 rounded-md border-2 border-background-warm text-dark-muted hover:text-primary hover:border-primary/40 transition-colors disabled:opacity-40"
                   >
@@ -816,7 +816,7 @@ export default function AdminInvoiceGenerator() {
                         <div key={record.id} className="flex items-center justify-between gap-3 bg-background-warm rounded-lg px-3 py-2">
                           <div className="min-w-0">
                             <p className="text-sm font-button font-bold text-dark truncate">
-                              {record.invoice_number} — {record.billing_company_name || record.invoice_title || 'Untitled'}
+                              {record.invoice_number} - {record.billing_company_name || record.invoice_title || 'Untitled'}
                             </p>
                             <p className="text-2xs text-dark-muted">
                               {formatDate(record.invoice_date, { day: 'numeric', month: 'short', year: 'numeric' })} · {formatPrice(record.total)}

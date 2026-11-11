@@ -164,7 +164,7 @@ export function useEnquiryLifecycle(params: {
     if (pendingAmount > 0) {
       const ok = await confirm({
         title: 'Complete with balance pending?',
-        message: `${formatPrice(pendingAmount)} is still unpaid on this booking. Completing it now won't cancel that balance — make sure it's still being chased separately.`,
+        message: `${formatPrice(pendingAmount)} is still unpaid on this booking. Completing it now won't cancel that balance - make sure it's still being chased separately.`,
         confirmLabel: 'Complete anyway',
         variant: 'danger',
       });

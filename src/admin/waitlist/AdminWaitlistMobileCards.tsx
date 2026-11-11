@@ -71,7 +71,7 @@ export default function AdminWaitlistMobileCards({
                     {e.full_name}
                     {e.group_size && e.group_size > 1 && (
                       <span
-                        title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
+                        title={`${groupLabel(e)} - waiting for ${e.group_size} seats together`}
                         className="inline-flex items-center gap-1 text-2xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
                       >
                         <Users size={9} aria-hidden="true" /> {groupLabel(e)} · {e.group_size}

@@ -28,7 +28,7 @@ interface CalendarEventFields {
 }
 
 function buildEventFields(trip: UpcomingTrip): CalendarEventFields {
-  const title = `${trip.title} — Ulaa Trip`;
+  const title = `${trip.title} - Ulaa Trip`;
   const details = trip.description || `Trip to ${trip.destination} with Ulaa.`;
   const location = trip.meeting_point || trip.destination;
   const start = toCalendarDate(trip.start_date);
@@ -137,7 +137,7 @@ export function addOfferReminderToCalendar(trip: UpcomingTrip, activePrice?: num
   const end = new Date(endDateStr);
   if (Number.isNaN(end.getTime())) return false;
 
-  const title = `${trip.special_offer_name || 'Special offer'} ends — ${trip.title}`;
+  const title = `${trip.special_offer_name || 'Special offer'} ends - ${trip.title}`;
   const details = activePrice != null
     ? `Book at ${formatPrice(activePrice)} per person before it's gone.`
     : `Last day to book this offer.`;

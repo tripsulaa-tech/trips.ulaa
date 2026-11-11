@@ -22,7 +22,7 @@ export default function html2canvas(): never {
   throw new Error(
     "html2canvas is stubbed out of this build (see src/stubs/html2canvas-stub.ts). " +
       "This app draws PDFs directly with jsPDF primitives and doesn't use jsPDF's " +
-      "doc.html() API — if you need it, install html2canvas and remove the alias " +
+      "doc.html() API - if you need it, install html2canvas and remove the alias " +
       "in vite.config.ts."
   );
 }

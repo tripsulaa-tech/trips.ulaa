@@ -44,7 +44,7 @@ export default function TripInclusionsSection({
                       type="button"
                       onClick={() => toggleInSet(setActiveIncludedGroups, gi)}
                       aria-expanded={activeIncludedGroups.has(gi)}
-                      aria-label={`${group.heading} — tap for details`}
+                      aria-label={`${group.heading} - tap for details`}
                       className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:pointer-events-none"
                     />
                     <div className="flex items-center gap-2 mb-2">
@@ -72,7 +72,7 @@ export default function TripInclusionsSection({
                       type="button"
                       onClick={() => toggleInSet(setActiveIncludedItems, i)}
                       aria-expanded={activeIncludedItems.has(i)}
-                      aria-label={`${item.description} — tap for details`}
+                      aria-label={`${item.description} - tap for details`}
                       className="absolute inset-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:pointer-events-none"
                     />
                     {item.icon ? (

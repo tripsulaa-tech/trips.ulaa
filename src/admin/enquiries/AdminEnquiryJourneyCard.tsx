@@ -104,7 +104,7 @@ export default function AdminEnquiryJourneyCard({
             </div>
             {forfeited ? (
               <span className="inline-flex items-center text-xs font-button font-semibold px-2.5 py-1 rounded-md bg-orange-100 text-orange-700">
-                No refund — {formatPrice(paidAmount)} forfeited
+                No refund - {formatPrice(paidAmount)} forfeited
               </span>
             ) : (
               <div className="min-w-[140px] flex-1 sm:flex-none sm:w-44">
@@ -246,7 +246,7 @@ export default function AdminEnquiryJourneyCard({
         </div>
         <p className="text-dark-muted text-xs flex items-start gap-1.5 bg-cream rounded-md p-2.5">
           <RefreshCw size={14} className="shrink-0 mt-0.5 text-primary" aria-hidden="true" />
-          Mark this enquiry Contacted first — use the button above. That opens the Contact Outcome popup (even a customer who already paid an advance counts as "Interested"), and Track Payment opens up right after.
+          Mark this enquiry Contacted first - use the button above. That opens the Contact Outcome popup (even a customer who already paid an advance counts as "Interested"), and Track Payment opens up right after.
         </p>
       </div>
     );
@@ -258,7 +258,7 @@ export default function AdminEnquiryJourneyCard({
         <p className="text-dark text-base font-display font-bold flex items-center gap-2">
           <Wallet size={18} className="shrink-0 text-primary" aria-hidden="true" /> No Payment Yet
         </p>
-        <p className="text-dark-muted text-xs mt-1">No booking exists on this enquiry yet — fill this in to track the first payment.</p>
+        <p className="text-dark-muted text-xs mt-1">No booking exists on this enquiry yet - fill this in to track the first payment.</p>
       </div>
 
       <PaymentFormFields

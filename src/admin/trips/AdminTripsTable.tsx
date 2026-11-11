@@ -95,7 +95,7 @@ export default function AdminTripsTable({
       label: 'Preview page',
       icon: Eye,
       onClick: () => window.open(`/admin/trips/${trip.id}/preview`, '_blank', 'noopener'),
-      title: 'Open this trip\'s full details page exactly as visitors will see it — works for drafts too, nothing is published',
+      title: 'Open this trip\'s full details page exactly as visitors will see it - works for drafts too, nothing is published',
     },
     {
       label: 'Check-in',
@@ -132,7 +132,7 @@ export default function AdminTripsTable({
       label: trip.banner_has_text ? 'Show Hero Title' : 'Hide Hero Title',
       icon: TextAa,
       onClick: () => onToggleBannerHasText(trip),
-      title: trip.banner_has_text ? 'The title is hidden on the trip page hero because the banner already contains it. Click to show it again' : 'Hide the title on the trip page hero — use when the banner image already has the title written on it',
+      title: trip.banner_has_text ? 'The title is hidden on the trip page hero because the banner already contains it. Click to show it again' : 'Hide the title on the trip page hero - use when the banner image already has the title written on it',
     },
     {
       label: trip.hide_special_offer_promo ? 'Show Offer Popup' : 'Hide Offer Popup',

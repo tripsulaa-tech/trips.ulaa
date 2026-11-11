@@ -24,7 +24,7 @@ import { getTripHighlightIcon, searchTripHighlightIcons, TRIP_HIGHLIGHT_ICONS } 
 export const handleExportTemplate = () => {
   const template = {
     _instructions:
-      'READ THIS FIRST — this file is a blank template of the Ulaa "Add/Edit Trip" admin form. ' +
+      'READ THIS FIRST - this file is a blank template of the Ulaa "Add/Edit Trip" admin form. ' +
       'DO NOT fill it in straight away and DO NOT invent details. When a user gives you this file, your FIRST job is to ' +
       'INTERVIEW them: greet them briefly, then ask the questions in "_interview.rounds" below, one round at a time ' +
       '(each round = one tab of the form), as short numbered questions in plain language. Wait for their answers before moving ' +
@@ -38,7 +38,7 @@ export const handleExportTemplate = () => {
       'IMAGES: do NOT put any image links, file names, "search:" text or web photos anywhere in this file, and do not ask the user for photos. ' +
       'Every image field (cover_image, hero_mobile_image, gallery_items[].photo, fashion_photos, itinerary[].images, accommodation_photos, ' +
       'end_banner.image) must stay "" (or an empty list). The admin uploads all photos themselves in the app after importing, so photos are never copied from websites. ' +
-      'Only the text next to photos (gallery captions, section intros) is filled in. The "trip_finance" block is INTERNAL (never shown on the public site) — ' +
+      'Only the text next to photos (gallery captions, section intros) is filled in. The "trip_finance" block is INTERNAL (never shown on the public site) - ' +
       'fill it only if the user gives cost details, otherwise leave its values blank.',
 
     _allowed_icon_keys:
@@ -68,7 +68,7 @@ export const handleExportTemplate = () => {
         ] },
         { tab: 'Finances & Profit (INTERNAL, optional)', ask: [
           'Do you want to enter costs now? If not, say "skip".',
-          'Cost lines: name, and whether it is a fixed amount, per traveler, or per selected headcount — plus the amount.',
+          'Cost lines: name, and whether it is a fixed amount, per traveler, or per selected headcount - plus the amount.',
           'On-ground agency name and amount (fixed or per traveler)?',
           'Child fare details (fare charged, vendor amount, entry ticket cost, kit cost)?',
           'Organiser name and their expenses? Any internal notes?',
@@ -115,7 +115,7 @@ export const handleExportTemplate = () => {
     // ── Tab: Basic Info ─────────────────────────────────────────────
     title: '<Trip Title, e.g. "Spiti Valley Winter Expedition">',
     destination: '<Destination, e.g. "Spiti, Himachal Pradesh">',
-    duration: '(auto-computed from start_date/end_date — leave blank)',
+    duration: '(auto-computed from start_date/end_date - leave blank)',
     start_date: '<Start Date, format YYYY-MM-DD>',
     end_date: '<End Date, format YYYY-MM-DD>',
     description: '<Short 2-4 sentence overview. Day-by-day plan goes in itinerary below, not here>',
@@ -135,7 +135,7 @@ export const handleExportTemplate = () => {
     special_offer_date: '<Offer Start Date, format YYYY-MM-DD, or "">',
     special_offer_end_date: '<Offer End Date (inclusive), format YYYY-MM-DD, e.g. 3 days after special_offer_date for a 3-day sale, or "" to run it for the start date only>',
     card_feature_tags: [
-      { icon: '<Icon-library key, NOT an emoji — e.g. "venus", "crown", "map-pinned". See src/constants/tripHighlightIcons.ts. Up to 4 tags>', label: '<Short bold label, e.g. "Girls-Only">' },
+      { icon: '<Icon-library key, NOT an emoji - e.g. "venus", "crown", "map-pinned". See src/constants/tripHighlightIcons.ts. Up to 4 tags>', label: '<Short bold label, e.g. "Girls-Only">' },
     ],
     // Packages & add-ons travelers can choose from. Leave both lists empty
     // for a plain single-price trip. A package's price is either its own
@@ -150,7 +150,7 @@ export const handleExportTemplate = () => {
         {
           name: '<Package name, e.g. "Basic" or "Premium">',
           description: '<Short public blurb, or "">',
-          option_ids: ['<id of an option above that this package includes — leave the list empty for the base trip only>'],
+          option_ids: ['<id of an option above that this package includes - leave the list empty for the base trip only>'],
           highlight: false,
           early_bird: false,
           early_bird_only: false, // true only on a seat-limited "Early Bird" package that should show Sold out once the early-bird seats are gone
@@ -167,7 +167,7 @@ export const handleExportTemplate = () => {
         {
           name: '<Cost name, e.g. "Transport", "Ad / Promotion", "Entry Ticket">',
           basis: '<"fixed" (lump sum), "per_traveler" (rate × every booked traveler) or "per_selected" (rate × a headcount)>',
-          rate: '<INR — the lump sum for "fixed", otherwise INR per person>',
+          rate: '<INR - the lump sum for "fixed", otherwise INR per person>',
           quantity: '<Headcount, only for "per_selected" lines not linked to an option, or "">',
           option_id: '<Optional: id of a trip_options option to count the headcount from real bookings, or "">',
         },
@@ -189,13 +189,13 @@ export const handleExportTemplate = () => {
           amount: '<Actual amount spent in INR (not multiplied by traveler count)>',
         },
       ],
-      notes: '<Internal notes — payment terms, receipts, or "">',
+      notes: '<Internal notes - payment terms, receipts, or "">',
     },
 
     // ── Tab: Media ──────────────────────────────────────────────────
     // Photos are uploaded manually in the app after importing. Keep every image field blank.
-    cover_image: '(leave blank — uploaded manually. Desktop cover: landscape, min 1600px wide, ideally 2400×1029)',
-    hero_mobile_image: '(leave blank — uploaded manually. Mobile hero: portrait 9:16, min 1080×1920)',
+    cover_image: '(leave blank - uploaded manually. Desktop cover: landscape, min 1600px wide, ideally 2400×1029)',
+    hero_mobile_image: '(leave blank - uploaded manually. Mobile hero: portrait 9:16, min 1080×1920)',
     // Note: included_items, not_included_items, and gallery_images are
     // deliberately left out of this template. They're legacy fallback
     // fields (see UpcomingTrip in types-index.ts) with no editor in the
@@ -204,22 +204,22 @@ export const handleExportTemplate = () => {
     // filled-in value before saving.
     gallery_description: '<Short intro paragraph shown below the "Places You\'ll Definitely Post" heading, or "">',
     gallery_items: [
-      { photo: '(leave blank — uploaded manually)', description: '<Caption / Place Name for this photo>' },
+      { photo: '(leave blank - uploaded manually)', description: '<Caption / Place Name for this photo>' },
     ],
     fashion_description: '<Short intro paragraph shown below the "Fashion Aesthetics" heading, or "">',
-    fashion_photos: ['(leave blank — uploaded manually; 6 or more photos look best)'],
+    fashion_photos: ['(leave blank - uploaded manually; 6 or more photos look best)'],
 
     // ── Tab: Overview & Itinerary ───────────────────────────────────
     highlight_cards: [
-      { icon: '<Icon-library key, NOT an emoji — same key system as itinerary.icon, e.g. "mountain-snow", "camera", "car", "palmtree". See src/constants/tripHighlightIcons.ts for the full list. An emoji here silently falls back to plain text instead of the colored icon circle used elsewhere on the page. Include at least 6 cards — this section looks sparse with fewer than 6>', heading: '<Short heading>', description: '<1-2 sentence description>' },
+      { icon: '<Icon-library key, NOT an emoji - same key system as itinerary.icon, e.g. "mountain-snow", "camera", "car", "palmtree". See src/constants/tripHighlightIcons.ts for the full list. An emoji here silently falls back to plain text instead of the colored icon circle used elsewhere on the page. Include at least 6 cards - this section looks sparse with fewer than 6>', heading: '<Short heading>', description: '<1-2 sentence description>' },
     ],
     itinerary: [
       {
         day: 1,
         title: '<Short title for this day, e.g. "Arrival & Local Exploration">',
         description: '<What happens this day>',
-        images: ['(leave blank — uploaded manually; at least 4 per day look best)'],
-        icon: '<Optional icon-library key for this day\'s theme, e.g. "palmtree", "coffee", "paw-print", "mountain" — leave "" to just show the day number>',
+        images: ['(leave blank - uploaded manually; at least 4 per day look best)'],
+        icon: '<Optional icon-library key for this day\'s theme, e.g. "palmtree", "coffee", "paw-print", "mountain" - leave "" to just show the day number>',
         bullets: ['<Optional bulleted sub-item for this day, e.g. "Guided trek to the viewpoint">'],
       },
     ],
@@ -227,35 +227,35 @@ export const handleExportTemplate = () => {
     // ── Tab: Inclusions & Prep ──────────────────────────────────────
     included_groups: [
       {
-        icon: '<Icon-library key, NOT an emoji — e.g. "hotel", "utensils", "car". See src/constants/tripHighlightIcons.ts. Include at least 4 groups — this section looks sparse with fewer than 4>',
+        icon: '<Icon-library key, NOT an emoji - e.g. "hotel", "utensils", "car". See src/constants/tripHighlightIcons.ts. Include at least 4 groups - this section looks sparse with fewer than 4>',
         heading: '<Group heading, e.g. "Premium Stay Experience">',
         bullets: ['<Bulleted sub-item under this heading, e.g. "5 Nights accommodation at carefully selected 4-star and beachfront properties">'],
       },
     ],
     not_included: ['<Short line item of what is NOT included, e.g. "Flights to base city">'],
     things_to_carry_items: [
-      { icon: '<Icon-library key, NOT an emoji — e.g. "shirt", "footprints", "hand", "glasses", "pill". See src/constants/tripHighlightIcons.ts>', description: '<Item traveller should pack, e.g. "Warm jacket">' },
+      { icon: '<Icon-library key, NOT an emoji - e.g. "shirt", "footprints", "hand", "glasses", "pill". See src/constants/tripHighlightIcons.ts>', description: '<Item traveller should pack, e.g. "Warm jacket">' },
     ],
     confidence_description: '<Short intro paragraph shown below the "Travel with Confidence" heading, or "">',
     confidence_items: [
-      { icon: '<Icon-library key, NOT an emoji — e.g. "shield-check", "headset", "users". See src/constants/tripHighlightIcons.ts. Include at least 6 items — this section looks sparse with fewer than 6>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
+      { icon: '<Icon-library key, NOT an emoji - e.g. "shield-check", "headset", "users". See src/constants/tripHighlightIcons.ts. Include at least 6 items - this section looks sparse with fewer than 6>', description: '<"Travel with Confidence" point, e.g. "24/7 support during the trip">' },
     ],
 
     // ── Tab: Accommodation ──────────────────────────────────────────
-    accommodation_description: '<Section Description for the "Stay. Relax. Repeat." section — describe the accommodation. For a ONE-DAY trip leave this as "": the site and PDF then show "This is a one-day experience, so accommodation is not included.">',
-    accommodation_photos: ['(leave blank — uploaded manually; 6 or more look best)'],
+    accommodation_description: '<Section Description for the "Stay. Relax. Repeat." section - describe the accommodation. For a ONE-DAY trip leave this as "": the site and PDF then show "This is a one-day experience, so accommodation is not included.">',
+    accommodation_photos: ['(leave blank - uploaded manually; 6 or more look best)'],
 
     // ── Tab: Meeting Point ──────────────────────────────────────────
     meeting_point: '<Location Name, e.g. "Delhi Airport Terminal 3">',
     meeting_address: '<Full street Address of the meeting point, or "">',
-    meeting_point_map_url: '<Meeting Point — Google Maps Link, or "">',
+    meeting_point_map_url: '<Meeting Point - Google Maps Link, or "">',
     meeting_time: '<Time, e.g. "6:00 AM">',
     meeting_terminal: '<Terminal/gate/landmark detail, or "">',
     meeting_details: '<Any extra logistics Details for the meeting point, or "">',
 
     // ── Tab: End Banner ─────────────────────────────────────────────
     end_banner: {
-      image: '(leave blank — uploaded manually)',
+      image: '(leave blank - uploaded manually)',
       heading: '<Heading shown on the left of the banner, e.g. "Ready to Experience the Magic?">',
       description: '<One or two lines below the heading>',
       cta_label: '<Button Label, e.g. "Book Your Seat", or "" to hide the button>',

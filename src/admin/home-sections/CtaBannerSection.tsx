@@ -46,7 +46,7 @@ export default function CtaBannerSection({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="cta-heading-1" className={labelClass}>Heading — Line 1</label>
+          <label htmlFor="cta-heading-1" className={labelClass}>Heading - Line 1</label>
           <input
             id="cta-heading-1"
             value={content.heading_line1}
@@ -56,7 +56,7 @@ export default function CtaBannerSection({
           />
         </div>
         <div>
-          <label htmlFor="cta-heading-highlight" className={labelClass}>Heading — Highlighted Line</label>
+          <label htmlFor="cta-heading-highlight" className={labelClass}>Heading - Highlighted Line</label>
           <p className="text-2xs text-dark-muted leading-snug mb-1.5">Rendered in the accent color + italic.</p>
           <input
             id="cta-heading-highlight"

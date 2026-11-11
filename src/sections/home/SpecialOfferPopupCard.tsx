@@ -196,7 +196,7 @@ export default function SpecialOfferPopupCard({
                         <Clock size={14} weight="bold" className="shrink-0" />
                         <span className="font-display text-xs sm:text-sm font-extrabold uppercase tracking-wide text-center">
                           {daysLeft <= 1
-                            ? "Ends today — grab it before it's gone!"
+                            ? "Ends today - grab it before it's gone!"
                             : `Only ${daysLeft} ${daysLeft === 1 ? 'day' : 'days'} left!`}
                         </span>
                         {/* Small, lighter-weight nudge riding alongside the

@@ -111,7 +111,7 @@ export default function AdminMergeTravellerModal({
           <p className="text-sm text-dark-muted">
             Use this when the same person has been saved twice (for example with two phone numbers, or two
             travellers sharing one number). Both phone numbers are kept on the merged traveller. Nothing is
-            deleted — every trip, payment and invoice stays; the two contacts just become one.
+            deleted - every trip, payment and invoice stays; the two contacts just become one.
           </p>
 
           <div>
@@ -148,12 +148,12 @@ export default function AdminMergeTravellerModal({
               )}
             </div>
             <p className="text-2xs text-dark-muted mt-1.5">
-              {query.trim() ? 'Matching contacts' : 'Possible matches (same phone, email, name or last 4 digits) — or search above'}
+              {query.trim() ? 'Matching contacts' : 'Possible matches (same phone, email, name or last 4 digits) - or search above'}
             </p>
             <ul className="mt-2 space-y-1.5" role="listbox" aria-label="Contacts to merge with">
               {candidates.length === 0 ? (
                 <li className="text-sm text-dark-muted bg-background-warm/50 rounded-md px-3 py-3">
-                  {query.trim() ? 'No contacts match that search.' : 'No obvious matches — try searching by name or phone.'}
+                  {query.trim() ? 'No contacts match that search.' : 'No obvious matches - try searching by name or phone.'}
                 </li>
               ) : candidates.map(c => (
                 <li key={c.key}>
@@ -223,7 +223,7 @@ export default function AdminMergeTravellerModal({
                 </p>
               )}
               <p className="text-xs text-dark-muted">
-                Each moved enquiry gets a "Details updated" entry on its Activity Timeline. This can't be undone automatically —
+                Each moved enquiry gets a "Details updated" entry on its Activity Timeline. This can't be undone automatically -
                 to split them again you'd edit the details back.
               </p>
             </div>

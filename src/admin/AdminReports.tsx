@@ -160,7 +160,7 @@ function buildRevenueTrend(paidRows: Payment[], period: Period): { label: string
 // called yet isn't a response-time data point, it's a queue depth.
 function averageResponseTime(list: Enquiry[]): string {
   const withResponse = list.filter(e => e.last_contact_at);
-  if (withResponse.length === 0) return '—';
+  if (withResponse.length === 0) return '-';
   const totalMs = withResponse.reduce((sum, e) => {
     return sum + (new Date(e.last_contact_at as string).getTime() - new Date(e.created_at).getTime());
   }, 0);
@@ -789,7 +789,7 @@ export default function AdminReports() {
     const ulaaCostBreakdown: { label: string; amount: number }[] = [
       {
         label: f.agency_name
-          ? `Agency Payment — ${f.agency_name}${f.agency_amount_type === 'per_traveler' ? ' (per traveler)' : ''}`
+          ? `Agency Payment - ${f.agency_name}${f.agency_amount_type === 'per_traveler' ? ' (per traveler)' : ''}`
           : `Agency Payment${f.agency_amount_type === 'per_traveler' ? ' (per traveler)' : ''}`,
         amount: t.agencyCost,
       },
@@ -805,9 +805,9 @@ export default function AdminReports() {
     });
     if (t.childFareCount > 0) {
       ulaaCostBreakdown.push(
-        { label: `Child Fare — Vendor Cost (×${t.childFareCount})`, amount: t.childFareVendorCost },
-        { label: `Child Fare — Entry Ticket (×${t.childFareCount})`, amount: t.childFareEntryTicketCost },
-        { label: `Child Fare — Kit Cost (×${t.childFareCount})`, amount: t.childFareKitCost },
+        { label: `Child Fare - Vendor Cost (×${t.childFareCount})`, amount: t.childFareVendorCost },
+        { label: `Child Fare - Entry Ticket (×${t.childFareCount})`, amount: t.childFareEntryTicketCost },
+        { label: `Child Fare - Kit Cost (×${t.childFareCount})`, amount: t.childFareKitCost },
       );
     }
 
@@ -816,7 +816,7 @@ export default function AdminReports() {
     // sheet's line items keep summing to organiserCosts.
     const organiserCostBreakdown: { label: string; amount: number }[] = t.organiserItems.map(c => ({
       label: c.name
-        ? (f.organiser_name ? `${c.name} — ${f.organiser_name}` : c.name)
+        ? (f.organiser_name ? `${c.name} - ${f.organiser_name}` : c.name)
         : 'Organiser Expense',
       amount: c.amount,
     }));

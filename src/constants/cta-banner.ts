@@ -8,7 +8,7 @@ export const DEFAULT_CTA_BANNER: CtaBannerContent = {
   eyebrow: 'Your Adventure Awaits',
   heading_line1: 'Ready for your',
   heading_highlight: 'next adventure?',
-  subheading: 'Book your seat today. No payment needed — just your passion to explore.',
+  subheading: 'Book your seat today. No payment needed - just your passion to explore.',
   primary_label: 'Book Your Seat',
   secondary_label: 'Talk to Us',
 };

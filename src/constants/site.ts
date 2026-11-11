@@ -45,5 +45,5 @@ export const FOOTER_TAGLINE = 'Girls-only travel experiences';
 export const FOOTER_TAGLINE_SUB = 'Discover hidden destinations together.';
 export const FOOTER_BLURB = "A girls-only travel community for curated trips to India's most beautiful hidden destinations.";
 export const FOOTER_REGION = 'India';
-export const FOOTER_REGION_LONG = 'India — Explore Everywhere';
+export const FOOTER_REGION_LONG = 'India - Explore Everywhere';
 export const FOOTER_SIGNOFF = 'for the fearless women of India.';

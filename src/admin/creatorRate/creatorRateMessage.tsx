@@ -56,8 +56,8 @@ export const DEFAULT_MESSAGE_TEMPLATE = [
   '',
   '{{items}}',
   '',
-  'These are our suggested ranges — happy to discuss and finalise. Let us know your thoughts!',
-  '— Team Ulaa',
+  'These are our suggested ranges - happy to discuss and finalise. Let us know your thoughts!',
+  '- Team Ulaa',
 ].join('\n');
 
 export const DEFAULT_VARIANT_ID = 'default';

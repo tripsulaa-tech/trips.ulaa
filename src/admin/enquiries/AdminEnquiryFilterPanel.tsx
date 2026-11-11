@@ -462,7 +462,7 @@ export default function AdminEnquiryFilterPanel(p: AdminEnquiryFilterPanelProps)
               <button
                 type="button"
                 onClick={() => p.trip.onSelect(p.trip.selectedKey === p.trip.generalKey ? null : p.trip.generalKey)}
-                title="Enquiries not linked to any trip — Contact Us messages and manual entries logged without picking a trip"
+                title="Enquiries not linked to any trip - Contact Us messages and manual entries logged without picking a trip"
                 className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-button font-semibold rounded-md border-2 px-3 h-[38px] transition-colors whitespace-nowrap ${
                   p.trip.selectedKey === p.trip.generalKey
                     ? 'bg-primary text-white border-primary'

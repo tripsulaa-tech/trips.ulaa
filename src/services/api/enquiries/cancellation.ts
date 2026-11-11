@@ -58,7 +58,7 @@ export async function cancelEnquiry(
     throw new Error('A completed booking can\u2019t be cancelled.');
   }
   if (enquiry.checked_in_at) {
-    throw new Error('This traveller has already checked in — cancellation is no longer allowed. Undo Check In first if that was a mistake.');
+    throw new Error('This traveller has already checked in - cancellation is no longer allowed. Undo Check In first if that was a mistake.');
   }
   // Spec section 18's Cancellation Rules: cancelling only makes sense once
   // a booking has actually started (past Advance Pending) — a lead that
@@ -69,7 +69,7 @@ export async function cancelEnquiry(
     enquiry.journey_stage === 'new_enquiry' || enquiry.journey_stage === 'contacted'
     || enquiry.journey_stage === 'not_interested'
   ) {
-    throw new Error('Cannot cancel — this lead hasn\u2019t agreed to book yet.');
+    throw new Error('Cannot cancel - this lead hasn\u2019t agreed to book yet.');
   }
 
   if (thirdPartyCharges !== undefined) {

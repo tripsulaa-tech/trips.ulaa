@@ -121,7 +121,7 @@ export default function MultiImageUploadField({ label, value, onChange, bucket, 
       // image bytes — fall back to using the URL as-is so the admin can
       // still add it, just without the storage/perf benefit.
       onChange([...value, trimmed]);
-      toast.error("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead — it may load slower for visitors.");
+      toast.error("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead - it may load slower for visitors.");
     } finally {
       setUploading(false);
     }

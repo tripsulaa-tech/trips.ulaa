@@ -27,7 +27,7 @@ import { ONE_DAY_STAY_TEXT, isOneDayTrip } from '../../utils-index';
 
     const description = trip.accommodation_description
       || (oneDay ? ONE_DAY_STAY_TEXT : null)
-      || 'More than just a place to stay—these handpicked accommodations are where you\'ll relax, laugh, share stories, and create unforgettable memories with your travel sisters.';
+      || 'More than just a place to stay-these handpicked accommodations are where you\'ll relax, laugh, share stories, and create unforgettable memories with your travel sisters.';
 
     const contentTop = drawParagraph(description, MARGIN, 92, CONTENT_W, {
       size: 10,

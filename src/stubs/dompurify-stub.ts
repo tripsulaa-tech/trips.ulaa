@@ -15,7 +15,7 @@ const dompurify = {
     throw new Error(
       "dompurify is stubbed out of this build (see src/stubs/dompurify-stub.ts). " +
         "This app draws PDFs directly with jsPDF primitives and doesn't use jsPDF's " +
-        "doc.html() API — if you need it, install dompurify and remove the alias " +
+        "doc.html() API - if you need it, install dompurify and remove the alias " +
         "in vite.config.ts."
     );
   },

@@ -42,7 +42,7 @@ export default function NotInterestedModal({
     <Modal isOpen={!!notInterestedTarget} onClose={requestClose} title="Mark as Not Interested" size="sm">
       <div className="space-y-4">
         <p className="text-sm text-dark-muted">
-          This closes the enquiry as a query that went nowhere — no booking was made. You can reopen it later if they get back in touch.
+          This closes the enquiry as a query that went nowhere - no booking was made. You can reopen it later if they get back in touch.
         </p>
         <div>
           <label htmlFor="not-interested-reason" className="block text-sm font-medium text-dark mb-1">Reason</label>

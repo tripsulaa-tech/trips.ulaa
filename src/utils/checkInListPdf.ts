@@ -29,7 +29,7 @@ const CONTENT_W = PAGE_W - MARGIN * 2;
 const ROW_H = 26;
 const HEAD_H = 26;
 
-const dash = (s: string | null | undefined) => sanitizeForPdf(s) || '\u2014';
+const dash = (s: string | null | undefined) => sanitizeForPdf(s) || '-';
 
 type RGB = readonly [number, number, number];
 
@@ -88,7 +88,7 @@ export async function downloadCheckInListPdf(trip: UpcomingTrip, travellers: Enq
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
       text(C.dark);
-      doc.text(`${dash(trip.title)} \u2014 Traveller list (continued)`, MARGIN, y + 6);
+      doc.text(`${dash(trip.title)} - Traveller list (continued)`, MARGIN, y + 6);
       y += 24;
     }
   }
@@ -135,8 +135,8 @@ export async function downloadCheckInListPdf(trip: UpcomingTrip, travellers: Enq
     doc.text(nameLines[0], colName, ty);
 
     doc.setFont('helvetica', 'normal');
-    doc.text(e.age ? String(e.age) : '\u2014', colAge, ty);
-    doc.text(e.phone ? formatPhone(e.phone) || '\u2014' : '\u2014', colPhone, ty);
+    doc.text(e.age ? String(e.age) : '-', colAge, ty);
+    doc.text(e.phone ? formatPhone(e.phone) || '-' : '-', colPhone, ty);
     // Food: coloured leaf / drumstick / dashed box + coloured label.
     const foodKey = foodPreferenceKey(e);
     const food = FOOD_STYLE[foodKey];
@@ -144,7 +144,7 @@ export async function downloadCheckInListPdf(trip: UpcomingTrip, travellers: Enq
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     text(food.color);
-    doc.text(sanitizeForPdf(foodBadge(e).label) || '\u2014', colFood + 15, ty);
+    doc.text(sanitizeForPdf(foodBadge(e).label) || '-', colFood + 15, ty);
 
     // Package: tinted pill, gold for Premium, brand brown otherwise.
     const pkgName = sanitizeForPdf(e.package_name);
@@ -162,7 +162,7 @@ export async function downloadCheckInListPdf(trip: UpcomingTrip, travellers: Enq
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9.5);
       text(C.darkMuted);
-      doc.text('\u2014', colPkg, ty);
+      doc.text('-', colPkg, ty);
     }
 
     draw(C.grayLineSoft);

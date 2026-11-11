@@ -108,7 +108,7 @@ export function renderFooterAndPageNumbers(
     const instagramUrl = `https://instagram.com/${BRAND.instagram.replace(/^@/, '')}`;
     const websiteUrl = `https://${BRAND.website}`;
     const followSegments: { text: string; link?: string }[] = [
-      { text: 'Follow us \u2014 Instagram ' },
+      { text: 'Follow us - Instagram ' },
       { text: BRAND.instagram, link: instagramUrl },
       { text: '  \u2022  WhatsApp  \u2022  ' },
       { text: BRAND.website, link: websiteUrl },

@@ -135,7 +135,7 @@ export default function MobileMemoryWall({ intro, photos }: { intro: Intro; phot
       <div className="ulaa-memory-detail-copy">
         <p className="ulaa-memory-detail-question">{selectedItem.text}</p>
         <h3 id="memory-detail-title">{benefit?.title || welcome.heading}</h3>
-        <div id="memory-detail-description">{benefit ? <p>{benefit.description}</p> : welcome.items.map((item, index) => <p key={index}><strong>{item.title}</strong> — {item.description}</p>)}</div>
+        <div id="memory-detail-description">{benefit ? <p>{benefit.description}</p> : welcome.items.map((item, index) => <p key={index}><strong>{item.title}</strong> - {item.description}</p>)}</div>
         <Link to="/trips" className="ulaa-memory-cta" onClick={() => setSelected(null)}>Explore Trips<ArrowRight size={16} aria-hidden="true" /></Link>
       </div>
     </dialog>, document.body)}

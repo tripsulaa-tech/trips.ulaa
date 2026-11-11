@@ -97,7 +97,7 @@ export default function AdminEnquiryInvoicesCard({
                   const isPending = inv.status === 'pending';
                   return (
                     <tr key={inv.id} className="hover:bg-background/40 transition-colors">
-                      <td className="px-5 py-3 text-dark text-xs font-mono whitespace-nowrap">{inv.invoice_number || '—'}</td>
+                      <td className="px-5 py-3 text-dark text-xs font-mono whitespace-nowrap">{inv.invoice_number || '-'}</td>
                       <td className="px-4 py-3 min-w-[140px]">
                         <p className="text-dark text-sm">{INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type}</p>
                         {inv.payment_type === 'addon' && inv.notes && (
@@ -154,7 +154,7 @@ export default function AdminEnquiryInvoicesCard({
               return (
                 <div key={inv.id} className="px-4 py-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <p className="text-dark-muted text-2xs font-mono truncate">{inv.invoice_number || '—'}</p>
+                    <p className="text-dark-muted text-2xs font-mono truncate">{inv.invoice_number || '-'}</p>
                     <StatusPill isPending={isPending} forfeited={isForfeited(enquiry)} />
                   </div>
                   <div className="flex items-center justify-between gap-2">

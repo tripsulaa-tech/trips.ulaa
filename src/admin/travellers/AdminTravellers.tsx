@@ -86,7 +86,7 @@ export default function AdminTravellers() {
   ] as const;
 
   return (
-    <AdminLayout title="Travellers" subtitle="Every contact you've saved a phone number for — whether they've booked a trip yet, or are only on a waitlist." scrollRestorationReady={!loading}>
+    <AdminLayout title="Travellers" subtitle="Every contact you've saved a phone number for - whether they've booked a trip yet, or are only on a waitlist." scrollRestorationReady={!loading}>
       <div className="space-y-4 sm:space-y-6">
         <KpiCards cards={KPI_CARDS} columns={4} />
         <KpiCarousel cards={KPI_CARDS} />
@@ -124,7 +124,7 @@ export default function AdminTravellers() {
         ) : pageItems.length === 0 ? (
           totalCount === 0 ? (
             <div className="text-center py-16 text-dark-muted bg-white rounded-lg shadow-card">
-              No contacts yet — once someone enquires with a phone number, they'll show up here.
+              No contacts yet - once someone enquires with a phone number, they'll show up here.
             </div>
           ) : (
             <>

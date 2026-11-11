@@ -140,13 +140,13 @@ export default function AddEnquiryModal({
               <>
                 <span className="font-semibold">{convertingWaitlist.slots} seats</span> just opened up for{' '}
                 <span className="font-semibold">{convertingWaitlist.name}</span>'s group. Fill in each person below and
-                record their payment — all {convertingWaitlist.slots} will be booked and marked "converted" on the
+                record their payment - all {convertingWaitlist.slots} will be booked and marked "converted" on the
                 waitlist together.
               </>
             ) : (
               <>
                 A seat opened up for <span className="font-semibold">{convertingWaitlist.name}</span>. Confirm the details
-                below and record their payment to book the seat — they'll be marked "converted" on the waitlist automatically.
+                below and record their payment to book the seat - they'll be marked "converted" on the waitlist automatically.
               </>
             )}
           </p>
@@ -166,7 +166,7 @@ export default function AddEnquiryModal({
                   setForm(f => ({ ...f, trip_id: val }));
                   applySuggestedAmount(val, form.package_type);
                 }}
-                options={[{ value: '', label: '— No trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+                options={[{ value: '', label: '- No trip -' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
               />
             </div>
             <div>
@@ -183,7 +183,7 @@ export default function AddEnquiryModal({
               />
             </div>
             <div>
-              <label htmlFor="ge-g-total" className="block text-sm font-medium text-dark mb-1">Total Amount (₹) <span className="text-dark-muted font-normal">— per person</span></label>
+              <label htmlFor="ge-g-total" className="block text-sm font-medium text-dark mb-1">Total Amount (₹) <span className="text-dark-muted font-normal">- per person</span></label>
               <input
                 id="ge-g-total"
                 type="number"
@@ -205,7 +205,7 @@ export default function AddEnquiryModal({
             </div>
             <MethodReferenceFields
               idPrefix="ge-g"
-              methodLabel={<>Payment Method <span className="text-dark-muted font-normal">— for everyone's advance</span></>}
+              methodLabel={<>Payment Method <span className="text-dark-muted font-normal">- for everyone's advance</span></>}
               value={form.payment_method}
               onChange={val => setForm(f => ({ ...f, payment_method: val, payment_utr: val === 'Cash' ? '' : f.payment_utr }))}
               utrValue={form.payment_utr}
@@ -386,7 +386,7 @@ export default function AddEnquiryModal({
                 <AlertTriangle size={16} className="shrink-0 mt-0.5 text-warning-fg" aria-hidden="true" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
-                    Possible duplicate{possibleDuplicates.length > 1 ? 's' : ''} — matches this phone or email
+                    Possible duplicate{possibleDuplicates.length > 1 ? 's' : ''} - matches this phone or email
                   </p>
                   <p className="text-xs text-warning-fg/80">Double-check this isn't the same traveler.</p>
                 </div>
@@ -476,7 +476,7 @@ export default function AddEnquiryModal({
                 setForm(f => ({ ...f, trip_id: val }));
                 applySuggestedAmount(val, form.package_type);
               }}
-              options={[{ value: '', label: '— No trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+              options={[{ value: '', label: '- No trip -' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
             />
           </div>
           <div>
@@ -515,7 +515,7 @@ export default function AddEnquiryModal({
               onBlur={() => touch('amount_paid')}
               aria-describedby={soloErrorsVisible.amount_paid ? 'ge-amount-paid-error' : 'ge-amount-paid-hint'}
               className={inputClass}
-              placeholder="e.g. 5000 (advance) — leave blank if unpaid"
+              placeholder="e.g. 5000 (advance) - leave blank if unpaid"
             />
             <p id="ge-amount-paid-hint" className="text-2xs text-dark-muted mt-1">Any amount books the seat. Paying the full amount closes the enquiry.</p>
             {soloErrorsVisible.amount_paid && <p id="ge-amount-paid-error" role="alert" className={errorClass}>{soloErrorsVisible.amount_paid}</p>}

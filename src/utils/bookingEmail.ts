@@ -76,7 +76,7 @@ function bookingEmailFields(enquiry: Enquiry, payments: Payment[], t: BookingEma
   const tripName = enquiry.trip_title || 'your trip';
   const balance = remainingBalance(enquiry);
   const isFullyPaid = balance != null && balance <= 0;
-  const balanceText = balance != null ? formatPrice(balance) : '—';
+  const balanceText = balance != null ? formatPrice(balance) : '-';
   const deadlineText = enquiry.balance_due_date ? formatDate(enquiry.balance_due_date, { month: 'short' }) : 'TBD';
   return {
     to: enquiry.email || '',

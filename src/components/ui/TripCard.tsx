@@ -384,11 +384,11 @@ export default function TripCard({ trip, index = 0 }: TripCardProps) {
               <Timer size={14} className="text-white shrink-0" />
               <p className="text-white text-2xs leading-tight">
                 {trip.special_offer_name && (
-                  <span className="font-bold">{trip.special_offer_name} — </span>
+                  <span className="font-bold">{trip.special_offer_name} - </span>
                 )}
                 {specialOfferDaysRemaining <= 1 ? (
                   <>
-                    <span className="font-bold">Offer ends today</span> — grab it before it's gone!
+                    <span className="font-bold">Offer ends today</span> - grab it before it's gone!
                   </>
                 ) : (
                   <>

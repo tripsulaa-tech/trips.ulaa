@@ -140,7 +140,7 @@ export default function TripHero({
         {isAlmostFull && !isFull ? (
           <span className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full early-bird-badge-gradient-shift text-white font-button font-semibold text-xs sm:text-sm px-2.5 py-1 sm:px-3 sm:py-1 shadow-warm">
             <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-white animate-pulse motion-reduce:animate-none" aria-hidden="true" />
-            {seatsLeft === 1 ? 'Only 1 seat left' : `Only ${seatsLeft} seats left`} — hurry!
+            {seatsLeft === 1 ? 'Only 1 seat left' : `Only ${seatsLeft} seats left`} - hurry!
           </span>
         ) : (
           <span className="flex items-center gap-2"><Users size={16} className={icon} />

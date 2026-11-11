@@ -273,7 +273,7 @@ export default function AdminEnquiryDetail() {
       package_type: packageType,
       total_amount: suggested ?? '',
       discount_amount: enquiry.discount_amount || impliedDiscount || '',
-      discount_reason: enquiry.discount_reason || (impliedDiscount ? 'Backfilled — matches previously recorded total' : ''),
+      discount_reason: enquiry.discount_reason || (impliedDiscount ? 'Backfilled - matches previously recorded total' : ''),
       // Blank, not enquiry.amount_paid — same reasoning as AdminEnquiries'
       // openPayment: this field is this-payment's-own-amount now, matching
       // Generate Invoice, not a running total to edit down to.
@@ -676,7 +676,7 @@ export default function AdminEnquiryDetail() {
     if (pendingAmount > 0) {
       const ok = await confirm({
         title: 'Complete with balance pending?',
-        message: `${formatPrice(pendingAmount)} is still unpaid on this booking. Completing it now won't cancel that balance — make sure it's still being chased separately.`,
+        message: `${formatPrice(pendingAmount)} is still unpaid on this booking. Completing it now won't cancel that balance - make sure it's still being chased separately.`,
         confirmLabel: 'Complete anyway',
         variant: 'danger',
       });
@@ -765,17 +765,17 @@ export default function AdminEnquiryDetail() {
       if (canShareFile) {
         await navigator.share({
           files: [file],
-          title: `Ulaa Invoice — ${enquiry.booking_id || ''}`,
+          title: `Ulaa Invoice - ${enquiry.booking_id || ''}`,
           text: `Invoice for booking ${enquiry.booking_id || ''} (${enquiry.trip_title || 'Ulaa trip'})`,
         });
       } else {
         await downloadInvoicePdf(enquiry, rows);
         const text = encodeURIComponent(
           `Hi ${enquiry.full_name}, here's your Ulaa booking summary:\n` +
-          `Booking ID: ${enquiry.booking_id || '—'}\n` +
-          `Trip: ${enquiry.trip_title || '—'}\n` +
+          `Booking ID: ${enquiry.booking_id || '-'}\n` +
+          `Trip: ${enquiry.trip_title || '-'}\n` +
           `Amount paid: ${formatPrice(enquiry.amount_paid || 0)}${enquiry.total_amount ? ` of ${formatPrice(enquiry.total_amount)}` : ''}\n` +
-          `The invoice PDF has been downloaded — please attach it to this chat.`
+          `The invoice PDF has been downloaded - please attach it to this chat.`
         );
         window.open(whatsAppUrl(enquiry.phone, text), '_blank', 'noopener,noreferrer');
       }
@@ -878,7 +878,7 @@ export default function AdminEnquiryDetail() {
     return (
       <AdminLayout title="Enquiry Details" scrollRestorationReady>
         <div className="p-6 space-y-3">
-          <p className="text-dark-muted text-sm">This enquiry couldn't be found — it may have been deleted.</p>
+          <p className="text-dark-muted text-sm">This enquiry couldn't be found - it may have been deleted.</p>
           <Button variant="primary" size="sm" onClick={() => navigate('/admin/enquiries')}>
             <ArrowLeft size={14} aria-hidden="true" /> Back to Enquiries
           </Button>
@@ -1153,7 +1153,7 @@ export default function AdminEnquiryDetail() {
                 <button
                   type="button"
                   onClick={() => setEmailPreviewMode('dark')}
-                  title="Simulates clients that ignore the email's light-mode setting and auto-invert colors (e.g. Gmail's Android app) — not a separate dark template"
+                  title="Simulates clients that ignore the email's light-mode setting and auto-invert colors (e.g. Gmail's Android app) - not a separate dark template"
                   className={`px-3 py-1.5 rounded text-xs font-button font-semibold transition-colors ${emailPreviewMode === 'dark' ? 'bg-primary text-white' : 'text-dark-muted hover:text-dark'}`}
                 >
                   Dark
@@ -1162,7 +1162,7 @@ export default function AdminEnquiryDetail() {
             </div>
             {emailPreviewMode === 'dark' && (
               <p className="text-dark-muted text-xs">
-                This email is designed as one fixed light-mode template — most clients (including Gmail's web/desktop apps) will show it exactly like the Light tab. This Dark tab simulates the auto-invert some clients (like Gmail's Android app) apply on their own, ignoring that.
+                This email is designed as one fixed light-mode template - most clients (including Gmail's web/desktop apps) will show it exactly like the Light tab. This Dark tab simulates the auto-invert some clients (like Gmail's Android app) apply on their own, ignoring that.
               </p>
             )}
             <div className={emailPreviewMode === 'dark' ? 'rounded-md bg-dark p-3' : ''}>

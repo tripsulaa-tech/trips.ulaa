@@ -105,7 +105,7 @@ export default function BookingPackagePicker({
 
   return (
     <div>
-      <p className="block text-sm font-medium text-dark mb-1">Package — how many people for each? *</p>
+      <p className="block text-sm font-medium text-dark mb-1">Package - how many people for each? *</p>
       <div className="grid gap-2">
         <div className={`flex items-center justify-between gap-3 rounded-lg border-2 px-4 py-2.5 ${isGold(first) ? 'premium-gold-border' : 'border-background-warm'}`}>
           <div>

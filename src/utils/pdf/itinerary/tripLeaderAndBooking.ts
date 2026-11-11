@@ -324,7 +324,7 @@ import { RESPONSE_TIME } from '../../../constants/site';
       setText([180, 120, 20] as RGB);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.6);
-      doc.text(`Only ${remaining} seats left \u2014 almost full!`, cardCX, boxTop + boxH / 2 + 4, { align: 'center' });
+      doc.text(`Only ${remaining} seats left - almost full!`, cardCX, boxTop + boxH / 2 + 4, { align: 'center' });
     } else if (trip.advance_amount != null) {
       boxH = 40;
       setFill([232, 247, 237] as RGB);

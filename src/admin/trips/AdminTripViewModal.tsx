@@ -73,10 +73,10 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
               <div>
                 <p className="text-xs font-medium text-dark-muted mb-0.5">Price</p>
                 <p className="text-dark">
-                  {trip.price ? formatPrice(trip.price) : '—'}
+                  {trip.price ? formatPrice(trip.price) : '-'}
                   {trip.early_bird_price ? ` (Early-bird ${formatPrice(trip.early_bird_price)})` : ''}
-                  {trip.strike_through_price ? ` — strikeout ${formatPrice(trip.strike_through_price)}` : ''}
-                  {trip.special_offer_name && trip.special_offer_price ? ` — ${trip.special_offer_name}: ${formatPrice(trip.special_offer_price)} ${trip.special_offer_end_date && trip.special_offer_end_date !== trip.special_offer_date ? `from ${trip.special_offer_date} to ${trip.special_offer_end_date}` : `on ${trip.special_offer_date}`}` : ''}
+                  {trip.strike_through_price ? ` - strikeout ${formatPrice(trip.strike_through_price)}` : ''}
+                  {trip.special_offer_name && trip.special_offer_price ? ` - ${trip.special_offer_name}: ${formatPrice(trip.special_offer_price)} ${trip.special_offer_end_date && trip.special_offer_end_date !== trip.special_offer_date ? `from ${trip.special_offer_date} to ${trip.special_offer_end_date}` : `on ${trip.special_offer_date}`}` : ''}
                 </p>
               </div>
               {trip.meeting_point && (
@@ -168,7 +168,7 @@ export default function AdminTripViewModal({ trip, onClose, onEdit, actualRevenu
 
             {(trip.included_groups?.length ?? 0) > 0 && (
               <div>
-                <p className="text-xs font-medium text-dark-muted mb-1">What's Included — Grouped</p>
+                <p className="text-xs font-medium text-dark-muted mb-1">What's Included - Grouped</p>
                 <div className="space-y-2">
                   {trip.included_groups!.map((group, gi) => (
                     <div key={gi}>

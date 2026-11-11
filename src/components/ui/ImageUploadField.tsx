@@ -98,7 +98,7 @@ export default function ImageUploadField({ label, value, onChange, bucket, pathP
       // image bytes — fall back to using the URL as-is so the admin can
       // still save, just without the storage/perf benefit.
       onChange(trimmed);
-      toast.error("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead — it may load slower for visitors.");
+      toast.error("Couldn't save that image to our own storage automatically (the source site may not allow it), so it's linked directly instead - it may load slower for visitors.");
     } finally {
       setUploading(false);
     }

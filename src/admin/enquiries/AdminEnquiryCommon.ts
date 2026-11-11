@@ -98,8 +98,8 @@ const GENERATE_INVOICE_TYPE_OPTIONS: { value: GenerateInvoiceType; label: string
 ];
 
 export const GENERATE_INVOICE_STATUS_OPTIONS: { value: 'paid' | 'pending'; label: string }[] = [
-  { value: 'paid', label: 'Paid now — money already collected' },
-  { value: 'pending', label: 'Pending — invoice only, collect later' },
+  { value: 'paid', label: 'Paid now - money already collected' },
+  { value: 'pending', label: 'Pending - invoice only, collect later' },
 ];
 
 // Which one of the three invoice buttons (Download / Share / Email) is

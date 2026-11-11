@@ -192,7 +192,7 @@ export default function AdminCreatorRateCalculator() {
       fillReelViewsFrom(0, parsed);
     } catch (err) {
       console.error(err);
-      toast.error("Couldn't read your clipboard — paste directly into a Reel field instead.");
+      toast.error("Couldn't read your clipboard - paste directly into a Reel field instead.");
     }
   };
 
@@ -601,7 +601,7 @@ export default function AdminCreatorRateCalculator() {
       return;
     }
     // No saved phone and no native share sheet — fall back to copying.
-    if (await copyCalculationText(h)) toast.info('No phone number saved for this creator, so the message was copied instead — paste it into WhatsApp, Instagram DM, or email.', { duration: 6000 });
+    if (await copyCalculationText(h)) toast.info('No phone number saved for this creator, so the message was copied instead - paste it into WhatsApp, Instagram DM, or email.', { duration: 6000 });
   };
 
   return (
@@ -695,7 +695,7 @@ export default function AdminCreatorRateCalculator() {
           </div>
 
           <div className="flex items-center justify-between gap-3 mb-2">
-            <p className="text-sm font-medium text-dark">Average Views — Last 10 Reels *</p>
+            <p className="text-sm font-medium text-dark">Average Views - Last 10 Reels *</p>
             <button
               type="button"
               onClick={handlePasteAllViews}
@@ -741,7 +741,7 @@ export default function AdminCreatorRateCalculator() {
               onChange={e => setNotes(e.target.value)}
               className={inputClass}
               rows={2}
-              placeholder="Optional — context for this quote, negotiation notes, etc."
+              placeholder="Optional - context for this quote, negotiation notes, etc."
             />
           </div>
         </motion.div>
@@ -930,7 +930,7 @@ export default function AdminCreatorRateCalculator() {
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             {variant.id === defaultVariantId ? (
                               <span
-                                title="Default variant — used for Copy/Share unless overridden per row"
+                                title="Default variant - used for Copy/Share unless overridden per row"
                                 aria-label="Default variant"
                                 className="inline-flex items-center justify-center text-primary shrink-0"
                               >
@@ -1059,7 +1059,7 @@ export default function AdminCreatorRateCalculator() {
           onClose={() => setPreviewOpen(false)}
           title={(() => {
             const name = templateVariants.find(v => v.id === previewVariantId)?.name;
-            return name ? `Preview — ${name}` : 'Template Preview';
+            return name ? `Preview - ${name}` : 'Template Preview';
           })()}
           size="sm"
           footer={
@@ -1073,7 +1073,7 @@ export default function AdminCreatorRateCalculator() {
           <p className="text-xs text-dark-muted mb-3">
             {hasInputs
               ? 'This is how the message looks with the details currently entered above.'
-              : `Enter a follower count and Reel views above to preview with a real calculation — showing sample figures for now.`}
+              : `Enter a follower count and Reel views above to preview with a real calculation - showing sample figures for now.`}
           </p>
           <div className="bg-background-warm/40 border border-background-warm rounded-md p-4 whitespace-pre-wrap text-sm text-dark font-sans">
             {renderFormattedPreview(previewMessage)}
@@ -1126,7 +1126,7 @@ export default function AdminCreatorRateCalculator() {
                     <div className="text-center text-dark-muted text-sm py-6">Loading…</div>
                   ) : history.length === 0 ? (
                     <div className="text-center text-dark-muted text-sm py-6">
-                      No saved calculations yet — save one above to build a history you can look back on.
+                      No saved calculations yet - save one above to build a history you can look back on.
                     </div>
                   ) : (
                     <div className="space-y-2.5">

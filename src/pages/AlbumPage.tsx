@@ -336,7 +336,7 @@ export default function AlbumPage() {
                     key={label}
                     href="#gallery"
                     onClick={scrollToGallery}
-                    aria-label={`${value} photos — jump to gallery`}
+                    aria-label={`${value} photos - jump to gallery`}
                     className={`${cellClass} group`}
                   >
                     {inner}

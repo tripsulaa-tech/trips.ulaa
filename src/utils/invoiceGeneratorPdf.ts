@@ -146,7 +146,7 @@ function fmtAmount(n: number): string {
 }
 
 function fmtDate(iso: string): string {
-  if (!iso) return '\u2014';
+  if (!iso) return '-';
   return sanitizeForPdf(formatDate(iso, { day: 'numeric', month: 'long', year: 'numeric' }));
 }
 
@@ -268,7 +268,7 @@ async function drawBillingAndMeta(doc: jsPDF, data: InvoiceGeneratorData, cursor
     doc.text(value, labelCol, cy + 11);
   }
 
-  await metaRow(ICON_FILE_TEXT, 'Invoice No.', sanitizeForPdf(data.invoiceNumber) || '\u2014', 0);
+  await metaRow(ICON_FILE_TEXT, 'Invoice No.', sanitizeForPdf(data.invoiceNumber) || '-', 0);
   await metaRow(ICON_CALENDAR, 'Invoice Date', fmtDate(data.invoiceDateISO), 1);
 
   cursor.y = Math.max(leftBottom, topY + cardH) + 26;

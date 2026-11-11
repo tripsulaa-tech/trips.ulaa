@@ -111,7 +111,7 @@ export function useAddEnquiry(params: {
     const groupNote = incoming.group_size && incoming.group_size > 1
       ? [
           `Converted from waitlist (group of ${incoming.group_size}`,
-          alreadyConverted > 0 ? ` — ${alreadyConverted} already logged, logging ${slots} more now` : ` — logging ${slots} now`,
+          alreadyConverted > 0 ? ` - ${alreadyConverted} already logged, logging ${slots} more now` : ` - logging ${slots} now`,
           stillToLog > 0 ? `, ${stillToLog} seat${stillToLog === 1 ? '' : 's'} still to go after this` : ', completes the group',
           ').',
         ].join('')
@@ -391,11 +391,11 @@ export function useAddEnquiry(params: {
       // trigger's actual message from the admin.
       const message = err instanceof Error ? err.message : (err as { message?: string } | null)?.message;
       if (message === 'DUPLICATE_ENQUIRY') {
-        alert('There\'s already an active enquiry for this trip with this exact name, phone, and email. If this is meant to be a different traveler, tweak one of those fields — a shared family phone/email with a different name is fine.');
+        alert('There\'s already an active enquiry for this trip with this exact name, phone, and email. If this is meant to be a different traveler, tweak one of those fields - a shared family phone/email with a different name is fine.');
       } else if (message && /no seats left/i.test(message)) {
         alert(convertingWaitlist
           ? 'All slots are filled. Unable to complete the conversion.'
-          : 'This trip is fully booked — there are no seats left to log this enquiry against.');
+          : 'This trip is fully booked - there are no seats left to log this enquiry against.');
       } else {
         alert(message || 'Failed to save enquiry.');
       }

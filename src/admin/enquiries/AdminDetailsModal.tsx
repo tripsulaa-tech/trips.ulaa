@@ -118,7 +118,7 @@ export default function DetailsModal({
             <div className="flex items-center flex-wrap gap-1.5">
               {detailsTarget.group_size && detailsTarget.group_size > 1 ? (
                 <span
-                  title={`${groupLabel(detailsTarget)} — part of a group booking of ${detailsTarget.group_size}`}
+                  title={`${groupLabel(detailsTarget)} - part of a group booking of ${detailsTarget.group_size}`}
                   className="inline-flex items-center gap-0.5 text-2xs font-button font-semibold px-2 py-0.5 rounded-md whitespace-nowrap bg-slate-100 text-dark-muted"
                 >
                   <Users size={10} aria-hidden="true" /> {groupLabel(detailsTarget)} · {detailsTarget.group_seq}/{detailsTarget.group_size}
@@ -213,7 +213,7 @@ export default function DetailsModal({
                 {detailsTarget.discount_amount > 0 && (
                   <p className="text-xs text-dark-muted bg-background-warm rounded-md px-3 py-2">
                     Discount applied: <span className="font-semibold text-dark">{formatPrice(detailsTarget.discount_amount)}</span>
-                    {detailsTarget.discount_reason ? ` — ${detailsTarget.discount_reason}` : ''}
+                    {detailsTarget.discount_reason ? ` - ${detailsTarget.discount_reason}` : ''}
                   </p>
                 )}
 
@@ -253,7 +253,7 @@ export default function DetailsModal({
                         return (
                           <li key={inv.id} className="flex items-center justify-between gap-2 px-3 py-2">
                             <div className="min-w-0">
-                              <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '—'}</p>
+                              <p className="text-dark text-xs font-mono truncate">{inv.invoice_number || '-'}</p>
                               <p className="text-dark-muted text-2xs">
                                 {INVOICE_TYPE_LABEL[inv.payment_type] ?? inv.payment_type} · {formatDate(inv.paid_at, { day: 'numeric', month: 'short', year: 'numeric' })}
                                 {inv.payment_method ? ` · ${inv.payment_method}` : ''}
@@ -300,7 +300,7 @@ export default function DetailsModal({
                   href={detailsTarget.phone ? `tel:${detailsTarget.phone}` : undefined}
                   linkTitle={`Call ${detailsTarget.full_name}`}
                 >
-                  <p className="text-dark text-sm font-semibold whitespace-nowrap">{detailsTarget.phone ? formatPhone(detailsTarget.phone) : '—'}</p>
+                  <p className="text-dark text-sm font-semibold whitespace-nowrap">{detailsTarget.phone ? formatPhone(detailsTarget.phone) : '-'}</p>
                 </InfoItem>
                 <InfoItem
                   icon={<EnvelopeSimple size={15} aria-hidden="true" />}
@@ -308,7 +308,7 @@ export default function DetailsModal({
                   href={detailsTarget.email ? `mailto:${detailsTarget.email}` : undefined}
                   linkTitle={`Email ${detailsTarget.full_name}`}
                 >
-                  <p title={detailsTarget.email || undefined} className="text-dark text-sm font-semibold truncate">{detailsTarget.email || '—'}</p>
+                  <p title={detailsTarget.email || undefined} className="text-dark text-sm font-semibold truncate">{detailsTarget.email || '-'}</p>
                 </InfoItem>
               </div>
 
@@ -320,19 +320,19 @@ export default function DetailsModal({
                   <p title={detailsTarget.trip_id ? detailsTarget.trip_title : undefined} className="text-dark text-sm font-semibold truncate">
                     {detailsTarget.trip_id ? detailsTarget.trip_title : (
                       <span className="text-dark-muted italic font-normal">
-                        {isGeneralContactMessage(detailsTarget) ? 'None — Contact Us message' : 'None — logged without a trip'}
+                        {isGeneralContactMessage(detailsTarget) ? 'None - Contact Us message' : 'None - logged without a trip'}
                       </span>
                     )}
                   </p>
                 </InfoItem>
                 <InfoItem icon={<User size={15} aria-hidden="true" />} label="Age">
-                  <p className="text-dark text-sm font-semibold truncate">{detailsTarget.age ?? '—'}</p>
+                  <p className="text-dark text-sm font-semibold truncate">{detailsTarget.age ?? '-'}</p>
                 </InfoItem>
               </div>
 
               <div className="grid grid-cols-2 gap-x-3 gap-y-3 py-4">
                 <InfoItem icon={<Building2 size={15} aria-hidden="true" />} label="City">
-                  <p className="text-dark text-sm font-semibold truncate">{detailsTarget.city || '—'}</p>
+                  <p className="text-dark text-sm font-semibold truncate">{detailsTarget.city || '-'}</p>
                 </InfoItem>
                 <InfoItem
                   icon={<FoodMark type={detailsTarget.food_preference === 'veg' || detailsTarget.food_preference === 'non_veg' ? detailsTarget.food_preference : 'not_set'} size={12} />}
@@ -342,7 +342,7 @@ export default function DetailsModal({
                     detailsTarget.food_preference === 'veg' ? 'text-success-fg' : detailsTarget.food_preference === 'non_veg' ? 'text-danger-fg' : 'text-dark'
                   }`}>
                     {(detailsTarget.food_preference === 'veg' || detailsTarget.food_preference === 'non_veg') && <FoodMark type={detailsTarget.food_preference} size={11} />}
-                    {detailsTarget.food_preference === 'veg' ? 'Veg' : detailsTarget.food_preference === 'non_veg' ? 'Non-veg' : '—'}
+                    {detailsTarget.food_preference === 'veg' ? 'Veg' : detailsTarget.food_preference === 'non_veg' ? 'Non-veg' : '-'}
                   </p>
                 </InfoItem>
               </div>
@@ -386,7 +386,7 @@ export default function DetailsModal({
                   <InfoItem
                     icon={<WhatsAppIcon size={15} aria-hidden="true" />}
                     label="WhatsApp"
-                    href={getWhatsAppLink(detailsTarget.phone, `Hi ${detailsTarget.full_name.trim().split(/\s+/)[0]}, following up on your ${detailsTarget.trip_title ? `${detailsTarget.trip_title} ` : ''}enquiry with Ulaa — `)}
+                    href={getWhatsAppLink(detailsTarget.phone, `Hi ${detailsTarget.full_name.trim().split(/\s+/)[0]}, following up on your ${detailsTarget.trip_title ? `${detailsTarget.trip_title} ` : ''}enquiry with Ulaa - `)}
                     linkTitle={`Message ${detailsTarget.full_name} on WhatsApp`}
                     external
                   >

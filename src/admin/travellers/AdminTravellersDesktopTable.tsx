@@ -127,7 +127,7 @@ export default function AdminTravellersDesktopTable({
                             <button
                               type="button"
                               onClick={() => onMerge(contact)}
-                              title="Another traveller uses this phone number — click to review and merge"
+                              title="Another traveller uses this phone number - click to review and merge"
                               className="inline-flex items-center gap-1 text-2xs font-button font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-warning-bg text-warning-fg shrink-0 hover:bg-amber-200 transition-colors"
                             >
                               <Warning size={9} aria-hidden="true" /> Shared number
@@ -168,14 +168,14 @@ export default function AdminTravellersDesktopTable({
                           <Mail size={11} className="shrink-0" aria-hidden="true" /> {contact.email}
                         </a>
                       ) : (
-                        <p className="text-xs text-dark-muted">—</p>
+                        <p className="text-xs text-dark-muted">-</p>
                       )}
                     </div>
                   </td>
                   <td className="px-4 py-4 text-dark-muted hidden lg:table-cell">
                     {contact.city ? (
                       <span className="inline-flex items-center gap-1"><MapPin size={12} aria-hidden="true" /> {contact.city}</span>
-                    ) : '—'}
+                    ) : '-'}
                   </td>
                   <td className="px-4 py-4 text-dark-muted max-w-[220px]">
                     <p className="truncate">

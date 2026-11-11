@@ -135,7 +135,7 @@ export default function AdminEnquiryTravellerCard({
           <button
             type="button"
             onClick={onStartEdit}
-            title="Edit these details — fixes who this enquiry is actually about, doesn't affect payments, status, or booking journey"
+            title="Edit these details - fixes who this enquiry is actually about, doesn't affect payments, status, or booking journey"
             className="w-8 h-8 rounded-full bg-primary/10 inline-flex items-center justify-center text-primary hover:bg-primary hover:text-white transition-colors shrink-0"
           >
             <Pencil size={15} aria-hidden="true" />
@@ -256,11 +256,11 @@ export default function AdminEnquiryTravellerCard({
                     size="sm"
                     value={editForm.trip_id}
                     onChange={val => setEditForm(f => ({ ...f, trip_id: val }))}
-                    options={[{ value: '', label: '— No trip —' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
+                    options={[{ value: '', label: '- No trip -' }, ...trips.map(t => ({ value: t.id, label: t.title }))]}
                   />
                   {editForm.trip_id !== (enquiry.trip_id || '') && (
                     <p className="text-2xs text-warning-fg bg-warning-bg rounded px-2 py-1.5 mt-1.5">
-                      Changing the trip doesn't update an already-tracked total amount — open Payment afterwards to re-check the price for the new trip.
+                      Changing the trip doesn't update an already-tracked total amount - open Payment afterwards to re-check the price for the new trip.
                     </p>
                   )}
                 </div>
@@ -268,7 +268,7 @@ export default function AdminEnquiryTravellerCard({
                 <p title={enquiry.trip_id ? enquiry.trip_title : undefined} className="text-dark text-sm font-semibold truncate">
                   {enquiry.trip_id ? enquiry.trip_title : (
                     <span className="text-dark-muted italic font-normal">
-                      {isGeneralContactMessage ? 'None — Contact Us message' : 'None — logged without a trip'}
+                      {isGeneralContactMessage ? 'None - Contact Us message' : 'None - logged without a trip'}
                     </span>
                   )}
                 </p>
@@ -297,7 +297,7 @@ export default function AdminEnquiryTravellerCard({
                   {editTouched.has('age') && editErrors.age && <p id="eq-detail-edit-age-error" role="alert" className="text-danger-fg text-xs mt-1">{editErrors.age}</p>}
                 </>
               ) : (
-                <p className="text-dark text-sm font-semibold truncate">{enquiry.age ?? '—'}</p>
+                <p className="text-dark text-sm font-semibold truncate">{enquiry.age ?? '-'}</p>
               )}
             </div>
           </div>
@@ -326,7 +326,7 @@ export default function AdminEnquiryTravellerCard({
                   {citySuggestField.open && <SuggestionDropdown items={citySuggestField.suggestions} onSelect={citySuggestField.select} />}
                 </>
               ) : (
-                <p className="text-dark text-sm font-semibold truncate">{enquiry.city || '—'}</p>
+                <p className="text-dark text-sm font-semibold truncate">{enquiry.city || '-'}</p>
               )}
             </div>
           </div>
@@ -351,7 +351,7 @@ export default function AdminEnquiryTravellerCard({
                   enquiry.food_preference === 'veg' ? 'text-success-fg' : enquiry.food_preference === 'non_veg' ? 'text-danger-fg' : 'text-dark'
                 }`}>
                   {(enquiry.food_preference === 'veg' || enquiry.food_preference === 'non_veg') && <FoodMark type={enquiry.food_preference} size={11} />}
-                  {enquiry.food_preference === 'veg' ? 'Veg' : enquiry.food_preference === 'non_veg' ? 'Non-veg' : '—'}
+                  {enquiry.food_preference === 'veg' ? 'Veg' : enquiry.food_preference === 'non_veg' ? 'Non-veg' : '-'}
                 </p>
               )}
             </div>
@@ -447,7 +447,7 @@ export default function AdminEnquiryTravellerCard({
                         options={[{ value: '', label: 'None (base trip)' }, ...tripPackages.map(p => ({ value: p.id, label: p.name }))]}
                       />
                       {enquiry.booking_id && (
-                        <span className="block text-2xs text-dark-muted mt-0.5">Amount unchanged — adjust via Track Payment / Add-on</span>
+                        <span className="block text-2xs text-dark-muted mt-0.5">Amount unchanged - adjust via Track Payment / Add-on</span>
                       )}
                     </div>
                   ) : (
@@ -464,7 +464,7 @@ export default function AdminEnquiryTravellerCard({
           {!editing && enquiry.phone && (
             <div className="flex items-center gap-2.5 min-w-0">
               <a
-                href={getWhatsAppLink(enquiry.phone, `Hi ${enquiry.full_name.trim().split(/\s+/)[0]}, following up on your ${enquiry.trip_title ? `${enquiry.trip_title} ` : ''}enquiry with Ulaa — `)}
+                href={getWhatsAppLink(enquiry.phone, `Hi ${enquiry.full_name.trim().split(/\s+/)[0]}, following up on your ${enquiry.trip_title ? `${enquiry.trip_title} ` : ''}enquiry with Ulaa - `)}
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Message ${enquiry.full_name} on WhatsApp`}

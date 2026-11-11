@@ -68,7 +68,7 @@ export default function Footer() {
           <Link to="/" className="inline-block">
             <img
               src={FOOTER_LOGO_SRC}
-              alt={`${SITE_SHORT_NAME} — ${BRAND_MOTTO}`}
+              alt={`${SITE_SHORT_NAME} - ${BRAND_MOTTO}`}
               className="w-full max-w-[260px] mx-auto h-auto -mb-3"
             />
           </Link>
@@ -166,7 +166,7 @@ export default function Footer() {
             <Link to="/" className="inline-block">
               <img
                 src={FOOTER_LOGO_SRC}
-                alt={`${SITE_SHORT_NAME} — ${BRAND_MOTTO}`}
+                alt={`${SITE_SHORT_NAME} - ${BRAND_MOTTO}`}
                 className="w-full max-w-[210px] h-auto"
               />
             </Link>

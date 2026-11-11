@@ -46,7 +46,7 @@ export function renderDetails(ctx: InvoicePdfCtx, enquiry: Enquiry): void {
   label('BILLED TO', MARGIN);
   let leftY = top + 25;
   leftY = line(val(enquiry.full_name), MARGIN, leftY, { bold: true, size: 11.5 });
-  leftY = line(formatPhone(enquiry.phone) || '\u2014', MARGIN, leftY, { muted: true });
+  leftY = line(formatPhone(enquiry.phone) || '-', MARGIN, leftY, { muted: true });
   leftY = line(val(enquiry.email), MARGIN, leftY, { muted: true });
 
   // --- Trip --------------------------------------------------------------
@@ -70,7 +70,7 @@ export function renderDetails(ctx: InvoicePdfCtx, enquiry: Enquiry): void {
   // packages fall back to the booking's own type (Normal / Early Bird).
   rightY = line(`Package - ${packageName}`, col2X, rightY, {});
   const city = val(enquiry.city);
-  if (enquiry.city && city !== '\u2014') {
+  if (enquiry.city && city !== '-') {
     rightY = line(`City - ${city}`, col2X, rightY, {});
   }
 

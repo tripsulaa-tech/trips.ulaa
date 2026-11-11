@@ -11,7 +11,7 @@ export const DEFAULT_FOUNDER: FounderContent = {
   name: 'Founder Name',
   designation: 'Founder & CEO, Ulaa',
   description:
-    'A passionate traveller and women\'s safety advocate, our founder started Ulaa after one too many trips where she wished she had a trusted community of women to explore with. Her mission: to make the world smaller, safer, and more beautiful — one women-only trip at a time.',
+    'A passionate traveller and women\'s safety advocate, our founder started Ulaa after one too many trips where she wished she had a trusted community of women to explore with. Her mission: to make the world smaller, safer, and more beautiful - one women-only trip at a time.',
   social_links: [
     { platform: 'Instagram', url: '' },
     { platform: 'LinkedIn', url: '' },

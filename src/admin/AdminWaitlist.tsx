@@ -89,7 +89,7 @@ export default function AdminWaitlist() {
               <span className="font-semibold">
                 {seatOpenCount} {seatOpenCount === 1 ? 'person is' : 'people are'} waiting
               </span>{' '}
-              on a trip that now has an open seat — sorted to the top below.
+              on a trip that now has an open seat - sorted to the top below.
             </p>
           </motion.div>
         )}

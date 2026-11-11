@@ -119,7 +119,7 @@ export default function AdminWaitlistDesktopTable({
                   <div className="flex flex-col items-start gap-1">
                     {e.group_size && e.group_size > 1 ? (
                       <span
-                        title={`${groupLabel(e)} — waiting for ${e.group_size} seats together`}
+                        title={`${groupLabel(e)} - waiting for ${e.group_size} seats together`}
                         className="inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md bg-background-warm text-dark-muted whitespace-nowrap"
                       >
                         <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_size}
@@ -152,7 +152,7 @@ export default function AdminWaitlistDesktopTable({
                   )}
                 </td>
                 <td className="px-4 py-4 text-dark-muted hidden lg:table-cell max-w-[180px]">
-                  <p className="truncate">{e.trip_title || '—'}</p>
+                  <p className="truncate">{e.trip_title || '-'}</p>
                   <SeatAvailabilityBadges entry={e} seatsAvailable={seatsAvailable} />
                 </td>
                 <td className="px-4 py-4 text-dark-muted hidden md:table-cell">

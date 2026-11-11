@@ -74,7 +74,7 @@ export default function TripHighlightsSection({
                 type="button"
                 onClick={() => toggleHighlight(i)}
                 aria-expanded={isOpen}
-                aria-label={`${card.heading} — tap for details`}
+                aria-label={`${card.heading} - tap for details`}
                 className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:pointer-events-none"
               >
                 <TripHighlightIconDisplay icon={card.icon} index={i} filled={isOpen} hoverFill />

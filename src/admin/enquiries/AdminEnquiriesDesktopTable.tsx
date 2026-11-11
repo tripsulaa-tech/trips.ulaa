@@ -233,7 +233,7 @@ export default function AdminEnquiriesDesktopTable({
                         )}
                         {!e.trip_id && !activeGroup && (
                           <span
-                            title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website — not linked to any trip' : 'Logged without picking a trip'}
+                            title={isGeneralContactMessage(e) ? 'A "Contact Us" message from the website - not linked to any trip' : 'Logged without picking a trip'}
                             className="inline-flex items-center gap-1 text-xs font-button font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-dark-muted shrink-0"
                           >
                             <MessageCircle size={9} className="shrink-0" aria-hidden="true" /> General
@@ -244,7 +244,7 @@ export default function AdminEnquiriesDesktopTable({
                             Food stays a tiny icon-only chip. Package has its own column. */}
                         {e.group_size && e.group_size > 1 && (
                           <span
-                            title={`${groupLabel(e)} — part of a group booking of ${e.group_size}`}
+                            title={`${groupLabel(e)} - part of a group booking of ${e.group_size}`}
                             className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-0.5 rounded-md shrink-0 whitespace-nowrap ${clr ? clr.badge : 'bg-slate-100 text-dark-muted'}`}
                           >
                             <Users size={12} className="shrink-0" aria-hidden="true" /> {groupLabel(e)} · {e.group_seq}/{e.group_size}
@@ -307,7 +307,7 @@ export default function AdminEnquiriesDesktopTable({
                     ) : (
                       <button
                         onClick={() => openPayment(e)}
-                        title={e.booking_id ? `Booking ID: ${e.booking_id} — click to open payments` : 'Open payments'}
+                        title={e.booking_id ? `Booking ID: ${e.booking_id} - click to open payments` : 'Open payments'}
                         className="text-left hover:opacity-75 transition-opacity"
                       >
                         <PaymentSummaryLine e={e} />
@@ -321,7 +321,7 @@ export default function AdminEnquiriesDesktopTable({
                   </td>
                   <td className="px-3 py-3 text-left">
                     <div className="flex flex-col items-start gap-1">
-                    <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} — ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
+                    <span title={closedReasonLabel(e) ? `Booking Journey: ${jb.label} - ${closedReasonLabel(e)}` : `Booking Journey: ${jb.label}`} className={`inline-flex items-center gap-1 text-xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap ${jb.color}`}>
                       <jb.icon size={12} className="shrink-0" aria-hidden="true" />
                       {jb.label}
                     </span>
@@ -396,7 +396,7 @@ export default function AdminEnquiriesDesktopTable({
                           </button>
                         );
                       }
-                      return <span className="text-dark-muted/50 text-xs">—</span>;
+                      return <span className="text-dark-muted/50 text-xs">-</span>;
                     })()}
                   </td>
                   <td className="px-3 py-3 text-right">

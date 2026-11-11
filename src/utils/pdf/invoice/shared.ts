@@ -99,13 +99,13 @@ export function invoiceFileName(enquiry: Enquiry): string {
  *  measured or drawn. */
 export function val(text: string | null | undefined): string {
   const s = sanitizeForPdf(text);
-  return s || '\u2014'; // em dash for empty fields, matching the old template
+  return s || '-'; // em dash for empty fields, matching the old template
 }
 
 export { money } from '../shared';
 
 export function fdate(iso: string | null | undefined): string {
-  if (!iso) return '\u2014';
+  if (!iso) return '-';
   return formatDate(iso, { day: 'numeric', month: 'short', year: 'numeric' });
 }
 

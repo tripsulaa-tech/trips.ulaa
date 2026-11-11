@@ -41,9 +41,9 @@ export default function BulkEnquiryModal({
   // (or two rows still share the exact same title+batch), fall back to
   // the trip date so every option stays distinguishable.
   const pastTripLabel = (trip: CompletedTrip): string => {
-    if (trip.batch?.trim()) return `${trip.title} \u2014 ${formatBatchLabel(trip.batch)} (Completed)`;
+    if (trip.batch?.trim()) return `${trip.title} - ${formatBatchLabel(trip.batch)} (Completed)`;
     const sameTitle = pastTrips.filter(t => t.title === trip.title);
-    if (sameTitle.length > 1) return `${trip.title} \u2014 ${formatDate(trip.trip_date, { month: 'short' })} (Completed)`;
+    if (sameTitle.length > 1) return `${trip.title} - ${formatDate(trip.trip_date, { month: 'short' })} (Completed)`;
     return `${trip.title} (Completed)`;
   };
 
@@ -52,8 +52,8 @@ export default function BulkEnquiryModal({
       <div className="flex items-start gap-2 bg-info-bg border border-info-border rounded-md px-3 py-2.5 mb-4 text-sm text-info-fg">
         <Info size={16} className="shrink-0 mt-0.5" aria-hidden="true" />
         <p>
-          Log a whole batch of leads — e.g. everyone who commented "interested" on a post, or a backlog of old
-          contacts this app never had a record of — against one trip and one source in a single pass. Add a phone
+          Log a whole batch of leads - e.g. everyone who commented "interested" on a post, or a backlog of old
+          contacts this app never had a record of - against one trip and one source in a single pass. Add a phone
           number per person and they show up in the Contact Book right away.
         </p>
       </div>
@@ -105,7 +105,7 @@ export default function BulkEnquiryModal({
         </div>
 
         <div>
-          <label htmlFor="bulk-names" className="block text-sm font-medium text-dark mb-1">People — one per line *</label>
+          <label htmlFor="bulk-names" className="block text-sm font-medium text-dark mb-1">People - one per line *</label>
           <textarea
             id="bulk-names"
             value={form.namesText}

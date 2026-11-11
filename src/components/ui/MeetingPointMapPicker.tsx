@@ -284,7 +284,7 @@ export default function MeetingPointMapPicker({ isOpen, onClose, onSelect, initi
             </ul>
           )}
           {hasSearched && !searching && results.length === 0 && query.trim() && (
-            <p className="text-xs text-dark-muted mt-1.5">No matches found — try a different search, or click straight on the map below.</p>
+            <p className="text-xs text-dark-muted mt-1.5">No matches found - try a different search, or click straight on the map below.</p>
           )}
         </div>
 
@@ -309,7 +309,7 @@ export default function MeetingPointMapPicker({ isOpen, onClose, onSelect, initi
               </div>
             </>
           ) : (
-            <span className="text-sm text-dark-muted">No location picked yet — search above or click the map.</span>
+            <span className="text-sm text-dark-muted">No location picked yet - search above or click the map.</span>
           )}
         </div>
       </div>

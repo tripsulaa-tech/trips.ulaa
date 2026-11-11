@@ -23,8 +23,8 @@ export default function HomePage() {
   useScrollRestoration('/', true);
 
   usePageMeta({
-    title: `${SITE_NAME} — ${BRAND_MOTTO}`,
-    description: `${SITE_NAME} — ${BRAND_MOTTO} ${SITE_DESCRIPTION}`,
+    title: `${SITE_NAME} - ${BRAND_MOTTO}`,
+    description: `${SITE_NAME} - ${BRAND_MOTTO} ${SITE_DESCRIPTION}`,
     path: '/',
   });
 

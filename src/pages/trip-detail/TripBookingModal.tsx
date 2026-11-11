@@ -48,7 +48,7 @@ export default function TripBookingModal({
     if (isBookingDraftDirty(bookingDraft)) {
       const ok = await confirm({
         title: 'Close without submitting?',
-        message: "You've entered some details for this booking. If you close now they won't be submitted — but we'll keep them ready for you if you come back to this form.",
+        message: "You've entered some details for this booking. If you close now they won't be submitted - but we'll keep them ready for you if you come back to this form.",
         confirmLabel: 'Close',
         cancelLabel: 'Keep editing',
         variant: 'default',

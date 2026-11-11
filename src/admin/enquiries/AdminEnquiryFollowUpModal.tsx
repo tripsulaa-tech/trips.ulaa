@@ -173,7 +173,7 @@ export function BookingFollowUpModal({
               onChange={ev => setNotes(ev.target.value)}
               className={inputClass}
               rows={3}
-              placeholder="e.g. which document is still pending — optional"
+              placeholder="e.g. which document is still pending - optional"
             />
           </div>
 

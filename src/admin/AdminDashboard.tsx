@@ -59,16 +59,16 @@ function SkeletonBlock({ className = '' }: { className?: string }) {
 }
 
 function formatDate(dateStr?: string) {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return '—';
+  if (Number.isNaN(d.getTime())) return '-';
   return formatDateBase(dateStr, { day: 'numeric', month: 'short', year: 'numeric' }, 'en-GB');
 }
 
 function formatDateRange(start?: string, end?: string) {
-  if (!start) return '—';
+  if (!start) return '-';
   const s = new Date(start);
-  if (Number.isNaN(s.getTime())) return '—';
+  if (Number.isNaN(s.getTime())) return '-';
   const e = end ? new Date(end) : null;
   const sameMonth = e && s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
   // `day` must be explicitly cleared here — formatDateBase (the shared
@@ -351,7 +351,7 @@ export default function AdminDashboard() {
                             {truncateText(e.full_name, 10)}
                           </Link>
                         </td>
-                        <td className="py-2 sm:py-3 px-1 text-dark-muted truncate" title={e.trip_title || undefined}>{truncateText(e.trip_title || '—', 10)}</td>
+                        <td className="py-2 sm:py-3 px-1 text-dark-muted truncate" title={e.trip_title || undefined}>{truncateText(e.trip_title || '-', 10)}</td>
                         <td className="py-2 sm:py-3 px-1 text-dark-muted whitespace-nowrap">{formatDate(e.created_at)}</td>
                         <td className="py-2 sm:py-3 px-1 text-right">
                           <span className={`inline-block text-2xs sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md whitespace-nowrap ${STATUS_STYLES[e.status]}`}>

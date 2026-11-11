@@ -7,7 +7,7 @@ export const DEFAULT_ABOUT: AboutContent = {
     image: '',
     mobile_image: '',
     heading: 'About Ulaa',
-    subheading: 'Unseen. Local. Adventures. Activities. — A girls-only travel revolution.',
+    subheading: 'Unseen. Local. Adventures. Activities. - A girls-only travel revolution.',
     cta_label: 'Explore Trips',
     cta_url: '/trips',
   },
@@ -17,7 +17,7 @@ export const DEFAULT_ABOUT: AboutContent = {
     sub_heading: 'How It Began',
     heading: 'Our Story',
     description:
-      'Ulaa was born from a simple frustration — why should women have to compromise their sense of adventure because the world hasn\'t made it safe enough? We set out to change that. Every trip we design puts safety, sisterhood, and soul-level experiences at the centre.',
+      'Ulaa was born from a simple frustration - why should women have to compromise their sense of adventure because the world hasn\'t made it safe enough? We set out to change that. Every trip we design puts safety, sisterhood, and soul-level experiences at the centre.',
     image: '',
   },
 
@@ -42,7 +42,7 @@ export const DEFAULT_ABOUT: AboutContent = {
         { icon: 'shield-check', title: 'Safety First', description: 'Every destination, accommodation, and guide is vetted with women\'s safety as the top priority.' },
         { icon: 'compass', title: 'Curated Experiences', description: 'No tourist traps. Only real, raw, soulful adventures off the beaten path.' },
         { icon: 'users', title: 'Instant Sisterhood', description: 'Join a group of like-minded women and leave with friendships that last a lifetime.' },
-        { icon: 'plane', title: 'Stress-Free Planning', description: 'We handle everything — stays, transport, meals — so you just show up and explore.' },
+        { icon: 'plane', title: 'Stress-Free Planning', description: 'We handle everything - stays, transport, meals - so you just show up and explore.' },
       ],
     },
   },
@@ -54,7 +54,7 @@ export const DEFAULT_ABOUT: AboutContent = {
     subheading: 'Thoughtfully crafted for every traveler.',
     cards: [
       { heading: 'Women-Only Safe Spaces', description: 'Every trip is exclusively for women, creating an environment where you can truly let your guard down.', image: '' },
-      { heading: 'Handpicked Hidden Gems', description: 'We seek out destinations Instagram hasn\'t discovered yet — raw, authentic, and unforgettable.', image: '' },
+      { heading: 'Handpicked Hidden Gems', description: 'We seek out destinations Instagram hasn\'t discovered yet - raw, authentic, and unforgettable.', image: '' },
       { heading: 'Small Groups, Big Connections', description: 'Our groups are intentionally small so everyone gets personal attention and real bonds form.', image: '' },
       { heading: 'Local & Sustainable', description: 'We partner with local guides, homestays, and businesses to keep travel meaningful and responsible.', image: '' },
       { heading: 'Solo-Friendly by Design', description: 'Whether you\'re a seasoned solo traveller or stepping out for the first time, you\'re in the right place.', image: '' },

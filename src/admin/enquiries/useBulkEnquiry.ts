@@ -153,7 +153,7 @@ export function useBulkEnquiry(params: {
       return;
     }
     if (entries.length === 0) {
-      alert('Enter at least one person — one per line.');
+      alert('Enter at least one person - one per line.');
       return;
     }
 

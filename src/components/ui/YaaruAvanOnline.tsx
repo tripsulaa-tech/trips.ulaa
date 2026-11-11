@@ -464,7 +464,7 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
 
   // ── Leaving ──
   const leave = async () => {
-    // Always ask first — "Leave" sits right under the game and is easy to tap
+    // Always ask first - "Leave" sits right under the game and is easy to tap
     // by accident. Uses the app's own themed dialog; "Stay" is the focused
     // default so a stray Enter keeps the player in.
     const midGame = !!phase && phase !== 'lobby';

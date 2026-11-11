@@ -119,7 +119,7 @@ export default function ContactOutcomeModal({
               onChange={ev => setNotes(ev.target.value)}
               className={inputClass}
               rows={3}
-              placeholder="What was discussed on the call — optional"
+              placeholder="What was discussed on the call - optional"
             />
           </div>
 

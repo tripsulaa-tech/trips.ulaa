@@ -58,7 +58,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
           />
         </div>
         <div>
-          <label htmlFor="cancellation-refund-min-days" className="block text-xs font-medium text-dark-muted mb-1">Refund timeline — min days</label>
+          <label htmlFor="cancellation-refund-min-days" className="block text-xs font-medium text-dark-muted mb-1">Refund timeline - min days</label>
           <input
             id="cancellation-refund-min-days"
             type="number"
@@ -69,7 +69,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
           />
         </div>
         <div>
-          <label htmlFor="cancellation-refund-max-days" className="block text-xs font-medium text-dark-muted mb-1">Refund timeline — max days</label>
+          <label htmlFor="cancellation-refund-max-days" className="block text-xs font-medium text-dark-muted mb-1">Refund timeline - max days</label>
           <input
             id="cancellation-refund-max-days"
             type="number"
@@ -82,7 +82,7 @@ export default function CancellationPolicyEditor({ value, onChange }: Cancellati
       </div>
 
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-button font-bold text-dark-muted">Cancellation by Participant — refund tiers</span>
+        <span className="text-xs font-button font-bold text-dark-muted">Cancellation by Participant - refund tiers</span>
         <button
           type="button"
           onClick={addTier}

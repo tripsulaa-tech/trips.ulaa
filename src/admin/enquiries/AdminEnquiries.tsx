@@ -416,9 +416,9 @@ export default function AdminEnquiries() {
   // Append the batch when set; if it isn't (or two rows still share the
   // same title+batch), fall back to the trip date instead.
   const completedTripGroupTitle = (ct: CompletedTrip): string => {
-    if (ct.batch?.trim()) return `${ct.title} \u2014 ${formatBatchLabel(ct.batch)}`;
+    if (ct.batch?.trim()) return `${ct.title} - ${formatBatchLabel(ct.batch)}`;
     const sameTitle = completedTrips.filter(t => t.title === ct.title);
-    if (sameTitle.length > 1) return `${ct.title} \u2014 ${formatDate(ct.trip_date, { month: 'short' })}`;
+    if (sameTitle.length > 1) return `${ct.title} - ${formatDate(ct.trip_date, { month: 'short' })}`;
     return ct.title;
   };
 
@@ -1021,10 +1021,10 @@ export default function AdminEnquiries() {
                       <Pencil size={14} aria-hidden="true" /> Bulk Edit
                     </button>
                   ) : (
-                    <span title="Bulk Edit is disabled when the selection spans more than one trip — pricing fields aren't safe to apply across trips with different prices.">
+                    <span title="Bulk Edit is disabled when the selection spans more than one trip - pricing fields aren't safe to apply across trips with different prices.">
                       <button
                         disabled
-                        aria-label="Bulk Edit — disabled because the selection spans more than one trip"
+                        aria-label="Bulk Edit - disabled because the selection spans more than one trip"
                         className="inline-flex items-center gap-1 text-xs font-button font-semibold px-3 py-2 rounded-md border border-background-warm text-dark-muted/40 cursor-default"
                       >
                         <Pencil size={14} aria-hidden="true" /> Bulk Edit

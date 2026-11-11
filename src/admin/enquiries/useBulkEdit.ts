@@ -58,11 +58,11 @@ export function useBulkEdit(params: {
     // generic error).
     const { touchesPaymentFields, hasChanges, overpaid } = validateBulkEditForm(bulkForm, targets);
     if (!hasChanges) {
-      alert('Pick at least one field to change before saving — everything is still set to "No change".');
+      alert('Pick at least one field to change before saving - everything is still set to "No change".');
       return;
     }
     if (touchesPaymentFields && overpaid) {
-      alert(`Amount paid can't exceed the total amount — this would overpay ${overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.`);
+      alert(`Amount paid can't exceed the total amount - this would overpay ${overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.`);
       return;
     }
 

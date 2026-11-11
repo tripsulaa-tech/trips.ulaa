@@ -76,7 +76,7 @@ export default function CompletedTripsPage() {
 
   usePageMeta({
     title: pageTitle('Completed Trips'),
-    description: 'Relive past Ulaa adventures — photo albums and stories from our girls-only trips across India.',
+    description: 'Relive past Ulaa adventures - photo albums and stories from our girls-only trips across India.',
     path: '/completed-trips',
   });
 
@@ -138,7 +138,7 @@ export default function CompletedTripsPage() {
                 {stats.map(({ value, label }) => (
                   <div key={label}>
                     <p className="font-display text-3xl md:text-4xl font-bold text-primary">
-                      {loading ? '—' : value}
+                      {loading ? '-' : value}
                     </p>
                     <p className="text-dark-muted text-sm md:text-base mt-1">{label}</p>
                   </div>
@@ -165,7 +165,7 @@ export default function CompletedTripsPage() {
         skeletonType="album"
         items={trips}
         filteredItems={filtered}
-        emptyState={{ title: 'No completed trips yet.', message: 'Check back soon — our first album is on the way.' }}
+        emptyState={{ title: 'No completed trips yet.', message: 'Check back soon - our first album is on the way.' }}
         noResultsState={{ title: 'No albums found.', message: 'Try adjusting your search or filters.' }}
         hasActiveFilters={search !== '' || month !== 'All'}
         onClearFilters={() => { setSearch(''); setMonth('All'); }}

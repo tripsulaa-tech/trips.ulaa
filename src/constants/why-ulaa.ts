@@ -27,7 +27,7 @@ export const DEFAULT_WHY_ULAA: WhyUlaaContent = {
     {
       image: placeholderImage('ulaa-hidden-destinations'),
       title: 'Hidden Destinations',
-      description: 'Discover places off the tourist trail — untouched, authentic, and breathtaking.',
+      description: 'Discover places off the tourist trail - untouched, authentic, and breathtaking.',
     },
     {
       image: placeholderImage('ulaa-small-groups'),

@@ -122,8 +122,8 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
       {isCancelled && (
         <div className={`relative flex items-center gap-1.5 mb-3 rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold ${isNoShow ? 'bg-orange-50 text-orange-700' : 'bg-danger-bg text-danger-fg'}`}>
           <XCircle size={12} className="shrink-0" aria-hidden="true" /> {isNoShow
-            ? 'No Show — did not report on the trip day. Seat released, no refund.'
-            : 'Cancelled — progress below is where it stood before cancellation'}
+            ? 'No Show - did not report on the trip day. Seat released, no refund.'
+            : 'Cancelled - progress below is where it stood before cancellation'}
         </div>
       )}
 
@@ -193,7 +193,7 @@ export function BookingLifecycleStepper({ enquiry }: { enquiry: Enquiry }) {
       {enquiry.booking_status === 'balance_pending' && !isCancelled && (
         <div className="relative flex items-center gap-1.5 mt-3 bg-warning-bg text-warning-fg rounded-md px-2.5 py-1.5 text-2xs font-button font-semibold">
           <AlertTriangle size={12} className="shrink-0" aria-hidden="true" />
-          Balance overdue{enquiry.balance_due_date ? ` — due ${formatDate(enquiry.balance_due_date, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+          Balance overdue{enquiry.balance_due_date ? ` - due ${formatDate(enquiry.balance_due_date, { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
         </div>
       )}
     </div>
@@ -237,7 +237,7 @@ export function JourneyLifecycleLegend() {
             </div>
           );
         })}
-        <span className="text-dark-muted/75 text-2xs mx-1 shrink-0 whitespace-nowrap">or, at any point —</span>
+        <span className="text-dark-muted/75 text-2xs mx-1 shrink-0 whitespace-nowrap">or, at any point -</span>
         <span className={`inline-flex items-center gap-1 text-2xs font-button font-semibold px-2 py-1 rounded-md whitespace-nowrap shrink-0 ${JOURNEY_STAGE_CONFIG.not_interested.color}`}>
           <UserMinus size={11} className="shrink-0" aria-hidden="true" /> Not Interested
         </span>

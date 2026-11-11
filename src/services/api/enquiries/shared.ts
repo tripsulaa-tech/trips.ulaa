@@ -48,7 +48,7 @@ export async function getUtrWarning(
     const lines = clashes.map(c => {
       const who = c.enquiry_id === options?.currentEnquiryId ? 'this booking' : (names.get(c.enquiry_id) || 'another booking');
       const amount = Number(c.amount).toLocaleString('en-IN');
-      return `• ${who} — ₹${amount}${c.invoice_number ? ` (${c.invoice_number})` : ''}`;
+      return `• ${who} - ₹${amount}${c.invoice_number ? ` (${c.invoice_number})` : ''}`;
     });
     return `UTR ${(utr || '').trim()} is already recorded on:\n${lines.join('\n')}\n\nIf one person paid for more than one traveller, this is fine. If not, it may be the same payment entered twice.`;
   } catch {

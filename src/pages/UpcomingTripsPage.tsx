@@ -126,7 +126,7 @@ export default function UpcomingTripsPage() {
                         ? (() => {
                             const t = activeSpecialOfferTrips[0];
                             const daysLeft = specialOfferDaysLeft(t.special_offer_date!, t.special_offer_end_date);
-                            return `${t.special_offer_name} — ${daysLeft <= 1 ? 'ends today!' : `ends in ${daysLeft} days!`}`;
+                            return `${t.special_offer_name} - ${daysLeft <= 1 ? 'ends today!' : `ends in ${daysLeft} days!`}`;
                           })()
                         : `${activeSpecialOfferTrips.length} special offers live now!`}
                     </p>
@@ -153,7 +153,7 @@ export default function UpcomingTripsPage() {
         skeletonType="trip"
         items={trips}
         filteredItems={filtered}
-        emptyState={{ title: 'No upcoming trips yet.', message: 'Check back soon — new adventures are on the way.' }}
+        emptyState={{ title: 'No upcoming trips yet.', message: 'Check back soon - new adventures are on the way.' }}
         noResultsState={{ title: 'No trips found.', message: 'Try adjusting your search or filters.' }}
         hasActiveFilters={search !== '' || month !== 'All'}
         onClearFilters={() => { setSearch(''); setMonth('All'); }}

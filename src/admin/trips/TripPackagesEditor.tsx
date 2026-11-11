@@ -129,7 +129,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
       {/* Options */}
       <section className="space-y-3" aria-label="Options">
         <div>
-          <h4 className="text-sm font-semibold text-dark">1. Options — what travelers can add</h4>
+          <h4 className="text-sm font-semibold text-dark">1. Options - what travelers can add</h4>
           <p className="text-xs text-dark-muted">Extras with their own price. Tick them inside a package below.</p>
         </div>
         {options.map(o => {
@@ -176,7 +176,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                     ))}
                   </>
                 ) : (
-                  <span>Not in any package yet — tick it inside a package below.</span>
+                  <span>Not in any package yet - tick it inside a package below.</span>
                 )}
               </p>
             </div>
@@ -190,7 +190,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
       {/* Packages */}
       <section className="space-y-3" aria-label="Packages">
         <div>
-          <h4 className="text-sm font-semibold text-dark">2. Packages — presets travelers choose from</h4>
+          <h4 className="text-sm font-semibold text-dark">2. Packages - presets travelers choose from</h4>
           <p className="text-xs text-dark-muted">The first package is the default one travelers land on.</p>
         </div>
 
@@ -341,7 +341,7 @@ export default function TripPackagesEditor({ value, regularPrice, earlyBirdPrice
                   {q.price != null && q.price > 0 ? formatPrice(q.price) : `+${formatPrice(q.extra)}`}
                 </span>
                 {!hasOwnPrice(p) && (
-                  <span className="basis-full text-2xs text-dark-muted">No price set — using trip price + options.</span>
+                  <span className="basis-full text-2xs text-dark-muted">No price set - using trip price + options.</span>
                 )}
               </div>
             </div>

@@ -289,8 +289,8 @@ export function useTravellers() {
       await alert(
         `Moved ${moved} of ${other.rows.length} enquiries. ` +
         (lastError instanceof Error && lastError.message === 'DUPLICATE_ENQUIRY'
-          ? 'The rest clash with an existing enquiry for the same trip — cancel or delete the duplicate, then merge again.'
-          : 'The rest failed to update — try merging again.')
+          ? 'The rest clash with an existing enquiry for the same trip - cancel or delete the duplicate, then merge again.'
+          : 'The rest failed to update - try merging again.')
       );
       return;
     }

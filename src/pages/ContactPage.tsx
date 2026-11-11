@@ -133,7 +133,7 @@ export default function ContactPage() {
     } catch (err) {
       setStatus('error');
       if (err instanceof Error && err.message === 'DUPLICATE_ENQUIRY') {
-        setErrorMsg("Looks like you've already sent this exact message — we've got it and will get back to you shortly.");
+        setErrorMsg("Looks like you've already sent this exact message - we've got it and will get back to you shortly.");
       } else if (err instanceof Error && err.message === 'RATE_LIMITED') {
         setErrorMsg("We've received several messages from these details just now. Please wait a few minutes and try again, or reach us on WhatsApp.");
       } else {
@@ -168,7 +168,7 @@ export default function ContactPage() {
 
               <p className="text-dark-muted mt-5 max-w-md leading-relaxed">
                 Got questions, custom plans, or just want to say hi?
-                We're all ears — drop us a message and we'll get back to you soon.
+                We're all ears - drop us a message and we'll get back to you soon.
               </p>
 
               <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
@@ -351,7 +351,7 @@ export default function ContactPage() {
                   </p>
                 </div>
                 <p className="text-dark-muted text-sm leading-relaxed sm:border-l sm:border-dark/10 sm:pl-5">
-                  "We don't have a storefront — we run every trip from the road (and from WhatsApp).
+                  "We don't have a storefront - we run every trip from the road (and from WhatsApp).
                   That's how we keep things personal."
                 </p>
               </div>
@@ -394,12 +394,12 @@ export default function ContactPage() {
                     </motion.div>
                     <h4 className="font-display text-xl sm:text-2xl font-bold text-dark mb-2">Message sent!</h4>
                     <p className="text-dark-muted max-w-sm mx-auto">
-                      Thanks for reaching out — we'll get back to you {RESPONSE_TIME}.
+                      Thanks for reaching out - we'll get back to you {RESPONSE_TIME}.
                     </p>
 
                     <div className="mt-6 bg-background-warm/60 rounded-md p-4 text-left max-w-sm mx-auto space-y-2">
                       <p className="text-sm font-semibold text-dark">What happens next</p>
-                      <p className="text-sm text-dark-muted">1. We read every message ourselves — no bots.</p>
+                      <p className="text-sm text-dark-muted">1. We read every message ourselves - no bots.</p>
                       <p className="text-sm text-dark-muted">2. You'll hear back by email or WhatsApp, {RESPONSE_TIME}.</p>
                     </div>
 

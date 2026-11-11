@@ -68,7 +68,7 @@ export default function TripPricingSummary({ pricing: p, totalSeats, optionCount
                   <p className="text-xs text-dark-muted">{opts.length ? opts.map(o => o.name).join(', ') : 'Base trip only'}</p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="text-dark">{regular != null ? formatPrice(regular) : '—'}</p>
+                  <p className="text-dark">{regular != null ? formatPrice(regular) : '-'}</p>
                   {early != null && early !== regular && <p className="text-xs text-dark-muted">Early-bird {formatPrice(early)}</p>}
                 </div>
               </div>

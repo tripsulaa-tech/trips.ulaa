@@ -99,7 +99,7 @@ export async function markWaitlistConverted(waitlistId: string, enquiryId: strin
   if (enquiryFetchError) throw enquiryFetchError;
 
   if (entry.trip_id !== enquiry.trip_id) {
-    throw new Error('Waitlist entry and enquiry belong to different trips — cannot link them.');
+    throw new Error('Waitlist entry and enquiry belong to different trips - cannot link them.');
   }
 
   const existingIds = entry.converted_enquiry_ids || [];

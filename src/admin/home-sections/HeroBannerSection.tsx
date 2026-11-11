@@ -47,9 +47,9 @@ export default function HeroBannerSection({ content, setContent, sectionRef }: {
             onChange={count => { update('video_count', count as 1 | 2 | 3 | 4); setPreviewIndex(0); }}
             options={[
               { value: 1, label: '1 video' },
-              { value: 2, label: '2 videos — play one after another' },
-              { value: 3, label: '3 videos — play one after another' },
-              { value: 4, label: '4 videos — play one after another' },
+              { value: 2, label: '2 videos - play one after another' },
+              { value: 3, label: '3 videos - play one after another' },
+              { value: 4, label: '4 videos - play one after another' },
             ]} />
           {content.video_count > 1 && <p className="text-xs text-dark-muted mt-1">Each video plays to the end, then the next one fades in. “Loop video” repeats the whole set. Visitors get dots to jump between videos.</p>}
         </div>
@@ -147,9 +147,9 @@ export default function HeroBannerSection({ content, setContent, sectionRef }: {
         }))}>Restore original hero text and buttons</button>
         {field('eyebrow', 'Small introduction (optional)', 70)}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {field('heading_line1', 'Headline — first line', 80)}
+          {field('heading_line1', 'Headline - first line', 80)}
           {field('heading_highlight', 'Orange italic word (optional)', 40)}
-          {field('heading_line2', 'Second line — after the orange word', 80)}
+          {field('heading_line2', 'Second line - after the orange word', 80)}
         </div>
         <div>
           <label htmlFor="hero-subheading" className="block text-sm font-medium text-dark mb-1">Supporting text (optional)</label>

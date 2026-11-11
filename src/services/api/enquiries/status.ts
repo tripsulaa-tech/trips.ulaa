@@ -158,7 +158,7 @@ export async function updateEnquiryDetails(
     website: 'Website', whatsapp: 'WhatsApp', phone: 'Phone Call', instagram: 'Instagram', walk_in: 'Walk-in', other: 'Other',
   };
   const track = (label: string, oldVal: string, newVal: string) => {
-    if (oldVal !== newVal) changes.push(`${label}: ${oldVal || '—'} → ${newVal || '—'}`);
+    if (oldVal !== newVal) changes.push(`${label}: ${oldVal || '-'} → ${newVal || '-'}`);
   };
 
   if (fields.full_name !== undefined) {
@@ -195,7 +195,7 @@ export async function updateEnquiryDetails(
   if (fields.trip_id !== undefined) {
     const val = fields.trip_id || null;
     if (val !== (current.trip_id || null)) {
-      changes.push(`Trip: ${current.trip_title || '—'} → ${fields.trip_title || '—'}`);
+      changes.push(`Trip: ${current.trip_title || '-'} → ${fields.trip_title || '-'}`);
     }
     patch.trip_id = val;
   }
@@ -327,7 +327,7 @@ export async function setBookingFollowUp(
 // UI alone.
 export async function checkInEnquiry(enquiry: Enquiry): Promise<Enquiry> {
   if (enquiry.cancelled_at || enquiry.booking_state === 'cancelled') {
-    throw new Error('Cannot check in — this booking has been cancelled.');
+    throw new Error('Cannot check in - this booking has been cancelled.');
   }
   if (enquiry.journey_stage !== 'fully_paid') {
     throw new Error(
@@ -337,7 +337,7 @@ export async function checkInEnquiry(enquiry: Enquiry): Promise<Enquiry> {
     );
   }
   if (enquiry.is_no_show) {
-    throw new Error('Cannot check in — this booking is marked as a no-show. Undo the no-show first.');
+    throw new Error('Cannot check in - this booking is marked as a no-show. Undo the no-show first.');
   }
   // §26: trip attendance point must have been reached before check-in is allowed.
   if (enquiry.trip_id) {
@@ -352,7 +352,7 @@ export async function checkInEnquiry(enquiry: Enquiry): Promise<Enquiry> {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (tripDate > today) {
-        throw new Error('Cannot check in yet — the trip has not started. Check-in is available from the departure date onward.');
+        throw new Error('Cannot check in yet - the trip has not started. Check-in is available from the departure date onward.');
       }
     }
   }
@@ -436,13 +436,13 @@ export async function markEnquiryCompleted(enquiryId: string): Promise<Enquiry> 
 export async function setEnquiryNoShow(enquiry: Enquiry, isNoShow: boolean): Promise<Enquiry> {
   if (isNoShow) {
     if (enquiry.cancelled_at || enquiry.booking_state === 'cancelled') {
-      throw new Error('Cannot mark no-show — this booking has been cancelled.');
+      throw new Error('Cannot mark no-show - this booking has been cancelled.');
     }
     if (enquiry.journey_stage !== 'fully_paid') {
-      throw new Error('Cannot mark no-show — this booking has to be Fully Paid first.');
+      throw new Error('Cannot mark no-show - this booking has to be Fully Paid first.');
     }
     if (enquiry.checked_in_at) {
-      throw new Error('Cannot mark no-show — this traveller is already checked in. Undo the check-in first.');
+      throw new Error('Cannot mark no-show - this traveller is already checked in. Undo the check-in first.');
     }
     if (enquiry.is_no_show) {
       throw new Error('Already marked as a no-show.');

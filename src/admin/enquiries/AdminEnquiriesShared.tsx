@@ -261,8 +261,8 @@ export function seatStatus(e: Enquiry): { label: string; title: string; color: s
     return e.is_no_show
       // "Released", not "No Show" — the Status column already says No Show,
       // so repeating it here told the admin nothing new about the seat.
-      ? { label: 'Released', title: 'No-show — seat released, forfeits refund per policy', color: 'bg-orange-100 text-orange-700', icon: XCircle }
-      : { label: 'Cancelled', title: 'Cancelled — seat released', color: 'bg-danger-bg text-danger-fg', icon: XCircle };
+      ? { label: 'Released', title: 'No-show - seat released, forfeits refund per policy', color: 'bg-orange-100 text-orange-700', icon: XCircle }
+      : { label: 'Cancelled', title: 'Cancelled - seat released', color: 'bg-danger-bg text-danger-fg', icon: XCircle };
   }
   return { label: 'Not booked', title: 'No payment recorded yet, so no seat is held', color: 'bg-background-warm text-dark-muted', icon: Circle };
 }
@@ -284,11 +284,11 @@ export function refundStatus(e: Enquiry, short = false): { label: string; color:
   // "pending" — showing a refund due here was misleading.
   // `short` is for the narrow table cell, where the amount is already in
   // the payment line right above it.
-  if (e.is_no_show) return { label: short ? 'No refund' : `No refund — ${formatPrice(e.amount_paid)} forfeited`, color: 'bg-orange-100 text-orange-700' };
+  if (e.is_no_show) return { label: short ? 'No refund' : `No refund - ${formatPrice(e.amount_paid)} forfeited`, color: 'bg-orange-100 text-orange-700' };
   const refunded = e.refund_amount || 0;
   if (refunded >= e.amount_paid) return { label: 'Refunded', color: 'bg-success-bg text-success-fg' };
-  if (refunded > 0) return { label: `Refund pending — ${formatPrice(e.amount_paid - refunded)} left`, color: 'bg-warning-bg text-warning-fg' };
-  return { label: `Refund pending — ${formatPrice(e.amount_paid)}`, color: 'bg-danger-bg text-danger-fg' };
+  if (refunded > 0) return { label: `Refund pending - ${formatPrice(e.amount_paid - refunded)} left`, color: 'bg-warning-bg text-warning-fg' };
+  return { label: `Refund pending - ${formatPrice(e.amount_paid)}`, color: 'bg-danger-bg text-danger-fg' };
 }
 
 export const STATUS_CONFIG = {

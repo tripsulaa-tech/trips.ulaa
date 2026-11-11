@@ -370,7 +370,7 @@ export default function TripDetailPage() {
   const statusLabel = trip.status === 'draft' ? 'Draft (not visible to the public)' : trip.status === 'coming_soon' ? 'Coming Soon' : 'Published';
   const previewBanner = isPreview ? (
     <div className="fixed top-0 inset-x-0 z-[100] bg-dark text-white text-xs sm:text-sm font-button font-semibold px-4 py-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 shadow-card">
-      <span>Admin preview — {statusLabel}. Booking is disabled.</span>
+      <span>Admin preview - {statusLabel}. Booking is disabled.</span>
       <span className="inline-flex items-center gap-1" role="group" aria-label="Preview layout">
         <button
           type="button"

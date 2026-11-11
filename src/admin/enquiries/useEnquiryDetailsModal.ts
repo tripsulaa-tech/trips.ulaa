@@ -94,17 +94,17 @@ export function useEnquiryDetailsModal() {
       if (canShareFile) {
         await navigator.share({
           files: [file],
-          title: `Ulaa Invoice — ${e.booking_id || ''}`,
+          title: `Ulaa Invoice - ${e.booking_id || ''}`,
           text: `Invoice for booking ${e.booking_id || ''} (${e.trip_title || 'Ulaa trip'})`,
         });
       } else {
         await downloadInvoicePdf(e, payments);
         const text = encodeURIComponent(
           `Hi ${e.full_name}, here's your Ulaa booking summary:\n` +
-          `Booking ID: ${e.booking_id || '—'}\n` +
-          `Trip: ${e.trip_title || '—'}\n` +
+          `Booking ID: ${e.booking_id || '-'}\n` +
+          `Trip: ${e.trip_title || '-'}\n` +
           `Amount paid: ${formatPrice(e.amount_paid || 0)}${e.total_amount ? ` of ${formatPrice(e.total_amount)}` : ''}\n` +
-          `The invoice PDF has been downloaded — please attach it to this chat.`
+          `The invoice PDF has been downloaded - please attach it to this chat.`
         );
         window.open(whatsAppUrl(e.phone, text), '_blank', 'noopener,noreferrer');
       }

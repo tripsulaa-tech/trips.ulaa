@@ -520,7 +520,7 @@ export default function AdminAlbums() {
             {errors.destination && <p role="alert" className="text-xs text-danger-fg mt-1">{errors.destination}</p>}
           </div>
           <div>
-            <label htmlFor="album-map-url" className="block text-sm font-medium text-dark mb-1">Destination — Google Maps Link</label>
+            <label htmlFor="album-map-url" className="block text-sm font-medium text-dark mb-1">Destination - Google Maps Link</label>
             <input
               id="album-map-url"
               value={form.map_url}

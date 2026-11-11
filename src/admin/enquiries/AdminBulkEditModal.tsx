@@ -54,7 +54,7 @@ export default function BulkEditModal({
     : undefined;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={`Bulk Edit — ${selectedCount} selected`} size="sm">
+    <Modal isOpen={isOpen} onClose={onClose} title={`Bulk Edit - ${selectedCount} selected`} size="sm">
       <div className="space-y-4">
         {selectedTripName && (
           <p className="text-xs font-medium text-primary bg-primary/10 rounded-md px-3 py-2">
@@ -149,7 +149,7 @@ export default function BulkEditModal({
           </div>
         ) : (
           <div>
-            <label htmlFor="bulk-total-amount" className="block text-sm font-medium text-dark mb-1">Enter Money — Total Amount (₹)</label>
+            <label htmlFor="bulk-total-amount" className="block text-sm font-medium text-dark mb-1">Enter Money - Total Amount (₹)</label>
             <input
               id="bulk-total-amount"
               type="number"
@@ -180,7 +180,7 @@ export default function BulkEditModal({
           </p>
           {overpaid && (
             <p id="bulk-amount-paid-error" role="alert" className={errorClass}>
-              Amount paid can't exceed the total amount — this would overpay {overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.
+              Amount paid can't exceed the total amount - this would overpay {overpaid.full_name}. Adjust the amount or set a matching total amount for the selection.
             </p>
           )}
         </div>
@@ -201,7 +201,7 @@ export default function BulkEditModal({
         </div>
 
         {!hasChanges && (
-          <p role="alert" className={errorClass}>Pick at least one field to change before saving — everything is still set to "No change".</p>
+          <p role="alert" className={errorClass}>Pick at least one field to change before saving - everything is still set to "No change".</p>
         )}
 
         <div className="flex gap-3 pt-2">

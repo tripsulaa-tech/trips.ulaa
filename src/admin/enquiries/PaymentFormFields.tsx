@@ -85,10 +85,10 @@ export default function PaymentFormFields({
   const alreadyPaidNow = enquiry.amount_paid || 0;
   const [autoSwitch, setAutoSwitch] = useState<{ type: PaymentForm['payment_type']; text: string } | null>(null);
   const AUTO_SWITCH_TEXT: Partial<Record<PaymentForm['payment_type'], string>> = {
-    balance: 'Switched to Balance — this payment clears the full amount owed.',
-    installment: 'Switched to Installment — this is less than the balance owed.',
-    full_payment: 'Switched to Full Payment — this payment covers the whole total.',
-    advance: 'Switched to Advance — this is less than the full total.',
+    balance: 'Switched to Balance - this payment clears the full amount owed.',
+    installment: 'Switched to Installment - this is less than the balance owed.',
+    full_payment: 'Switched to Full Payment - this payment covers the whole total.',
+    advance: 'Switched to Advance - this is less than the full total.',
   };
   const updateForm = (patch: (f: PaymentForm) => PaymentForm) => {
     const edited = patch(paymentForm);
@@ -275,7 +275,7 @@ export default function PaymentFormFields({
           {capApplies && !isChildFare && (
             <p className={`text-2xs mt-1 ${cappedAt != null ? 'text-warning-fg font-medium' : 'text-dark-muted'}`}>
               {cappedAt != null
-                ? `Can't be more than the ${capLabel} — set to ${formatPrice(cappedAt)}.`
+                ? `Can't be more than the ${capLabel} - set to ${formatPrice(cappedAt)}.`
                 : `Up to ${formatPrice(remainingOwed as number)} (${capLabel}).`}
             </p>
           )}
@@ -426,7 +426,7 @@ export default function PaymentFormFields({
               <> · Balance due: <span className="font-semibold text-dark">{formatPrice(balance)}</span></>
             )}
             {isOverpaid && (
-              <> · <span className="font-semibold text-danger-fg">Overpaid by {formatPrice(Math.abs(balance))} — refund needed</span></>
+              <> · <span className="font-semibold text-danger-fg">Overpaid by {formatPrice(Math.abs(balance))} - refund needed</span></>
             )}
           </p>
         );

@@ -41,7 +41,7 @@ export function createInvoiceContext(doc: jsPDF, enquiry: Enquiry, tripUrl: stri
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10.5);
     setText(COLORS.dark);
-    doc.text('Ulaa \u2014 Booking Invoice', MARGIN, MARGIN);
+    doc.text('Ulaa - Booking Invoice', MARGIN, MARGIN);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     setText(COLORS.darkMuted);

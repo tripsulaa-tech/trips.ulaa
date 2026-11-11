@@ -521,8 +521,8 @@ export default function AdminTripFinance() {
                       </section>
                       <p className="lg:col-span-2 text-xs text-dark-muted">
                         {r.live
-                          ? 'Live — updates as bookings, costs and prices change.'
-                          : `Saved copy${r.capturedAt ? ` from ${fmtDate(r.capturedAt)}` : ''} — kept after the upcoming trip was removed.`}
+                          ? 'Live - updates as bookings, costs and prices change.'
+                          : `Saved copy${r.capturedAt ? ` from ${fmtDate(r.capturedAt)}` : ''} - kept after the upcoming trip was removed.`}
                       </p>
                     </div>
                   )}
@@ -536,7 +536,7 @@ export default function AdminTripFinance() {
       <Modal
         isOpen={!!editingRow}
         onClose={() => !saving && closeEdit()}
-        title={editingRow ? `${pricingDraft ? 'Pricing, Finances & Profit' : 'Finances & Profit'} — ${editingRow.title}` : 'Finances & Profit'}
+        title={editingRow ? `${pricingDraft ? 'Pricing, Finances & Profit' : 'Finances & Profit'} - ${editingRow.title}` : 'Finances & Profit'}
         size="2xl"
         mobileFullScreen
         compactHeader
