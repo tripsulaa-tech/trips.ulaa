@@ -5,7 +5,7 @@ import { ArrowRight, ArrowsOutCardinal, Plus, Shuffle, X, Heart, ShieldCheck, Co
 import { Link } from 'react-router-dom';
 import type { AboutContent, AboutHaveYouEverItem, AboutWelcomeItem } from '../../types/types-index';
 import { getTripHighlightIcon } from '../../constants/tripHighlightIcons';
-import { localSiteImage } from '../../utils/imageUrls';
+import { localSiteImage, siteThumbImgProps } from '../../utils/imageUrls';
 import fallbackPhoto from '../../assets/hero.webp';
 import './mobile-memory-wall.css';
 
@@ -22,12 +22,17 @@ function matchingBenefit(item: AboutHaveYouEverItem, benefits: AboutWelcomeItem[
   return benefits.find(benefit => pattern.test(`${benefit.title} ${benefit.icon}`));
 }
 
-function MemoryPhoto({ src }: { src: string }) {
-  return <img src={localSiteImage(src) || fallbackPhoto} alt="" loading="lazy" decoding="async"
+// Grid tiles load the small thumbnail (falls back to the original, then to the
+// placeholder). The enlarged detail view (`full`) loads the original.
+function MemoryPhoto({ src, full = false }: { src: string; full?: boolean }) {
+  const thumb = full ? null : siteThumbImgProps(src);
+  return <img src={(thumb ? thumb.src : localSiteImage(src)) || fallbackPhoto} alt="" loading="lazy" decoding="async"
     draggable={false} onError={event => {
-      if (event.currentTarget.dataset.fallback) return;
-      event.currentTarget.dataset.fallback = 'true';
-      event.currentTarget.src = fallbackPhoto;
+      const img = event.currentTarget;
+      if (thumb?.onError && !img.dataset.thumbFallback) { thumb.onError(event); return; }
+      if (img.dataset.fallback) return;
+      img.dataset.fallback = 'true';
+      img.src = fallbackPhoto;
     }} />;
 }
 
@@ -131,7 +136,7 @@ export default function MobileMemoryWall({ intro, photos }: { intro: Intro; phot
         if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) setSelected(null);
       } }}>
       <button type="button" autoFocus className="ulaa-memory-close" aria-label="Close memory" onClick={() => setSelected(null)}><X size={22} /></button>
-      <div className="ulaa-memory-detail-photo"><MemoryPhoto src={photoAt(selected!)} /></div>
+      <div className="ulaa-memory-detail-photo"><MemoryPhoto src={photoAt(selected!)} full /></div>
       <div className="ulaa-memory-detail-copy">
         <p className="ulaa-memory-detail-question">{selectedItem.text}</p>
         <h3 id="memory-detail-title">{benefit?.title || welcome.heading}</h3>

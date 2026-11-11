@@ -430,6 +430,21 @@ export async function getCompletedTrips(): Promise<CompletedTrip[]> {
   return data || [];
 }
 
+// Only the three columns the About page needs (live stats + memory-wall photos).
+// getCompletedTrips() pulls every column, including the big itinerary / story /
+// gallery data, which is wasted download on a page that never shows it.
+export type CompletedTripSummary = Pick<CompletedTrip, 'participants' | 'destination' | 'cover_image'>;
+
+export async function getCompletedTripsSummary(): Promise<CompletedTripSummary[]> {
+  const { data, error } = await supabase
+    .from('completed_trips')
+    .select('participants, destination, cover_image')
+    .eq('is_published', true)
+    .order('trip_date', { ascending: false });
+  if (error) throw error;
+  return (data || []) as CompletedTripSummary[];
+}
+
 export async function getCompletedTripBySlug(slug: string): Promise<CompletedTrip | null> {
   const { data, error } = await supabase
     .from('completed_trips')

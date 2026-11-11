@@ -94,3 +94,17 @@ export function localSiteImage(src: string | undefined | null): string {
   if (!LOCAL_SITE_IMAGES.has(path)) return src;
   return `/site-images/${path.split('/').map(encodeURIComponent).join('/')}`;
 }
+
+/**
+ * For photos shown small (grid tiles, cards): a mirrored local copy if one
+ * exists, otherwise the ~720px thumbnail with automatic fallback to the
+ * original. Do NOT use for full-width hero banners.
+ */
+export function siteThumbImgProps(src: string | undefined | null): {
+  src: string;
+  onError?: (e: SyntheticEvent<HTMLImageElement>) => void;
+} {
+  const local = localSiteImage(src);
+  if (local !== (src ?? '')) return { src: local };
+  return thumbImgProps(local);
+}

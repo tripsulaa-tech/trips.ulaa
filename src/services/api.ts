@@ -28,6 +28,7 @@ export {
   getTripFinanceSnapshots,
   saveTripFinanceSnapshot,
   getCompletedTrips,
+  getCompletedTripsSummary,
   getCompletedTripBySlug,
   getAllCompletedTripsAdmin,
   likeCompletedTrip,
@@ -111,6 +112,7 @@ export {
 
 export {
   getSiteContent,
+  peekSiteContent,
   upsertSiteContent,
 } from './api/siteContent';
 

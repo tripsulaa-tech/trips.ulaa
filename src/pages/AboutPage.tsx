@@ -19,7 +19,7 @@ import Button from '../components/ui/Button';
 import MobileMemoryWall from '../sections/about/MobileMemoryWall';
 import TestimonialCard from '../components/ui/TestimonialCard';
 import TestimonialsDesktopSlider from '../components/ui/TestimonialsDesktopSlider';
-import { getSiteContent, getTestimonials, getCompletedTrips } from '../services/api';
+import { getSiteContent, peekSiteContent, getTestimonials, getCompletedTripsSummary } from '../services/api';
 import { subscribeToTable } from '../services/realtime';
 import { useScrollRestoration } from '../hooks/useScrollRestoration';
 import { usePageMeta } from '../hooks/usePageMeta';
@@ -35,7 +35,7 @@ import type {
 } from '../types/types-index';
 
 import { BRAND_MOTTO, SITE_SHORT_NAME, pageTitle } from '../constants/site';
-import { localSiteImage } from '../utils/imageUrls';
+import { localSiteImage, siteThumbImgProps } from '../utils/imageUrls';
 const MeetTheFounder = lazy(() => import('../sections/home/MeetTheFounder'));
 
 // "journey" steps likewise store an icon-library key (AboutJourneyStep.icon).
@@ -55,13 +55,19 @@ export default function AboutPage() {
     path: '/about',
   });
 
-  const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT);
+  // Start from the last-known copy (if this visitor has been here before) so
+  // the hero and photos begin downloading on the very first render instead of
+  // only after the database answers. The live copy still replaces it below.
+  const [content, setContent] = useState<AboutContent>(() => {
+    const last = peekSiteContent<Partial<AboutContent>>('about');
+    return last ? mergeWithDefaults(last) : DEFAULT_ABOUT;
+  });
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   // Completed trips, fetched live so the stats strip below (Girls Travelled,
   // Trips Completed, Destinations) reflects real data instead of a
   // hardcoded admin number — same live-data approach, and now the exact
   // same three stats, as the Completed Trips page.
-  const [completedTrips, setCompletedTrips] = useState<CompletedTrip[]>([]);
+  const [completedTrips, setCompletedTrips] = useState<Pick<CompletedTrip, 'participants' | 'destination' | 'cover_image'>[]>([]);
 
   // Mobile "What Our Girls Say" carousel — mirrors the swipeable single-card
   // carousel used on the home page's Testimonials section.
@@ -103,8 +109,9 @@ export default function AboutPage() {
   };
 
   useEffect(() => {
-    // Fetch about content
-    getSiteContent<Partial<AboutContent>>('about')
+    // Fetch about content (reuses a copy fetched in the last few minutes,
+    // e.g. when coming from the Completed Trips page which reads the same row)
+    getSiteContent<Partial<AboutContent>>('about', { cached: true })
       .then(data => setContent(mergeWithDefaults(data)))
       .catch(() => {});
 
@@ -114,8 +121,9 @@ export default function AboutPage() {
       .catch(() => {});
 
     // Fetch completed trips to derive live stats (girls travelled, trips
-    // completed, destinations) instead of using static numbers
-    getCompletedTrips()
+    // completed, destinations) instead of using static numbers. Summary
+    // query: only the 3 columns this page uses, not whole trip rows.
+    getCompletedTripsSummary()
       .then(data => setCompletedTrips(data))
       .catch(() => {});
   }, []);
@@ -184,22 +192,20 @@ export default function AboutPage() {
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute inset-0">
             {(hero.image || hero.mobile_image) ? (
-              <>
+              // One <picture>, so the browser downloads only the image for this
+              // screen. Two always-rendered <img> tags (one hidden with CSS)
+              // made every visitor download BOTH full-size hero images.
+              <picture className="block w-full h-full">
+                <source media="(min-width: 768px)" srcSet={localSiteImage(hero.image || hero.mobile_image)} />
                 <img
                   src={localSiteImage(hero.mobile_image || hero.image)}
                   alt={hero.heading}
-                  className="w-full h-full object-cover md:hidden"
+                  className="w-full h-full object-cover"
                   loading="eager"
                   fetchPriority="high"
+                  decoding="async"
                 />
-                <img
-                  src={localSiteImage(hero.image || hero.mobile_image)}
-                  alt={hero.heading}
-                  className="w-full h-full object-cover hidden md:block"
-                  loading="eager"
-                  fetchPriority="high"
-                />
-              </>
+              </picture>
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-primary/80 to-dark" />
             )}
@@ -355,9 +361,10 @@ export default function AboutPage() {
               >
                 {card.image ? (
                   <img
-                    src={localSiteImage(card.image)}
+                    {...siteThumbImgProps(card.image)}
                     alt={card.heading}
                     loading="lazy"
+                    decoding="async"
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 ) : (
@@ -420,7 +427,7 @@ export default function AboutPage() {
                       className="flex-1 aspect-[4/3] lg:aspect-auto rounded-2xl overflow-hidden group"
                     >
                       <img
-                        src={localSiteImage(community.photos[0])}
+                        {...siteThumbImgProps(community.photos[0])}
                         alt="Our community"
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
@@ -442,7 +449,7 @@ export default function AboutPage() {
                           className="relative aspect-square lg:aspect-auto rounded-2xl overflow-hidden group"
                         >
                           <img
-                            src={localSiteImage(photo)}
+                            {...siteThumbImgProps(photo)}
                             alt={`Community photo ${i + 2}`}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             loading="lazy"
