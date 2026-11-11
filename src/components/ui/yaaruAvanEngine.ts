@@ -300,8 +300,24 @@ function drawFrom<T extends { id: string }>(
   return byId.get(id)!;
 }
 
-export function drawPair(level: Level, opts: { tripTitle?: string } = {}): WordPair {
+/** About 1 round in 4 (from round 2) the last pair is dealt again; the Tourist/Stranger sides are shuffled again in dealRound. */
+const PAIR_REUSE_CHANCE = 0.25;
+const LAST_PAIR_KEY = 'ulaa:yaaru-avan:lastpair';
+
+/** `allowRepeat`: pass true from round 2 on, so a word that was the Stranger's can come back (maybe as the Tourists' word) and nobody can guess their role from words they remember. */
+export function drawPair(level: Level, opts: { tripTitle?: string; allowRepeat?: boolean } = {}): WordPair {
   const pool = WORD_PAIRS.filter(p => p.level === level);
+  const remember = (p: WordPair, reused: boolean) => {
+    try { localStorage.setItem(LAST_PAIR_KEY, JSON.stringify({ id: p.id, reused })); } catch { /* ignore */ }
+  };
+  if (opts.allowRepeat) {
+    try {
+      const raw = localStorage.getItem(LAST_PAIR_KEY);
+      const last = raw ? (JSON.parse(raw) as { id?: string; reused?: boolean }) : null;
+      const again = last && !last.reused ? pool.find(p => p.id === last.id) : undefined;
+      if (again && Math.random() < PAIR_REUSE_CHANCE) { remember(again, true); return again; }
+    } catch { /* ignore */ }
+  }
   let lastCat: string | null = null;
   try { lastCat = localStorage.getItem(LAST_CAT_KEY); } catch { /* ignore */ }
 
@@ -316,12 +332,14 @@ export function drawPair(level: Level, opts: { tripTitle?: string } = {}): WordP
     if (hit) {
       writeList(seenKey, [...dealt, hit.id]);
       try { localStorage.setItem(LAST_CAT_KEY, hit.category); } catch { /* ignore */ }
+      remember(hit, false);
       return hit;
     }
   }
 
   const pair = drawFrom(pool, BAG_KEY(level), p => p.category !== lastCat);
   try { localStorage.setItem(LAST_CAT_KEY, pair.category as Category); } catch { /* ignore */ }
+  remember(pair, false);
   return pair;
 }
 

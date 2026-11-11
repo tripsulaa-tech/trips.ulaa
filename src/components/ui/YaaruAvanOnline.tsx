@@ -4,7 +4,7 @@ import {
   Play, ArrowRight, ArrowCounterClockwise, ShareNetwork, SpeakerHigh, SpeakerSlash, Vibrate, Trophy, Plus, Minus, X,
   Ticket, Airplane, Eye, EyeSlash, Crown, Skull, CheckCircle, XCircle, MagicWand,
   Gift, Question, Copy, LockSimple, LockSimpleOpen, WifiSlash, DeviceMobile, Hash, UsersThree, ChatCircleDots,
-  CaretRight, Check, ArrowLeft,
+  CaretRight, Check, ArrowLeft, UserMinus,
 } from '@phosphor-icons/react';
 import { SITE_HOST } from '../../constants/site';
 import SpecialList from './YaaruAvanSpecialList';
@@ -372,6 +372,8 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
   const [sniperPick, setSniperPick] = useState<string | null>(null);
   const [showRules, setShowRules] = useState(false);
   const [sittingOut, setSittingOut] = useState<{ name: string; points: number }[]>([]);
+  // Host, mid-round: the "Remove a player" list.
+  const [managing, setManaging] = useState(false);
   const noticeTimer = useRef<number | null>(null);
 
   const room = state?.room ?? null;
@@ -465,20 +467,39 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
     // Always ask first — "Leave" sits right under the game and is easy to tap
     // by accident. Uses the app's own themed dialog; "Stay" is the focused
     // default so a stray Enter keeps the player in.
+    const midGame = !!phase && phase !== 'lobby';
     if (phase) {
       const inLobby = phase === 'lobby';
       const ok = await confirm({
         title: inLobby ? 'Leave this room?' : 'Leave this game?',
         message: inLobby
           ? 'You will be taken out of the room. You will need the room code to join again.'
-          : 'You will not be able to rejoin your seat once you leave.',
+          : `Your seat stays in room ${code}. Open Yaaru Avan again and tap Rejoin room to carry on. The host can also remove you if you are not coming back.`,
         confirmLabel: inLobby ? 'Leave room' : 'Leave game',
         cancelLabel: inLobby ? 'Stay in room' : 'Keep playing',
       });
       if (!ok) return;
     }
+    if (midGame) { onExit(); return; } // keep the saved room so this phone can rejoin the same seat
     try { if (phase === 'lobby') await online.leave(code); } catch { /* leaving anyway */ }
     onLeft();
+  };
+
+  // Host, mid-round: remove a player who is leaving and deal the round again (new word) in the same room.
+  const removeMidGame = async (p: { id: string; name: string }) => {
+    const left = players.length - 1;
+    const ok = await confirm({
+      title: `Remove ${p.name}?`,
+      message: left >= MIN_PLAYERS
+        ? 'The round is dealt again with a new word for everyone left, in this same room. Scores stay the same, and they keep their points if they join again later with the same name.'
+        : `Only ${left} would be left, so the room goes back to the lobby. Scores stay the same.`,
+      confirmLabel: 'Remove and deal again',
+      cancelLabel: 'Keep them',
+      variant: 'default',
+    });
+    if (!ok) return;
+    setManaging(false);
+    await act(() => online.removeAndRedeal(room!.code, p.id));
   };
 
   // ── Problems: room ended, or still loading ──
@@ -1285,6 +1306,25 @@ function Room({ code, audio, onLeft, onExit }: { code: string; audio: Audio; onL
               <button type="button" disabled={busy} onClick={() => void act(() => online.toLobby(room.code))} className={ghostBtn}><UsersThree size={16} weight="bold" /> Back to the lobby</button>
             </>
           ) : waiting(`Waiting for ${hostName} to pick what is next…`)}
+        </div>
+      )}
+
+      {isHost && phase !== 'lobby' && phase !== 'roundEnd' && phase !== 'final' && players.length > 1 && (
+        <div className="mt-4">
+          <button type="button" onClick={() => setManaging(v => !v)} aria-expanded={managing} className="w-full inline-flex items-center justify-center gap-1.5 text-[11px] font-semibold text-cream/70 hover:text-cream transition-colors">
+            <UserMinus size={14} weight="bold" /> {managing ? 'Close player list' : 'Someone leaving? Remove a player'}
+          </button>
+          {managing && (
+            <ul className={`${glass} divide-y divide-white/10 mt-2 text-left`}>
+              {players.filter(p => p.id !== me.id).map(p => (
+                <li key={p.id} className="flex items-center gap-2.5 px-3 py-2">
+                  <span className={`w-2 h-2 rounded-full shrink-0 ${p.away ? 'bg-cream/25' : 'bg-emerald-400'}`} aria-hidden="true" />
+                  <span className="flex-1 min-w-0 text-sm font-bold text-white truncate">{p.name}{p.away && <span className="ml-1.5 text-[10px] font-semibold text-cream/55">away</span>}</span>
+                  <button type="button" disabled={busy} onClick={() => void removeMidGame(p)} className="rounded-md px-2.5 py-1 text-[11px] font-bold text-rose-200 border border-rose-300/30 hover:bg-rose-400/15 transition-colors disabled:opacity-40">Remove</button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

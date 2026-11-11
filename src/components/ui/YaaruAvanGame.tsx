@@ -302,9 +302,10 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
     beginRound(cleaned, 1);
   };
 
-  const beginRound = (list: string[], no: number) => {
+  // `forceNew`: a re-deal asked for a NEW word, so the pair just skipped must not come back.
+  const beginRound = (list: string[], no: number, forceNew = false) => {
     clearTimers();
-    const pair = drawPair(level, { tripTitle: no === 1 ? tripTitle : undefined });
+    const pair = drawPair(level, { tripTitle: no === 1 ? tripTitle : undefined, allowRepeat: no > 1 && !forceNew });
     const r = dealRound(list, countsFor(list.length, strangers, pickpockets), pair,
       useSpecials && specialIds.length > 0 ? { enabled: specialIds } : undefined);
     setGuessQueue([]);
@@ -332,7 +333,7 @@ export default function YaaruAvanGame({ tripSlug = '', tripTitle = 'Ulaa', class
   const repickWord = () => {
     play('flip');
     setHolding(false);
-    beginRound(seats.map(s => s.name), roundNo);
+    beginRound(seats.map(s => s.name), roundNo, true);
   };
   // From a pass itself, the player already knows their role, so ask first (themed dialog):
   // this is for a word that isn't working, not for re-rolling your own role.

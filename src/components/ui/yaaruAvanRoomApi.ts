@@ -141,6 +141,7 @@ const MESSAGES: Record<string, string> = {
   name_required: 'Please type your name.',
   host_only: 'Only the host can do that.',
   not_in_room: 'You are not in this room any more.',
+  cannot_kick_self: 'You cannot remove yourself. Use Leave instead.',
   wrong_phase: 'That is not possible right now.',
   need_more_players: 'You need at least 3 players.',
   bad_roles: 'These roles do not work for this many players.',
@@ -234,6 +235,8 @@ export const online = {
   setLocked: (code: string, locked: boolean) => rpc('yaaru_avan_set_locked', { p_code: code, p_token: t(), p_locked: locked }),
   kick: (code: string, player: string) => rpc('yaaru_avan_kick', { p_code: code, p_token: t(), p_player: player }),
   leave: (code: string) => rpc('yaaru_avan_leave', { p_code: code, p_token: t() }),
+  /** Host, in the middle of a round: remove a player (they keep their points) and deal the round again with a new word, in the same room. */
+  removeAndRedeal: (code: string, player: string) => rpc('yaaru_avan_remove_and_redeal', { p_code: code, p_token: t(), p_player: player }),
   /** Players removed earlier in this game, with the points they will get back if they rejoin by name. */
   benched: (code: string) => rpc<{ name: string; points: number }[]>('yaaru_avan_benched', { p_code: code, p_token: t() }),
   startRound: (code: string, dare: string | null, reset = false) =>
